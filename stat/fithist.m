@@ -33,7 +33,7 @@ function [f, modes] = fithist(counts, edges, type)
                 % adjust solver configuration
                 ft = fittype(fa, 'independent', 'x', 'coefficients', ["a", "b", "c", "d", "e", "f", "g"]);
                 opts = fitoptions('Method', 'NonlinearLeastSquares');
-                opts.Algorithm = 'Levenberg-Marquardt';
+                opts.Algorithm = 'Trust-Region';
                 opts.Display = 'Off';
                 opts.Lower = zeros(1, 7);
                 opts.StartPoint = [fe.a1, fe.b1, fe.c1, skewness(counts), fe.a1, fe.b1, fe.c1];
