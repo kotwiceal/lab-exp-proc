@@ -1,21 +1,33 @@
-function [f, modes] = fithist(counts, edges, type)
+function [f, modes] = fithist(counts, edges, named)
     %% Analytical approximation of one-dimensional statistical distribution.
     %% The function takes following arguments:
     %   counts:     [n×1 double]    - statistical counts
     %   edges:      [n×1 double]    - statistical edges
     %   type:       [char array]    - approximation type
-    %
+    %   range:      [1×2 double]    - specified range to cut data
     %% The function returns following results:
     %   f:          [1×1 cfit]      - fit object
     %   modes:      [n×k double]  - approximate distribution modes assembled to column vector mapped by specific edges grid
     
+        arguments
+            counts double
+            edges double
+            named.type char = 'gauss1'
+            named.range double = []
+        end
+
         if ~iscolumn(counts)
             counts = counts';
         end
         if ~iscolumn(edges)
             edges = edges';
         end
-        switch type
+
+        if ~isempty(named.range)
+            [edges, counts] = histcutrange(edges, counts, named.range);
+        end
+
+        switch named.type
             case 'gauss1'
                 f = fit(edges, counts, 'gauss1');
                 modes(:, 1) = f.a1*exp(-((edges-f.b1)/f.c1).^2); 
