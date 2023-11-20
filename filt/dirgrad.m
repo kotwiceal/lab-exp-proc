@@ -1,45 +1,46 @@
-function data = dirgrad(data, angle, component)
-%% Process a directed gradient of multidimensional data.
+function varargout = dirgrad(u, w, angle, named)
+%% Process a directed gradient of multidimensional data
 %% The function takes following arguments:
-%   data: 
-%       struct with fields:
-%           u: [n×mx... double]
-%           w: [n×m×... double]
-%   angle:      [double]        - angle rotation [rad];
-%   component:  [char array]    - returned directed derivatives
+%   u:          [n×mx... double]    - first vector component
+%   w:          [n×m×... double]    - second vector component
+%   angle:      [double]            - angle rotation [rad];
+%   component:  [char array]        - returned directed derivatives
 %
 %% The function returns following results:
-%   data: 
-%       struct with fields:
-%           u: [l×n×... double]
-%           w: [l×n×... double]
-%           dudl: [l×n×... double]
-%           dwdl: [l×n×... double]
-%           dudn: [l×n×... double]
-%           dwdn: [l×n×... double]
+%   dudl: [l×n×... double]
+%   dwdl: [l×n×... double]
+%   dudn: [l×n×... double]
+%   dwdn: [l×n×... double]
+
+    arguments
+        u double
+        w double
+        angle double
+        named.component char = 'dwdl'
+    end
 
     mat = [cos(angle)^2, cos(angle)*sin(angle), cos(angle)*sin(angle), sin(angle)^2; ...
         -cos(angle)*sin(angle), cos(angle)^2, -sin(angle)^2, cos(angle)*sin(angle); ...
         -cos(angle)*sin(angle), -sin(angle)^2, cos(angle)^2, cos(angle)*sin(angle); ...
         sin(angle)^2, -cos(angle)*sin(angle), -cos(angle)*sin(angle), cos(angle)^2];
     Gx = fspecial('sobel'); Gz = Gx';
-    dudx = imfilter(data.u, Gx); dudz = imfilter(data.u, Gz);
-    dwdx = imfilter(data.w, Gx); dwdz = imfilter(data.w, Gz);
+    dudx = imfilter(u, Gx); dudz = imfilter(u, Gz);
+    dwdx = imfilter(w, Gx); dwdz = imfilter(w, Gz);
     vr = mat' * [dudx(:), dudz(:), dwdx(:), dwdz(:)]';
-    sz = size(data.u);
-    switch component
+    sz = size(u);
+    switch named.component
         case 'dudl'
-            data.dudl = reshape(vr(1, :), sz);
+            varargout{1} = reshape(vr(1, :), sz);
         case 'dudn'
-            data.dudn = reshape(vr(2, :), sz);
+            varargout{1} = reshape(vr(2, :), sz);
         case 'dwdl'
-            data.dwdl = reshape(vr(3, :), sz);
+            varargout{1} = reshape(vr(3, :), sz);
         case 'dwdn'
-            data.dwdn = reshape(vr(4, :), sz);
+            varargout{1} = reshape(vr(4, :), sz);
         case 'all'
-            data.dudl = reshape(vr(1, :), sz);
-            data.dudn = reshape(vr(2, :), sz);
-            data.dwdl = reshape(vr(3, :), sz);
-            data.dwdn = reshape(vr(4, :), sz);
+            varargout{1} = reshape(vr(1, :), sz);
+            varargout{2} = reshape(vr(2, :), sz);
+            varargout{3} = reshape(vr(3, :), sz);
+            varargout{4} = reshape(vr(4, :), sz);
     end
 end
