@@ -1,15 +1,15 @@
 function guiprocinten(data, named)
-    %% Interactive intermittency processing.
-    %% The function takes following arguments:
-    %   data:           [n×m... double]                 - multidimensional data
-    %   shape:          [char]                          - type of region selection
-    %   mask:           [double]                        - two row vertex to line selection; edge size to rectangle selection; 
-    %                                                       n-row verxex to polygon selection 
-    %   fit:            [char]                          - type of statistics fit
-    %   range:          [1×2 double]                    - range to cut data
-    %   norm:           [char]                          - type of statistics normalization
-    %   interaction:    [char]                          - region selection behaviour
-    %   number:         [int]                           - count of selection regions
+%% Interactive intermittency processing.
+%% The function takes following arguments:
+%   data:           [n×m... double]                 - multidimensional data
+%   shape:          [char]                          - type of region selection
+%   mask:           [double]                        - two row vertex to line selection; edge size to rectangle selection; 
+%                                                       n-row verxex to polygon selection 
+%   fit:            [char]                          - type of statistics fit
+%   range:          [1×2 double]                    - range to cut data
+%   norm:           [char]                          - type of statistics normalization
+%   interaction:    [char]                          - region selection behaviour
+%   number:         [int]                           - count of selection regions
     
         arguments
             data double
@@ -109,9 +109,9 @@ function guiprocinten(data, named)
     
         function eventcrosshair(~, ~)
             try
-            threshold = roicrosshair.Position(1);
-            disp(["interactive: threshold=", threshold])
-            prociten();
+                threshold = roicrosshair.Position(1);
+                disp(["interactive: threshold=", threshold])
+                prociten();
             catch
                 disp('eventcrosshair error')
             end
@@ -120,7 +120,7 @@ function guiprocinten(data, named)
         figure('WindowStyle', 'docked');
         tiledlayout(floor((size(data, 4)*2+2)/3) + 1, 3);
         for i = 1:length(rois)
-            nexttile; imagesc(data(:,:,1,i)); colormap turbo; 
+            nexttile; imshow(data(:,:,1,i)); colormap turbo; axis on;
             if ~isempty(named.range)
                 clim(named.range); 
             end
