@@ -5,25 +5,33 @@ function varargout = dirgrad(u, w, angle, named)
 %   w:          [n×m×... double]    - second vector component
 %   angle:      [double]            - angle rotation [rad];
 %   component:  [char array]        - returned directed derivatives
+%   filter:     [char array]        - type of derivative approximation
 %
 %% The function returns following results:
 %   dudl: [l×n×... double]
 %   dwdl: [l×n×... double]
 %   dudn: [l×n×... double]
 %   dwdn: [l×n×... double]
-
+    
     arguments
         u double
         w double
         angle double
         named.component char = 'dwdl'
+        named.filter = 'sobel'
     end
 
     mat = [cos(angle)^2, cos(angle)*sin(angle), cos(angle)*sin(angle), sin(angle)^2; ...
         -cos(angle)*sin(angle), cos(angle)^2, -sin(angle)^2, cos(angle)*sin(angle); ...
         -cos(angle)*sin(angle), -sin(angle)^2, cos(angle)^2, cos(angle)*sin(angle); ...
         sin(angle)^2, -cos(angle)*sin(angle), -cos(angle)*sin(angle), cos(angle)^2];
-    Gx = fspecial('sobel'); Gz = Gx';
+    switch named.filter
+        case 'sobel'
+            Gx = fspecial('sobel'); Gz = Gx';
+        case '4ord'
+            Gx = repmat([-1, 8, 0, -8, 1]'/12, 1, 5);
+            Gz = Gx';
+    end
     dudx = imfilter(u, Gx); dudz = imfilter(u, Gz);
     dwdx = imfilter(w, Gx); dwdz = imfilter(w, Gz);
     vr = mat' * [dudx(:), dudz(:), dwdx(:), dwdz(:)]';
