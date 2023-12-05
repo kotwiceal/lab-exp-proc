@@ -30,7 +30,11 @@ function rois = guiselectregion(axroi, event, named)
             position = named.mask;
         case 'rect'
             roimethod = @drawrectangle;
-            position = [1, 1, named.mask];
+            if numel(named.mask) == 2
+                position = [1, 1, named.mask];
+            else
+                position = named.mask;
+            end
         case 'poly'
             roimethod = @drawpolygon;
             position = named.mask;

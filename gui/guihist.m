@@ -1,19 +1,19 @@
 function rois = guihist(axroi, data, named)
-%% Visualize data statistics by means manually region selection.
-%% The function takes following arguments:
-%   axroi:          [matlab.graphics.axis.Axes]     - axis object of canvas that selection data events are being occured
-%   data:           [n×m... double]                 - multidimensional data
-%   shape:          [char]                          - type of region selection
-%   mask:           [double]                        - two row vertex to line selection; edge size to rectangle selection; 
-%                                                       n-row verxex to polygon selection 
-%   fit:            [char]                          - type of statistics fit
-%   range:          [1×2 double]                    - range to cut data
-%   norm:           [char]                          - type of statistics normalization
-%   interaction:    [char]                          - region selection behaviour
-%   number:         [int]                           - count of selection regions
-%   legend:         [logical]                       - show legend
-%% The function returns following results:
-%   rois:     [object]   - ROI cell objects
+    %% Visualize data statistics by means manually region selection.
+    %% The function takes following arguments:
+    %   axroi:          [matlab.graphics.axis.Axes]     - axis object of canvas that selection data events are being occured
+    %   data:           [n×m... double]                 - multidimensional data
+    %   shape:          [char]                          - type of region selection
+    %   mask:           [double]                        - two row vertex to line selection; edge size to rectangle selection; 
+    %                                                       n-row verxex to polygon selection 
+    %   fit:            [char]                          - type of statistics fit
+    %   range:          [1×2 double]                    - range to cut data
+    %   norm:           [char]                          - type of statistics normalization
+    %   interaction:    [char]                          - region selection behaviour
+    %   number:         [int]                           - count of selection regions
+    %   legend:         [logical]                       - show legend
+    %% The function returns following results:
+    %   rois:     [object]   - ROI cell objects
     
         arguments
             axroi matlab.graphics.axis.Axes
@@ -87,5 +87,9 @@ function rois = guihist(axroi, data, named)
         nexttile; ax = gca;
         rois = guiselectregion(axroi, @event, shape = named.shape, ...
             mask = named.mask, interaction = named.interaction, number = named.number);
+    
+        if ~isempty(named.mask)
+            event();
+        end
     
     end
