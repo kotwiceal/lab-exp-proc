@@ -5,6 +5,7 @@ function varargout = dirgrad(u, w, angle, named)
 %   w:          [n×m×... double]    - second vector component
 %   angle:      [double]            - angle rotation [rad];
 %   component:  [char array]        - returned directed derivatives
+%   kernel:     [char array]        - difference schema
 %
 %% The function returns following results:
 %   dudl: [l×n×... double]
@@ -17,13 +18,16 @@ function varargout = dirgrad(u, w, angle, named)
         w double
         angle double
         named.component char = 'dwdl'
+        named.kernel = 'sobel'
     end
 
     mat = [cos(angle)^2, cos(angle)*sin(angle), cos(angle)*sin(angle), sin(angle)^2; ...
         -cos(angle)*sin(angle), cos(angle)^2, -sin(angle)^2, cos(angle)*sin(angle); ...
         -cos(angle)*sin(angle), -sin(angle)^2, cos(angle)^2, cos(angle)*sin(angle); ...
         sin(angle)^2, -cos(angle)*sin(angle), -cos(angle)*sin(angle), cos(angle)^2];
-    Gx = fspecial('sobel'); Gz = Gx';
+
+    Gx = difkernel(named.kernel); Gz = Gx';
+
     dudx = imfilter(u, Gx); dudz = imfilter(u, Gz);
     dwdx = imfilter(w, Gx); dwdz = imfilter(w, Gz);
     vr = mat' * [dudx(:), dudz(:), dwdx(:), dwdz(:)]';
