@@ -31,12 +31,30 @@ function [f, modes] = fithist(counts, edges, named)
             case 'gauss1'
                 f = fit(edges, counts, 'gauss1');
                 modes(:, 1) = f.a1*exp(-((edges-f.b1)/f.c1).^2); 
+            case 'gauss1s'
+
+                fa = @(a, b, c, d, x) a*exp(-((x-b)/c).^2).*(1+erf(d*(x-b)/c));            
+                % get parameters to initial appoximation
+                fe = fit(edges, counts, 'gauss1');
+    
+                % adjust solver configuration
+                ft = fittype(fa, 'independent', 'x', 'coefficients', ["a", "b", "c", "d"]);
+                opts = fitoptions('Method', 'NonlinearLeastSquares');
+                opts.Algorithm = 'Trust-Region';
+                opts.Display = 'Off';
+                opts.Lower = zeros(1, 4);
+                opts.StartPoint = [fe.a1, fe.b1, fe.c1, skewness(counts)];
+                opts.Upper = 5*opts.StartPoint;
+
+                f = fit(edges, counts, ft, opts);
+                modes(:, 1) = f.a*exp(-((edges-f.b)/f.c).^2).*(1+erf(f.d*(edges-f.b)/f.c));
+
             case 'gauss2'
                 % fit function: two normal distributions
                 f = fit(edges, counts, 'gauss2');
                 modes(:, 1) = f.a1*exp(-((edges-f.b1)/f.c1).^2); 
                 modes(:, 2) = f.a2*exp(-((edges-f.b2)/f.c2).^2);
-            case 'skew'
+            case 'gauss2s'
                 % fit function: normal + skew normal distributions
                 fa = @(a, b, c, d, e, f, g, x) a*exp(-((x-b)/c).^2).*(1+erf(d*(x-b)/c))+e*exp(-((x-f)/g).^2);            
                 % get parameters to initial appoximation

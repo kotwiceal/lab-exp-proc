@@ -7,6 +7,6 @@ function result = binarize(data, threshold)
 %   result: [l×n×... double]
     
         result = zeros(size(data));
-        result(data >= threshold) = 1;
+        result(abs(data) >= threshold) = 1;
         result(isnan(data)) = nan;
     end
