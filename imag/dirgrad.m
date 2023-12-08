@@ -1,11 +1,13 @@
 function varargout = dirgrad(u, w, angle, named)
 %% Process a directed gradient of multidimensional data
 %% The function takes following arguments:
-%   u:          [n×mx... double]    - first vector component
+%   u:          [n×m×... double]    - first vector component
 %   w:          [n×m×... double]    - second vector component
 %   angle:      [double]            - angle rotation [rad];
 %   component:  [char array]        - returned directed derivatives
-%   kernel:     [char array]        - difference schema
+%   filter:     [char array]        - difference schema
+%   smooth:     [char array]        - smooth filter
+%   kernel:     [double]            - kernel of smooth filter
 %
 %% The function returns following results:
 %   dudl: [l×n×... double]
@@ -18,7 +20,9 @@ function varargout = dirgrad(u, w, angle, named)
         w double
         angle double
         named.component char = 'dwdl'
-        named.kernel = 'sobel'
+        named.filter = 'sobel'
+        named.smooth char = 'gaussian'
+        named.kernel double = [3, 3]
     end
 
     mat = [cos(angle)^2, cos(angle)*sin(angle), cos(angle)*sin(angle), sin(angle)^2; ...
@@ -26,10 +30,22 @@ function varargout = dirgrad(u, w, angle, named)
         -cos(angle)*sin(angle), -sin(angle)^2, cos(angle)^2, cos(angle)*sin(angle); ...
         sin(angle)^2, -cos(angle)*sin(angle), -cos(angle)*sin(angle), cos(angle)^2];
 
-    Gx = difkernel(named.kernel); Gz = Gx';
+    Gx = difkernel(named.filter); Gz = Gx';
 
     dudx = imfilter(u, Gx); dudz = imfilter(u, Gz);
     dwdx = imfilter(w, Gx); dwdz = imfilter(w, Gz);
+    
+    switch named.smooth
+        case 'none'
+        otherwise
+            try
+                kernel = fspecial(named.smooth, named.kernel);
+                dudx = imfilter(dudx, kernel); dudz = imfilter(dudz, kernel);
+                dwdx = imfilter(dwdx, kernel); dwdz = imfilter(dwdz, kernel);
+            catch
+            end
+    end
+    
     vr = mat' * [dudx(:), dudz(:), dwdx(:), dwdz(:)]';
     sz = size(u);
     switch named.component
