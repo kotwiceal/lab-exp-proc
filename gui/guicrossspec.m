@@ -1,31 +1,51 @@
-function rois = guiautospec(axroi, data, named)
-%% Visualalize auto-spectra of selected by rectangle ROI data.
+function rois = guicrossspec(axroi, data, named)
+%% Visualalize cross-spectra function of selected by rectangle ROI data.
 %% The function takes following arguments:
 %   axroi:          [matlab.graphics.axis.Axes]     - axis object of canvas that selection data events are being occured
 %   data:           [n×m double]                    - matrix data
 %   mask:           [1×2 double]                    - size of rectangle selection
 %   clim:           [1×2 double]                    - color axis limit
-%   interaction:    [char]                          - region selection behaviour
 %   cscale:         [char array]                    - colormap scale
+%   type:           [char array]                    - type of displayed value
+%
 %% The function returns following results:
 %   rois:     [object]   - ROI cell objects
 
     arguments
         axroi matlab.graphics.axis.Axes
         data double
-        named.mask double = []
-        named.interaction char = 'all'
+        named.mask double = [10, 10]
+        named.interaction char = 'translate'
         named.clim double = []
         named.cscale char = 'log'
+        named.norm logical = true
+        named.type char = 'abs'
     end
-
-    warning off
 
     select = @(roiobj) imcrop(data, roiobj.Position);
 
-    function event(~, evt)
-        frame = select(evt.Source);
-        frame = fftshift(abs(fft2(frame)));
+    function event(~, ~)
+
+        value = [];
+        for i = 1:length(rois)
+            value(:, :, i) = select(rois{i});
+            value(:, :, i) = fftshift(fft2(value(:, :, i)));
+        end
+
+        if named.norm
+            frame = value(:,:,1).*conj(value(:,:,2))./sqrt(abs(value(:,:,1)).*abs(value(:,:,2)));
+        else
+            frame = value(:,:,1).*value(:,:,2);
+        end
+
+        switch named.type
+            case 'abs'
+                frame = abs(frame);
+            case 'real'
+                frame = real(frame);
+            case 'imag'
+                frame = imag(frame);
+        end
 
         cla(ax); imagesc(ax, frame); colorbar(ax); colormap(ax, 'turbo');
         set(ax, 'ColorScale', named.cscale); 
@@ -36,6 +56,6 @@ function rois = guiautospec(axroi, data, named)
 
     nexttile; ax = gca;
     rois = guiselectregion(axroi, @event, shape = 'rect', ...
-        mask = named.mask, interaction = named.interaction, number = 1);
+        mask = named.mask, interaction = named.interaction, number = 2);
 
 end
