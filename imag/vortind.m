@@ -17,7 +17,7 @@ function result = vortind(u, w, named)
         w double
         named.type = 'q'
         named.difkernel = 'sobel'
-        named.find logical = true
+        named.threshold logical = true
         named.smooth char = 'gaussian'
         named.kernel double = [3, 3]
     end
@@ -79,6 +79,8 @@ function result = vortind(u, w, named)
             
             result = tr2d(gradvel).^2-4*det2d(gradvel);
             result = reshape(result, size(u));
+        otherwise
+            result = [];
     end
 
     if named.threshold

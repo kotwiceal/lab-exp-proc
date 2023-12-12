@@ -14,7 +14,7 @@ function guiprocinterm(data, named)
 %   x:              [n×m double]                    - spatial coordinate
 %   z:              [n×m double]                    - spatial coordinate
 %   clim:           [1×2 double]                    - colorbar limit
-
+    
     arguments
         data double
         named.shape char = 'poly'
@@ -177,8 +177,11 @@ function guiprocinterm(data, named)
 
     function event_line(~, ~)
         %% callback at changing user line-probe
-        for j = 1:length(roilines)
-            line_position{j} = roilines{j}.Position;
+        try
+            for j = 1:length(roilines)
+                line_position{j} = roilines{j}.Position;
+            end
+        catch
         end
         
         try

@@ -12,6 +12,7 @@ function rois = guihist(axroi, data, named)
     %   interaction:    [char]                          - region selection behaviour
     %   number:         [int]                           - count of selection regions
     %   legend:         [logical]                       - show legend
+    %   init:           [char array]                    - initialize histogram approximation
     %% The function returns following results:
     %   rois:     [object]   - ROI cell objects
     
@@ -26,6 +27,7 @@ function rois = guihist(axroi, data, named)
             named.interaction char = 'all'
             named.number int8 = 1
             named.legend logical = false
+            named.init char = 'gauss1'
         end
     
         select = @(roiobj) guigetdata(roiobj, data, shape = 'flatten');
@@ -38,11 +40,23 @@ function rois = guihist(axroi, data, named)
                     for i = 1:length(rois)
                         [counts, edges] = histcounts(select(rois{i}), 'Normalization', named.norm);
                         edges = edges(2:end);
-                        plot(ax, edges, counts, 'Color', rois{i}.UserData.color, ...
-                            'DisplayName', strcat("raw ", num2str(i)))
+                        
+                        if ~isempty(named.range)
+                            [edges, counts] = histcutrange(edges, counts, named.range);
+                        end
+
+                        switch named.norm
+                            case 'cdf'
+                                plot(ax, edges, 1-counts, 'Color', rois{i}.UserData.color, ...
+                                    'DisplayName', strcat("raw ", num2str(i)))
+                            otherwise
+                                plot(ax, edges, counts, 'Color', rois{i}.UserData.color, ...
+                                    'DisplayName', strcat("raw ", num2str(i)))
+                        end
+
                     end
                     if named.legend
-                        legend(ax, 'Location', 'NorthOutSide')
+                        legend(ax, 'Location', 'Best')
                     end
                 otherwise
                     cla(ax); hold(ax, 'on'); box(ax, 'on'); grid(ax, 'on');
@@ -55,12 +69,12 @@ function rois = guihist(axroi, data, named)
                             [edges, counts] = histcutrange(edges, counts, named.range);
                         end
     
-                        [f, modes] = fithist(counts, edges, type = named.fit);
+                        [f, modes] = fithist(counts, edges, type = named.fit, init = named.init);
     
                         disp(f)
-    
+   
                         plot(ax, edges, counts, 'Color', rois{i}.UserData.color, ...
-                            'DisplayName', strcat("raw ", num2str(i)))
+                                'DisplayName', strcat("raw ", num2str(i)))
                             for j = 1:size(modes, 2)
                                 if named.number == 1
                                     plot(ax, edges, modes(:, j), ...
@@ -79,7 +93,7 @@ function rois = guihist(axroi, data, named)
                                 end
                     end
                     if named.legend
-                        legend(ax, 'Location', 'NorthOutSide')
+                        legend(ax, 'Location', 'Best')
                     end
             end
         end
