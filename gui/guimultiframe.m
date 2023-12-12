@@ -12,6 +12,7 @@ function guimultiframe(varargin, named)
     arguments
         named.clim double = [0, 1]
         named.label char = ''
+        named.cdiv logical = false
     end
 
     if iscell(varargin)
@@ -21,7 +22,12 @@ function guimultiframe(varargin, named)
     end
 
     function show(i)
-        cla(ax); imagesc(ax, data(:,:,i)); colormap(ax, 'turbo'); clim(ax, named.clim);
+        cla(ax); box(ax, 'on'); imagesc(ax, data(:,:,i)); colormap(ax, 'turbo'); 
+        if named.cdiv
+            clim(ax, [-named.clim(2), named.clim(2)]);
+        else
+            clim(ax, named.clim);
+        end
         axis(ax, 'equal'); title(ax, named.label, 'FontWeight', 'Normal')
     end
 
@@ -36,7 +42,11 @@ function guimultiframe(varargin, named)
     function updateClim(~, event)
         named.clim(2) = event.Value; 
         try
-            clim(ax, named.clim);
+            if named.cdiv
+                clim(ax, [-named.clim(2), named.clim(2)]);
+            else
+                clim(ax, named.clim);
+            end
         catch
             warning('guimultiframe: updateClim error');
         end
