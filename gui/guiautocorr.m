@@ -7,6 +7,7 @@ function rois = guiautocorr(axroi, data, named)
 %   clim:           [1×2 double]                    - color axis limit
 %   interaction:    [char]                          - region selection behaviour
 %   cscale:         [char array]                    - colormap scale
+%   display:        [char array]                    - display type
 %% The function returns following results:
 %   rois:     [object]   - ROI cell objects
 
@@ -16,7 +17,8 @@ function rois = guiautocorr(axroi, data, named)
         named.mask double = [10, 10]
         named.interaction char = 'translate'
         named.clim double = []
-        named.cscale char = 'log'
+        named.cscale char = 'linear'
+        named.display char = 'imagesc'
     end
 
     select = @(roiobj) imcrop(data, roiobj.Position);
@@ -25,7 +27,14 @@ function rois = guiautocorr(axroi, data, named)
 
         value = select(rois{1});
 
-        cla(ax); imagesc(ax, xcorr2(value)); colorbar(ax); colormap(ax, 'turbo');
+        cla(ax); 
+        switch named.display
+            case 'imagesc'
+                imagesc(ax, xcorr2(value)); 
+            case 'surf'
+                surf(ax, xcorr2(value));
+        end
+        colorbar(ax); colormap(ax, 'turbo');
         set(ax, 'ColorScale', named.cscale); 
         if ~isempty(named.clim)
             clim(ax, named.clim);
