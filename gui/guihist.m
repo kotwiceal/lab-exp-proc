@@ -13,6 +13,7 @@ function rois = guihist(axroi, data, named)
     %   number:         [int]                           - count of selection regions
     %   legend:         [logical]                       - show legend
     %   init:           [char array]                    - initialize histogram approximation
+    %   regul:          [1×3 double]                    - regularization settings
     %% The function returns following results:
     %   rois:     [object]   - ROI cell objects
     
@@ -28,6 +29,7 @@ function rois = guihist(axroi, data, named)
             named.number int8 = 1
             named.legend logical = false
             named.init char = 'gauss1'
+            named.regul double = []
         end
     
         select = @(roiobj) guigetdata(roiobj, data, shape = 'flatten');
@@ -69,7 +71,7 @@ function rois = guihist(axroi, data, named)
                             [edges, counts] = histcutrange(edges, counts, named.range);
                         end
     
-                        [f, modes] = fithist(counts, edges, type = named.fit, init = named.init);
+                        [f, modes] = fithist(counts, edges, type = named.fit, init = named.init, regul = named.regul);
     
                         disp(f)
    

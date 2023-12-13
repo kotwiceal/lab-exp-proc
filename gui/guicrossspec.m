@@ -7,7 +7,7 @@ function rois = guicrossspec(axroi, data, named)
 %   clim:           [1×2 double]                    - color axis limit
 %   cscale:         [char array]                    - colormap scale
 %   type:           [char array]                    - type of displayed value
-%
+%   display:        [char array]                    - display type
 %% The function returns following results:
 %   rois:     [object]   - ROI cell objects
 
@@ -20,6 +20,7 @@ function rois = guicrossspec(axroi, data, named)
         named.cscale char = 'log'
         named.norm logical = true
         named.type char = 'abs'
+        named.display char = 'imagesc'
     end
 
     select = @(roiobj) imcrop(data, roiobj.Position);
@@ -47,7 +48,14 @@ function rois = guicrossspec(axroi, data, named)
                 frame = imag(frame);
         end
 
-        cla(ax); imagesc(ax, frame); colorbar(ax); colormap(ax, 'turbo');
+        cla(ax); 
+        switch named.display
+            case 'imagesc'
+                imagesc(ax, frame); 
+            case 'surf'
+                surf(ax, frame);
+        end
+        colorbar(ax); colormap(ax, 'turbo');
         set(ax, 'ColorScale', named.cscale); 
         if ~isempty(named.clim)
             clim(ax, named.clim);

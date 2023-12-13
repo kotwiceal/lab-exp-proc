@@ -6,6 +6,7 @@ function [f, modes] = fithist(counts, edges, named)
 %   type:       [char array]    - approximation type
 %   range:      [1×2 double]    - specified range to cut data
 %   init:       [char array]    - initialize histogram approximation
+%   regul:      [1×3 double]    - regularization settings
 %% The function returns following results:
 %   f:          [1×1 cfit]      - fit object
 %   modes:      [n×k double]  - approximate distribution modes assembled to column vector mapped by specific edges grid
@@ -67,7 +68,7 @@ function [f, modes] = fithist(counts, edges, named)
             opts.Algorithm = 'Trust-Region';
             opts.Display = 'Off';
             opts.Lower = zeros(1, 7);
-            opts.Upper = 10*opts.StartPoint;
+            % opts.Upper = 10*opts.StartPoint;
 
             % get parameters to initial appoximation
             try
@@ -86,13 +87,15 @@ function [f, modes] = fithist(counts, edges, named)
                         opts.StartPoint = [fe.a1, fe.b1, fe.c1, skewness(counts), fe.a2, named.regul(1), named.regul(2)];
                     end
             end
+
+            opts.Upper = 10*opts.StartPoint;
             
             f = fit(edges, counts, ft, opts);
             modes(:, 1) = f.e*exp(-((edges-f.f)/f.g).^2);
             modes(:, 2) = f.a*exp(-((edges-f.b)/f.c).^2).*(1+erf(f.d*(edges-f.b)/f.c));
         case 'gauss2s2'
             % fit function: normal + skew normal distributions
-            fa = @(a, b, c, d, e, f, g, x) a*exp(-((x-b)/c).^2).*(1+erf(d*(x-b)/c))+e*exp(-((x-f)/g).^2).*(1+erf(h*(x-f)/g));            
+            fa = @(a, b, c, d, e, f, g, h, x) a*exp(-((x-b)/c).^2).*(1+erf(d*(x-b)/c))+e*exp(-((x-f)/g).^2).*(1+erf(h*(x-f)/g));            
 
             % adjust solver configuration
             ft = fittype(fa, 'independent', 'x', 'coefficients', ["a", "b", "c", "d", "e", "f", "g", "h"]);
@@ -100,7 +103,7 @@ function [f, modes] = fithist(counts, edges, named)
             opts.Algorithm = 'Trust-Region';
             opts.Display = 'Off';
             opts.Lower = zeros(1, 8);
-            opts.Upper = 10*opts.StartPoint;
+            % opts.Upper = 10*opts.StartPoint;
 
             % get parameters to initial appoximation
             try
@@ -120,6 +123,8 @@ function [f, modes] = fithist(counts, edges, named)
                     end
             end
             
+            opts.Upper = [10*opts.StartPoint(1:5), named.regul(1), named.regul(2), named.regul(3)];
+
             f = fit(edges, counts, ft, opts);
             modes(:, 1) = f.e*exp(-((edges-f.f)/f.g).^2).*(1+erf(f.h*(edges-f.f)/f.g));
             modes(:, 2) = f.a*exp(-((edges-f.b)/f.c).^2).*(1+erf(f.d*(edges-f.b)/f.c));

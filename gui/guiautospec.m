@@ -7,6 +7,7 @@ function rois = guiautospec(axroi, data, named)
 %   clim:           [1×2 double]                    - color axis limit
 %   interaction:    [char]                          - region selection behaviour
 %   cscale:         [char array]                    - colormap scale
+%   display:        [char array]                    - display type
 %% The function returns following results:
 %   rois:     [object]   - ROI cell objects
 
@@ -17,6 +18,7 @@ function rois = guiautospec(axroi, data, named)
         named.interaction char = 'all'
         named.clim double = []
         named.cscale char = 'log'
+        named.display char = 'imagesc'
     end
 
     warning off
@@ -27,7 +29,14 @@ function rois = guiautospec(axroi, data, named)
         frame = select(evt.Source);
         frame = fftshift(abs(fft2(frame)));
 
-        cla(ax); imagesc(ax, frame); colorbar(ax); colormap(ax, 'turbo');
+        cla(ax);
+        switch named.display
+            case 'imagesc'
+                imagesc(ax, frame); 
+            case 'surf'
+                surf(ax, frame);
+        end
+        colorbar(ax); colormap(ax, 'turbo');
         set(ax, 'ColorScale', named.cscale); 
         if ~isempty(named.clim)
             clim(ax, named.clim);
