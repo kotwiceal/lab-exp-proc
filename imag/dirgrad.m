@@ -30,24 +30,38 @@ function varargout = dirgrad(u, w, angle, named)
         -cos(angle)*sin(angle), -sin(angle)^2, cos(angle)^2, cos(angle)*sin(angle); ...
         sin(angle)^2, -cos(angle)*sin(angle), -cos(angle)*sin(angle), cos(angle)^2];
 
+    sz = size(u); u = u(:, :, :); w = w(:, :, :);
+
+    switch named.smooth
+        case 'average'
+            kernel = fspecial(named.smooth, named.kernel);
+            u = imfilter(u, kernel); w = imfilter(w, kernel);
+
+        case 'gaussian'
+            kernel = fspecial(named.smooth, named.kernel);
+            u = imfilter(u, kernel); w = imfilter(w, kernel);
+
+        case 'median'
+            kernel = named.kernel;
+            for i = 1:prod(sz(3:end))
+                u(:, :, i) = medfilt2(u(:, :, i), kernel);
+                w(:, :, i) = medfilt2(w(:, :, i), kernel);
+            end
+
+        case 'wiener'
+            kernel = named.kernel;
+            for i = 1:prod(sz(3:end))
+                u(:, :, i) = wiener2(u(:, :, i), kernel);
+                w(:, :, i) = wiener2(w(:, :, i), kernel);
+            end
+    end
+
     Gx = difkernel(named.filter); Gz = Gx';
 
     dudx = imfilter(u, Gx); dudz = imfilter(u, Gz);
     dwdx = imfilter(w, Gx); dwdz = imfilter(w, Gz);
-    
-    switch named.smooth
-        case 'none'
-        otherwise
-            try
-                kernel = fspecial(named.smooth, named.kernel);
-                dudx = imfilter(dudx, kernel); dudz = imfilter(dudz, kernel);
-                dwdx = imfilter(dwdx, kernel); dwdz = imfilter(dwdz, kernel);
-            catch
-            end
-    end
-    
+        
     vr = mat' * [dudx(:), dudz(:), dwdx(:), dwdz(:)]';
-    sz = size(u);
     switch named.component
         case 'dudl'
             varargout{1} = reshape(vr(1, :), sz);
