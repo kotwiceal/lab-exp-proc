@@ -4,7 +4,7 @@ function result = nlpfilter(data, kernel_size, method, named)
 %% The function takes following arguments:
 %   data:               [n×m... double]     - multidimensional data
 %   kernel_size:        [k×1 double]        - kernel size, when k<=ndims(data)
-%   kernel_stride:      [k×1 double]        - kernel stride
+%   strides:      [k×1 double]        - kernel stride
 %   type:               [char array]        - `slice` filter window takes in 2d data; `deep` - 3d;
 %
 %% The function returns following results:
@@ -14,7 +14,7 @@ function result = nlpfilter(data, kernel_size, method, named)
         data double
         kernel_size double
         method function_handle
-        named.kernel_stride double = [1, 1]
+        named.strides double = [1, 1]
         named.type = 'slice'
     end
 
@@ -28,8 +28,8 @@ function result = nlpfilter(data, kernel_size, method, named)
         data = padarray(data, floor(kernel_size/2));
     
         [X1, X2] = ndgrid(1:sz(1), 1:sz(2));
-        X1 = X1(1:named.kernel_stride(1):end, 1:named.kernel_stride(2):end);
-        X2 = X2(1:named.kernel_stride(1):end, 1:named.kernel_stride(2):end);
+        X1 = X1(1:named.strides(1):end, 1:named.strides(2):end);
+        X2 = X2(1:named.strides(1):end, 1:named.strides(2):end);
         sz1 = size(X1);
         X1 = X1(:); X2 = X2(:);
         result = zeros(1, numel(X1));
@@ -53,9 +53,9 @@ function result = nlpfilter(data, kernel_size, method, named)
                 data = padarray(data, floor(kernel_size/2));
             
                 [X1, X2, X3] = ndgrid(1:sz(1), 1:sz(2), 1:sz(3));
-                X1 = X1(1:named.kernel_stride(1):end, 1:named.kernel_stride(2):end, :);
-                X2 = X2(1:named.kernel_stride(1):end, 1:named.kernel_stride(2):end, :);
-                X3 = X3(1:named.kernel_stride(1):end, 1:named.kernel_stride(2):end, :);
+                X1 = X1(1:named.strides(1):end, 1:named.strides(2):end, :);
+                X2 = X2(1:named.strides(1):end, 1:named.strides(2):end, :);
+                X3 = X3(1:named.strides(1):end, 1:named.strides(2):end, :);
                 sz1 = size(X1);
                 X1 = X1(:); X2 = X2(:); X3(:);
                 result = zeros(1, numel(X1));
@@ -73,8 +73,8 @@ function result = nlpfilter(data, kernel_size, method, named)
                 data = padarray(data, floor(kernel_size/2));
             
                 [X1, X2] = ndgrid(1:sz(1), 1:sz(2));
-                X1 = X1(1:named.kernel_stride(1):end, 1:named.kernel_stride(2):end);
-                X2 = X2(1:named.kernel_stride(1):end, 1:named.kernel_stride(2):end);
+                X1 = X1(1:named.strides(1):end, 1:named.strides(2):end);
+                X2 = X2(1:named.strides(1):end, 1:named.strides(2):end);
                 sz1 = size(X1);
                 X1 = X1(:); X2 = X2(:);
                 result = zeros(1, numel(X1));
