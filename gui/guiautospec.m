@@ -11,13 +11,13 @@ function rois = guiautospec(axroi, data, named)
 %% The function returns following results:
 %   rois:           [object]                        - ROI cell objects
 %% Examples
-% % show auto-correlation of signal with default parameters
+%% show auto-correlation of signal with default parameters
 % data = rand(270, 320);
 % clf; tiledlayout(1, 2);
 % nexttile; imagesc(data);
 % guiautospec(gca, data);
 %
-% % show auto-correlation of signal with custom parameters
+%% show auto-correlation of signal with custom parameters
 % data = rand(270, 320);
 % clf; tiledlayout(1, 2);
 % nexttile; imagesc(data);
