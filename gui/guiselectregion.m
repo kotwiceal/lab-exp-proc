@@ -9,7 +9,7 @@ function rois = guiselectregion(axroi, event, named)
 %   interaction:    [char]                          - region selection behaviour
 %   number:         [int]                           - count of selection regions
 %% The function returns following results:
-%   rois:     [object]   - ROI cell objects
+%   rois:           [object]                        - ROI cell objects
 
     arguments
         axroi matlab.graphics.axis.Axes

@@ -3,23 +3,41 @@ function rois = guicrossspec(axroi, data, named)
 %% The function takes following arguments:
 %   axroi:          [matlab.graphics.axis.Axes]     - axis object of canvas that selection data events are being occured
 %   data:           [n×m double]                    - matrix data
+%   type:           [char array]                    - type of displayed value: 'abs', 'real', 'imag'
+%   norm:           [char array]                    - normalize result: true, false
 %   mask:           [1×2 double]                    - size of rectangle selection
+%   interaction:    [char array]                    - region selection behaviour: 'translate', 'all' (see ROI object) 
+%   aspect:         [char array]                    - axis aspect ratio: 'equal', 'auto' 
 %   clim:           [1×2 double]                    - color axis limit
 %   cscale:         [char array]                    - colormap scale
-%   type:           [char array]                    - type of displayed value
-%   display:        [char array]                    - display type
+%   display:        [char array]                    - display type: 'imagesc', 'surf' 
 %% The function returns following results:
-%   rois:     [object]   - ROI cell objects
+%   rois:           [object]                        - ROI cell objects
+%% Examples
+% % show auto-correlation of signal with default parameters
+% data = rand(270, 320);
+% clf; tiledlayout(1, 2);
+% nexttile; imagesc(data);
+% guicrossspec(gca, data);
+%
+% % show auto-correlation of signal with custom parameters
+% data = rand(270, 320);
+% clf; tiledlayout(1, 2);
+% nexttile; imagesc(data);
+% guicrossspec(gca, data, type = 'real', norm = false, mask = [100, 150, 25, 25], display = 'surf', clim = [0, 1], aspect = 'auto');
+
 
     arguments
         axroi matlab.graphics.axis.Axes
         data double
-        named.mask double = [10, 10]
-        named.interaction char = 'translate'
-        named.clim double = []
-        named.cscale char = 'log'
-        named.norm logical = true
         named.type char = 'abs'
+        named.norm logical = true
+        %% roi and axis parameters
+        named.mask double = []
+        named.interaction char = 'translate'
+        named.aspect char = 'equal'
+        named.clim double = []
+        named.cscale char = 'linear'
         named.display char = 'imagesc'
     end
 
@@ -28,6 +46,7 @@ function rois = guicrossspec(axroi, data, named)
     function event(~, ~)
 
         value = [];
+        % extract data by gui & process
         for i = 1:length(rois)
             value(:, :, i) = select(rois{i});
             value(:, :, i) = fftshift(fft2(value(:, :, i)));
@@ -60,10 +79,13 @@ function rois = guicrossspec(axroi, data, named)
         if ~isempty(named.clim)
             clim(ax, named.clim);
         end
+        axis(ax, named.aspect)
     end
 
     nexttile; ax = gca;
     rois = guiselectregion(axroi, @event, shape = 'rect', ...
         mask = named.mask, interaction = named.interaction, number = 2);
+
+    event();
 
 end
