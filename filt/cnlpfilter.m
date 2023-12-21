@@ -7,7 +7,7 @@ function result = cnlpfilter(data, kernel_size, kernel_stride, method)
 %   kernel_stride:      [k×1 double]        - kernel stride
 %
 %% The function returns following results:
-%   result:     [n1×m1... double]   - filtered data
+%   result:             [n1×m1... double]   - filtered data
 
     sz = size(data);
 

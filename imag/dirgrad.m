@@ -6,14 +6,16 @@ function varargout = dirgrad(u, w, angle, named)
 %   angle:      [double]            - angle rotation [rad];
 %   component:  [char array]        - returned directed derivatives
 %   filter:     [char array]        - difference schema
-%   smooth:     [char array]        - smooth filter
-%   kernel:     [double]            - kernel of smooth filter
+%   smooth:     [char array]        - smooth prefiltering
+%   kernel:     [double k×l]        - kernel of smooth filter
 %
 %% The function returns following results:
 %   dudl: [l×n×... double]
 %   dwdl: [l×n×... double]
 %   dudn: [l×n×... double]
 %   dwdn: [l×n×... double]
+%% Example
+% data.dwdl = dirgrad(data.un, data.wn, deg2rad(-22), component = 'dwdl', filter = '4ord');
 
     arguments
         u double

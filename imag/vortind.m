@@ -7,7 +7,7 @@ function result = vortind(u, w, named)
 %   threshold:  [logical]           - apply threshold 
 %   filter:     [char array]        - difference schema
 %   smooth:     [char array]        - smooth filter
-%   kernel:     [double]            - kernel of smooth filter
+%   kernel:     [double k×l]        - kernel of smooth filter
 %
 %% The function returns following results:
 %   result: [n×mx... double]        - vortex identification criteria
