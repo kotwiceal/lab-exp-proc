@@ -10,6 +10,13 @@ function data = import_vc7(varargin)
 %     z: [n×m double]
 %     u: [n×m×k×l double]
 %     w: [n×m×k×l double]
+%% Examples:
+%% load vector fields from specified folder
+% filenames = get_pather('\LVExport\u25mps\y_00');
+% data = import_vc7(filenames);
+%% load vector fields from specified folder with subfolders
+% filenames = get_pather('\LVExport\u25mps\', sub = true);
+% data = import_vc7(filenames);
 
     data = []; pathes = []; option = [];
     switch size(varargin, 2)
