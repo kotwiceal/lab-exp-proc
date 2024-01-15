@@ -1,5 +1,5 @@
 function result = cnlpfilter(data, kernel_size, kernel_stride, method)
-%% Apply custom method to sliding window data specified size and stride. 
+%% Apply custom method to data selected by sliding window with specified size and stride.
 %   User defined method must take nd array and return scalar.
 %% The function takes following arguments:
 %   data:               [n×m... double]     - multidimensional data

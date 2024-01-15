@@ -10,7 +10,7 @@ function result = vortind(u, w, named)
 %   kernel:     [double k×l]        - kernel of smooth filter
 %
 %% The function returns following results:
-%   result: [n×mx... double]        - vortex identification criteria
+%   result:     [n×mx... double]    - vortex identification criteria
 
     arguments
         u double
@@ -27,6 +27,7 @@ function result = vortind(u, w, named)
     dudx = imfilter(u, Gx); dudz = imfilter(u, Gz);
     dwdx = imfilter(w, Gx); dwdz = imfilter(w, Gz);
 
+    % prefiltering
     switch named.smooth
         case 'none'
         otherwise

@@ -82,6 +82,8 @@ function varargout = fithist(named)
         named.regul double = []
     end
 
+    warning off
+
     x = []; y = []; modes = []; f = [];
 
     % prepare fitting data
@@ -90,7 +92,7 @@ function varargout = fithist(named)
             x = named.x; y = named.y;
         end
     else
-        [y, x] = histcounts(named.data, 'Normalization', named.norm);
+        [y, x] = histcounts(named.data,'Normalization', named.norm);
         x = x(2:end);
     end
 
@@ -106,8 +108,8 @@ function varargout = fithist(named)
 
     % initialize optimization problem
     options = optimoptions('fmincon', 'Algorithm', 'interior-point', ...
-        'MaxFunctionEvaluations', 5000, 'MaxIterations', 1500, ...
-        'DiffMaxChange', 0.001);
+        'MaxFunctionEvaluations', 1e4, 'MaxIterations', 3e3, ...
+        'DiffMaxChange', 1e-4);
     problem = struct(options = options, solver = 'fmincon');
 
     if ~isempty(named.Aineq); problem.Aineq = named.Aineq; end
@@ -394,6 +396,7 @@ function varargout = fithist(named)
                     if named.show_param
                         disp(strcat("solution: ", num2str(coef)));
                         disp(strcat("fval: ", num2str(fval)))
+                        % advance
                         a = coef;
                         modess = [1/a(2)*((a(4)-1)/(a(4)+a(5)-2)+a(3)), ...
                             1/a(7)*((a(9)-1)/(a(9)+a(10)-2)+a(8))];
@@ -407,8 +410,10 @@ function varargout = fithist(named)
                         disp(strcat("means: ", num2str(means)))
                         disp(strcat("vars: ", num2str(vars)))
                         disp(strcat("amps: ", num2str(amps)))
-                        [~, temp] = problem.nonlcon(coef);
-                        disp(strcat("nonlcon(coef): ", num2str(temp)))
+                        try
+                            disp(strcat("nonlcon(coef): ", num2str(problem.nonlcon(coef))))
+                        catch
+                        end
                     end
 
                     f = @(x) fa(coef, x);
@@ -497,6 +502,84 @@ function varargout = fithist(named)
                     modes(:, 1) = f1(coef, edges);
                     modes(:, 2) = f2(coef, edges);
             end
+        case 'gumbel1'
+            switch named.solver
+                case 'fit'
+                    f = fitdist(named.data, 'ev');
+                    modes(:, 1) = f.pdf(edges);
+                case 'opt'
+                    % fa = @(a, x) a(1)*evpdf(x*a(2)-a(3), a(4), a(5)); % approximation function
+                    fa = @(a, x) a(1)/a(3)*exp(-(x-a(2))/a(3)-exp(-(x-a(2))/a(3)));
+                    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
+                    fi = fitdist(named.data, 'ev'); % initial appriximation
+        
+                    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
+                    problem.objective = fobj;
+        
+                    % coefi = [1, 1, mode(named.data), fi.mu, fi.sigma];
+                    coefi = [1, fi.mu, fi.sigma];
+                    if isempty(named.x0); problem.x0 = coefi; end
+                    if isempty(named.lb); problem.lb = 0.1*coefi; end
+                    if isempty(named.ub); problem.ub = 10*coefi; end
+        
+                    [coef, fval] = fmincon(problem);
+                    if named.show_param
+                        disp(strcat("solution: ", num2str(coef)));
+                        disp(strcat("fval: ", num2str(fval)))
+                    end
+                    f = @(x) fa(coef, x);
+                    modes(:, 1) = fa(coef, edges);
+            end
+        case 'gumbel2'
+            switch named.solver
+                case 'fit'
+                    f = [];
+                case 'opt'
+                    f1 = @(a, x) a(1)/a(3)*exp(-(x-a(2))/a(3)-exp(-(x-a(2))/a(3))); f1 = @(a, x) f1(a(1:3), x);
+                    f2 = @(a, x) a(1)/a(3)*exp(-(x-a(2))/a(3)-exp(-(x-a(2))/a(3))); f2 = @(a, x) f2(a(4:6), x);
+                    % f1 = @(a, x) a(1)*evpdf(x*a(2)-a(3), a(4), a(5)); f1 = @(a, x) f1(a(1:5), x);
+                    % f2 = @(a, x) a(1)*evpdf(x*a(2)-a(3), a(4), a(5)); f2 = @(a, x) f2(a(6:end), x);
+                    fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
+                    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
+                    fi = fitdist(named.data, 'ev'); % initial appriximation
+        
+                    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
+                    problem.objective = fobj;
+
+                    % coefi = [1, 1, 0, fi.mu, fi.sigma, 1, 1, 0, fi.mu, fi.sigma];
+                    coefi = [1, fi.mu, fi.sigma, 1, fi.mu, fi.sigma];
+                    if isempty(named.x0); problem.x0 = coefi; end
+                    if isempty(named.lb); problem.lb = 0.1*coefi; end
+                    if isempty(named.ub); problem.ub = 10*coefi; end
+        
+                    [coef, fval] = fmincon(problem);
+                    if named.show_param
+                        disp(strcat("solution: ", num2str(coef)));
+                        disp(strcat("fval: ", num2str(fval)));
+                        % advance
+                        ec = 0.57721;
+                        modess = [coef(2), coef(5)];
+                        means = [coef(2)+coef(3)*ec, coef(5)+coef(6)*ec];
+                        vars = [pi^2/6*coef(3)^2, pi^2/6*coef(6)^2];
+                        amps = [coef(1)/coef(3)*exp(-(modess(1)-coef(2))/coef(3)-exp(-(modess(1)-coef(2))/coef(3))), ...
+                            coef(4)/coef(6)*exp(-(modess(2)-coef(5))/coef(6)-exp(-(modess(2)-coef(5))/coef(6)))];
+                        disp(strcat("modes: ", num2str(modess)))
+                        disp(strcat("means: ", num2str(means)))
+                        disp(strcat("vars: ", num2str(vars)))
+                        disp(strcat("amps: ", num2str(amps)))
+                        try
+                            disp(strcat("nonlcon(coef): ", num2str(problem.nonlcon(coef))))
+                        catch
+                        end
+                    end
+                    f = @(x) fa(coef, x);
+                    modes(:, 1) = f1(coef, edges);
+                    modes(:, 2) = f2(coef, edges);
+            end
+
+        otherwise
+            f = []; fval = [];
+            modes = zeros(size(edges));
     end
 
     % select outputs
@@ -508,7 +591,9 @@ function varargout = fithist(named)
         varargout{5} = edges;
         switch named.solver
             case 'opt'
-                varargout{6} = fval;        
+                varargout{6} = fval;  
+            otherwise
+                varargout{6} = [];
         end
     else
         varargout{1} = f;

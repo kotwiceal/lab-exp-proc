@@ -1,10 +1,10 @@
 function result = nlpfilter(data, kernel_size, method, named)
-%% Apply custom method to sliding window data specified size and stride. 
+%% Apply custom method to data selected by sliding window with specified size and stride.
 %   User defined method must take nd array and return scalar.
 %% The function takes following arguments:
 %   data:               [n×m... double]     - multidimensional data
 %   kernel_size:        [k×1 double]        - kernel size, when k<=ndims(data)
-%   strides:      [k×1 double]        - kernel stride
+%   strides:            [k×1 double]        - kernel stride
 %   type:               [char array]        - `slice` filter window takes in 2d data; `deep` - 3d;
 %
 %% The function returns following results:
