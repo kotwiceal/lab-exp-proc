@@ -1,33 +1,79 @@
 function guiprocinterm(data, named)
 %% Interactive intermittency processing.
 %% The function takes following arguments:
-%   data:           [n×m... double]                 - multidimensional data
-%   shape:          [char]                          - type of region selection
-%   mask:           [double]                        - two row vertex to line selection; edge size to rectangle selection; 
-%                                                       n-row verxex to polygon selection 
-%   fit:            [char]                          - type of statistics fit
-%   range:          [1×2 double]                    - range to cut data
-%   norm:           [char]                          - type of statistics normalization
-%   interaction:    [char]                          - region selection behaviour
-%   number:         [int]                           - count of selection regions
-%   legend:         [boolean]                       - to show legend
-%   x:              [n×m double]                    - spatial coordinate
-%   z:              [n×m double]                    - spatial coordinate
-%   clim:           [1×2 double]                    - colorbar limit
-    
+%   data:           [n×m... double]     - multidimensional data
+%   x:              [n×m double]        - spatial coordinate
+%   z:              [n×m double]        - spatial coordinate
+%   range:          [1×2 double]        - range to exculde statistical edges
+%   norm:           [char]              - type of statistics normalization
+%
+%   fit:            [char]              - type of statistics fit
+%   solver:         [char array]        - execute fit or optimization: 'fit', 'opt'
+%   objnorm:        [1×l double]        - norm order at calculation objective function
+%   Aineq:          [p×l double]        - linear optimization inequality constrain matrix
+%   bineq:          [l×1 double]        - linear optimization inequality constrain right side
+%   Aeq:            [m×k double]        - linear optimization equality constrain matrix
+%   beq:            [k×1 double]        - linear optimization equality constrain right side
+%   nonlcon:        [funtion_handle]    - non-linear optimization constrain function
+%   x0:             [1×k doule]         - inital parameters
+%   lb:             [1×k doule]         - lower bound of parameters
+%   ub:             [1×k doule]         - upper bpund of parameters
+%   show_param:     [logical]           - display optimization result 
+%
+%   shape:          [char]              - type of region selection
+%   mask:           [double]            - edge size to rectangle selection; n-row verxex to polygon selection
+%   interaction:    [char]              - region selection behaviour
+%   legend:         [boolean]           - to show legend
+%   clim:           [1×2 double]        - colorbar limit
+%   xlim:           [1×2 double]        - x axis limit
+%   ylim:           [1×2 double]        - y axis limit
+%% Examples:
+%% show statistics selected by gui, choose threshold and plot distribution along horizontal projection of drawn line, 2D fields is presented in node coordinates 
+% guiprocinterm(data.dwdlf(:,:,:,1), fit = 'none')
+%% -//- 2D fields is presented in spatial coordinates 
+% guiprocinterm(data.dwdlf(:,:,:,1), x = data.x(:,:,1), z = data.z(:,:,1), fit = 'none')
+%% -//- several measurement positions & approximation statisitc by two beta distributions
+% guiprocinterm(data.dwdlf(:,:,:,1:3), x = data.x(:,:,1:3), z = data.z(:,:,1:3), fit = 'beta2')
+%% -//- perform constrained optimization at histogram approximation
+% % constrain function
+% nonlcon = @(x) nonlcon_beta2(x, rmean1 = [], rmode1 = [8e-4, 1.8e-3], rvar1 = [1e-7, 1e-6], ....
+%         ramp1 = [], rmean2 = [], rmode2 = [3e-3, 4e-3], rvar2 = [1e-6, 1e-2]);
+% % boundary constrains
+% lb = [0, 1e-3, 0, 7.8, 6416, 1e-3, 1e-2, 0, 0, 0];
+% ub = [2, 2e1, 1e-2, 7.8, 6416, 10, 2e1, 1e-2, 1e3, 1e4];
+% % initial vector
+% x0 = [1, 1, 1e-3, 5, 1e3, 1, 1, 3e-3, 10, 2e3];
+%
+% guiprocinterm(data.dwdlf(:,:,:,1:3), x = data.x(:,:,1:3), z = data.z(:,:,1:3), fit = 'beta2', ...
+%   objnorm = 2, x0 = x0, lb = lb, ub = ub, nonlcon = nonlcon)
+
     arguments
         data double
-        named.shape char = 'poly'
-        named.mask double = []
-        named.norm char = 'pdf'
-        named.fit char = 'gauss2s'
-        named.interaction char = 'all'
-        named.range double = []
-        named.number double = 1
-        named.legend logical = false
         named.x double = []
         named.z double = []
+        named.range double = []
+        named.norm char = 'pdf'
+        %% optimization parameters
+        named.fit char = 'beta2'
+        named.solver char = 'opt'
+        named.objnorm double = 2
+        named.Aineq double = []
+        named.bineq double = []
+        named.Aeq double = []
+        named.beq double = []
+        named.nonlcon = []
+        named.x0 double = []
+        named.lb double = []
+        named.ub double = []
+        named.show_param logical = true
+        %% roi and axis parameters
+        named.shape char = 'rect'
+        named.mask double = []
+        named.interaction char = 'all'
+        named.legend logical = false
         named.clim = [0, 0.3]
+        named.xlim double = []
+        named.ylim double = []
     end
     
     warning off
@@ -38,8 +84,9 @@ function guiprocinterm(data, named)
     ax_iterm2d = cell(1, size(data, 4)); % to store axes for intermittency figures;
     roicrosshair = {}; % to select threshold by statistics;
     threshold = []; % threshold to binarize data;
-    edges = []; % statistics edges;
-    counts = []; % statistics counts;
+    x_hist = []; % statistics edges;
+    y_hist = []; % statistics counts;
+    edges = []; % statistics edges of modes;
     rois = cell(1, size(data, 4)); % to select probe region of given data;
     selects = cell(1, size(data, 4)); % function handle to probe data;
     modes = []; % statistics modes;
@@ -73,30 +120,24 @@ function guiprocinterm(data, named)
         for j = 1:length(rois)
             temporary = vertcat(temporary, selects{j}(rois{j}));
         end
-        [counts, edges] = histcounts(temporary, 'Normalization', named.norm);
-        edges = edges(2:end);
 
-        if ~isempty(named.range)
-            [edges, counts] = histcutrange(edges, counts, named.range);
-        end
-        try
-            [~, modes] = fithist(counts, edges, type = named.fit);
-        catch
-            modes = zeros(length(counts), 2);
-        end
+        [x_hist, y_hist, ~, modes, edges, ~] = fithist(data = temporary, type = named.fit, ...
+            solver = named.solver, objnorm = named.objnorm, nonlcon = named.nonlcon, x0 = named.x0, ...
+            lb = named.lb, ub = named.ub, show_param = named.show_param);
     end
 
     function show_hist()
         %% show raw and fitted statistics
         cla(ax_hist);hold(ax_hist, 'on'); grid(ax_hist, 'on'); box(ax_hist, 'on'); 
         xlabel(ax_hist, 'edges'); ylabel(ax_hist, named.norm)
-        plot(ax_hist, edges, counts, 'DisplayName', 'full')
+        plot(ax_hist, x_hist, y_hist, 'DisplayName', 'full')
         plot(ax_hist, edges, modes(:, 1), 'DisplayName', 'mode 1')
         plot(ax_hist, edges, modes(:, 2), 'DisplayName', 'mode 2')
         plot(ax_hist, edges, sum(modes, 2), 'DisplayName', 'sum modes')
-        if (named.legend)
-            legend(ax_hist, 'Location', 'Best');     
-        end
+
+        if named.legend; legend(ax_hist, 'Location', 'Best'); end
+        if ~isempty(named.xlim); xlim(ax_hist, named.xlim); end
+        if ~isempty(named.ylim); ylim(ax_hist, named.ylim); end
     end
 
     function init_crosshair()
@@ -135,7 +176,7 @@ function guiprocinterm(data, named)
                 for j = 1:size(data, 4)
                     [xi, zi] = ndgrid(1:size(intermittency, 1), 1:size(intermittency, 2));
                     [xo, zo, io] = prepareSurfaceData(xi, zi, intermittency(:,:,j));
-                    iterm_fit{j} = fit([xo, zo], io, 'linearinterp');
+                    iterm_fit{j} = fit([zo, xo], io, 'linearinterp');
                 end
             case 'spatial'
                 for j = 1:size(data, 4)
@@ -151,6 +192,7 @@ function guiprocinterm(data, named)
             case 'node'     
                 for j = 1:length(ax_iterm2d)
                     cla(ax_iterm2d{j}); imagesc(ax_iterm2d{j}, intermittency(:,:,j)); clim(ax_iterm2d{j}, named.clim);
+                    axis(ax_iterm2d{1}, 'equal');
                     init_line(j);
                 end
             case 'spatial'
