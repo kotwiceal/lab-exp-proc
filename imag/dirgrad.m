@@ -22,8 +22,9 @@ function varargout = dirgrad(u, w, angle, named)
         w double
         angle double
         named.component char = 'dwdl'
-        named.filter = 'sobel'
-        named.smooth char = 'gaussian'
+        named.component (1,:) char {mustBeMember(component, {'dudl', 'dudn', 'dwdl', 'dwdn', 'all'})} = 'dwdl'
+        named.filter (1,:) char {mustBeMember(filter, {'sobel', '4ord', '4ordgauss', '2ord'})} = 'sobel'
+        named.smooth (1,:) char {mustBeMember(smooth, {'average', 'gaussian', 'median', 'wiener'})} = 'gaussian'
         named.kernel double = [3, 3]
     end
 

@@ -52,10 +52,10 @@ function guiprocinterm(data, named)
         named.x double = []
         named.z double = []
         named.range double = []
-        named.norm char = 'pdf'
+        named.norm (1,:) char {mustBeMember(norm, {'count', 'pdf', 'cdf', 'cumcount', 'probability', 'percentage', 'countdensity'})} = 'count'
         %% optimization parameters
-        named.fit char = 'beta2'
-        named.solver char = 'opt'
+        named.fit (1,:) char {mustBeMember(fit, {'none', 'gauss1', 'beta1', 'gamma1', 'gumbel1', 'gauss2', 'beta2', 'gamma2', 'gumbel2'})} = 'none'
+        named.solver (1,:) char {mustBeMember(solver, {'fit', 'opt'})} = 'fit'
         named.objnorm double = 2
         named.Aineq double = []
         named.bineq double = []
@@ -67,9 +67,9 @@ function guiprocinterm(data, named)
         named.ub double = []
         named.show_param logical = true
         %% roi and axis parameters
-        named.shape char = 'rect'
+        named.shape (1,:) char {mustBeMember(shape, {'rect', 'poly'})} = 'rect'
         named.mask double = []
-        named.interaction char = 'all'
+        named.interaction (1,:) char {mustBeMember(interaction, {'all', 'none', 'translate'})} = 'all'
         named.legend logical = false
         named.clim = [0, 0.3]
         named.xlim double = []

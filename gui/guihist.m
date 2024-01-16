@@ -91,11 +91,11 @@ function rois = guihist(axroi, data, named)
         named.x double = []
         named.z double = []
         named.range double = []
-        named.norm char = 'count'
+        named.norm (1,:) char {mustBeMember(norm, {'count', 'pdf', 'cdf', 'cumcount', 'probability', 'percentage', 'countdensity'})} = 'count'
         %% roi and axis parameters
-        named.shape char = 'rect'
+        named.shape (1,:) char {mustBeMember(shape, {'rect', 'poly'})} = 'rect'
         named.mask double = []
-        named.interaction char = 'all'
+        named.interaction (1,:) char {mustBeMember(interaction, {'all', 'none', 'translate'})} = 'all'
         named.number int8 = 1
         named.legend logical = false
         named.xlim double = []
@@ -103,8 +103,8 @@ function rois = guihist(axroi, data, named)
         named.markersize double = 3
         named.show_cdf logical = false
         %% optimization parameters
-        named.fit char = 'none'
-        named.solver char = 'fit'
+        named.fit (1,:) char {mustBeMember(fit, {'none', 'gauss1', 'beta1', 'gamma1', 'gumbel1', 'gauss2', 'beta2', 'gamma2', 'gumbel2'})} = 'none'
+        named.solver (1,:) char {mustBeMember(solver, {'fit', 'opt'})} = 'fit'
         named.objnorm double = 2
         named.Aineq double = []
         named.bineq double = []

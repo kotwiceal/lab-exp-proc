@@ -15,10 +15,10 @@ function result = vortind(u, w, named)
     arguments
         u double
         w double
-        named.type = 'q'
-        named.difkernel = 'sobel'
+        named.type (1,:) char {mustBeMember(type, {'q', 'l2', 'd'})} = 'q'
+        named.difkernel (1,:) char {mustBeMember(difkernel, {'sobel', '4ord', '4ordgauss', '2ord'})} = 'sobel'
         named.threshold logical = true
-        named.smooth char = 'gaussian'
+        named.smooth (1,:) char {mustBeMember(smooth, {'average', 'gaussian', 'none'})} = 'gaussian'
         named.kernel double = [3, 3]
     end
 

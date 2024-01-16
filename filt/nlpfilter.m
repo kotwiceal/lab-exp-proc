@@ -15,7 +15,7 @@ function result = nlpfilter(data, kernel_size, method, named)
         kernel_size double
         method function_handle
         named.strides double = [1, 1]
-        named.type = 'slice'
+        named.type (1,:) char {mustBeMember(type, {'slice', 'deep'})} = 'slice'
     end
 
 
