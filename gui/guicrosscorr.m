@@ -28,14 +28,14 @@ function rois = guicrosscorr(axroi, data, named)
     arguments
         axroi matlab.graphics.axis.Axes
         data double
-        named.type char = 'xcorr'
+        named.type (1,:) char {mustBeMember(type, {'xcorr', 'mul'})} = 'xcorr'
         %% roi and axis parameters
         named.mask double = []
-        named.interaction char = 'translate'
-        named.aspect char = 'equal'
+        named.interaction (1,:) char {mustBeMember(interaction, {'all', 'none', 'translate'})} = 'translate'
+        named.aspect (1,:) char {mustBeMember(aspect, {'equal', 'manual'})} = 'equal'
         named.clim double = []
-        named.cscale char = 'linear'
-        named.display char = 'imagesc'
+        named.cscale (1,:) char {mustBeMember(cscale, {'linear', 'log'})} = 'linear'
+        named.display (1,:) char {mustBeMember(display, {'imagesc', 'surf'})} = 'imagesc'
     end
 
     select = @(roiobj) imcrop(data, roiobj.Position);

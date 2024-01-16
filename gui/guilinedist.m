@@ -12,6 +12,8 @@ function rois = guilinedist(axroi, data, named)
 %   number:             [int]                           - count of selection regions
 %   xlim:               [1×2 double]                    - x axis limit
 %   ylim:               [1×2 double]                    - y axis limit
+%   displayname:        [string array]                  - list of labeled curves
+%   legend:             [1×1 logical]                   - show legend
 %% The function returns following results:
 %   rois:               [object]                        - ROI cell objects
 %% Examples:
@@ -37,14 +39,15 @@ function rois = guilinedist(axroi, data, named)
         data double
         named.x double = []
         named.z double = []
-        named.proj char = 'horz'
+        named.proj (1,:) char {mustBeMember(proj, {'horz', 'vert', 'line'})} = 'horz'
         %% roi and axis parameters
         named.mask double = []
-        named.interaction char = 'all'
+        named.interaction (1,:) char {mustBeMember(interaction, {'all', 'none', 'translate'})} = 'all'
         named.number int8 = 1
         named.xlim double = []
         named.ylim double = []
-        named.displayname char = []
+        named.displayname string = []
+        named.legend logical = false
     end
 
     warning off
@@ -69,10 +72,23 @@ function rois = guilinedist(axroi, data, named)
                 data_fit{j} = fit([zo, xo], io, 'linearinterp');
             end
         case 'spatial'
-            for j = 1:size(data, 3)
-                [xo, zo, io] = prepareSurfaceData(named.x, named.z, data(:,:,j)); 
-                data_fit{j} = fit([xo, zo], io, 'linearinterp');
+            if ismatrix(named.x) && ismatrix(named.z)
+                for j = 1:size(data, 3)
+                    [xo, zo, io] = prepareSurfaceData(named.x, named.z, data(:,:,j)); 
+                    data_fit{j} = fit([xo, zo], io, 'linearinterp');
+                end
+            else
+                for j = 1:size(data, 3)
+                    [xo, zo, io] = prepareSurfaceData(named.x(:,:,j), named.z(:,:,j), data(:,:,j)); 
+                    data_fit{j} = fit([xo, zo], io, 'linearinterp');
+                end
             end
+    end
+
+    if isempty(named.displayname)
+        named.legend = false;
+    else
+        named.legend = true;
     end
 
     function customize_appearance()
@@ -100,6 +116,7 @@ function rois = guilinedist(axroi, data, named)
 
         if ~isempty(named.xlim); xlim(ax, named.xlim); end
         if ~isempty(named.ylim); ylim(ax, named.ylim); end
+        if named.legend; legend(ax, 'Location', 'Best'); end
     end
 
     function event(~, ~)
@@ -121,8 +138,14 @@ function rois = guilinedist(axroi, data, named)
             end
 
             if length(rois) == 1
-                for j = 1:size(data, 3)
-                    plot(ax, X, Y{j})
+                if isempty(named.displayname)
+                    for j = 1:size(data, 3)
+                        plot(ax, X, Y{j})
+                    end
+                else
+                    for j = 1:size(data, 3)
+                        plot(ax, X, Y{j}, 'DisplayName', named.displayname(j))
+                    end
                 end
             else
                 for j = 1:size(data, 3)

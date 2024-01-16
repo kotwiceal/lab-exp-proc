@@ -14,9 +14,9 @@ function rois = guiselectregion(axroi, event, named)
     arguments
         axroi matlab.graphics.axis.Axes
         event function_handle
-        named.shape char = 'rect'
+        named.shape (1,:) char {mustBeMember(shape, {'line', 'rect', 'poly'})} = 'rect'
         named.mask double = []
-        named.interaction char = 'all'
+        named.interaction (1,:) char {mustBeMember(interaction, {'all', 'none', 'translate'})} = 'all'
         named.number int8 = 1
     end
 

@@ -62,11 +62,11 @@ function varargout = fithist(named)
         named.data double = []
         named.x double = []
         named.y double = []
-        named.norm char = 'pdf'
+        named.norm (1,:) char {mustBeMember(norm, {'count', 'pdf', 'probability', 'percentage', 'countdensity'})} = 'pdf'
         named.range double = []
         %% optimization parameters
-        named.type char = 'gauss1'
-        named.solver char = 'fit'
+        named.type (1,:) char {mustBeMember(type, {'none', 'gauss1', 'beta1', 'gamma1', 'gumbel1', 'gauss2', 'beta2', 'gamma2', 'gumbel2'})} = 'gauss1'
+        named.solver (1,:) char {mustBeMember(solver, {'fit', 'opt'})} = 'fit'
         named.objnorm double = 2
         named.Aineq double = []
         named.bineq double = []

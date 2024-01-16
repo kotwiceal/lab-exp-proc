@@ -3,6 +3,10 @@ function kernel = difkernel(type)
 %% The function takes following arguments:
 %   kernel: [char array]    - difference schema
 
+    arguments
+        named.type (1,:) char {mustBeMember(type, {'sobel', '4ord', '4ordgauss', '2ord'})}
+    end
+
     switch type
         case 'sobel'
             kernel = fspecial('sobel');

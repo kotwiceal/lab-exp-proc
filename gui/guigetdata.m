@@ -14,8 +14,8 @@ function result = guigetdata(roi, data, named)
         arguments
             roi 
             data double
-            named.shape char = 'raw'
-            named.type char = 'node'
+            named.shape (1,:) char {mustBeMember(shape, {'raw', 'flatten'})} = 'raw'
+            named.type (1,:) char {mustBeMember(type, {'node', 'spatial'})} = 'node'
             named.x double = []
             named.z double = []
         end
