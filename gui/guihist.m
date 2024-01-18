@@ -7,6 +7,7 @@ function rois = guihist(axroi, data, named)
 %   z:              [n×m double]                    - spatial coordinate
 %   range:          [1×2 double]                    - range to exclude data
 %   norm:           [char array]                    - type of statistics normalization
+%   binedge:        [double]                        - bins count or edge grid
 
 %   shape:          [char array]                    - type of region selection
 %   mask:           [double]                        - edge size to rectangle selection or n-row verxex to polygon selection 
@@ -91,11 +92,12 @@ function rois = guihist(axroi, data, named)
         named.x double = []
         named.z double = []
         named.range double = []
-        named.norm (1,:) char {mustBeMember(norm, {'count', 'pdf', 'cdf', 'cumcount', 'probability', 'percentage', 'countdensity'})} = 'count'
+        named.norm (1,:) char {mustBeMember(named.norm, {'count', 'pdf', 'cdf', 'cumcount', 'probability', 'percentage', 'countdensity'})} = 'count'
+        named.binedge double = []
         %% roi and axis parameters
-        named.shape (1,:) char {mustBeMember(shape, {'rect', 'poly'})} = 'rect'
+        named.shape (1,:) char {mustBeMember(named.shape, {'rect', 'poly'})} = 'rect'
         named.mask double = []
-        named.interaction (1,:) char {mustBeMember(interaction, {'all', 'none', 'translate'})} = 'all'
+        named.interaction (1,:) char {mustBeMember(named.interaction, {'all', 'none', 'translate'})} = 'all'
         named.number int8 = 1
         named.legend logical = false
         named.xlim double = []
@@ -103,8 +105,8 @@ function rois = guihist(axroi, data, named)
         named.markersize double = 3
         named.show_cdf logical = false
         %% optimization parameters
-        named.fit (1,:) char {mustBeMember(fit, {'none', 'gauss1', 'beta1', 'gamma1', 'gumbel1', 'gauss2', 'beta2', 'gamma2', 'gumbel2'})} = 'none'
-        named.solver (1,:) char {mustBeMember(solver, {'fit', 'opt'})} = 'fit'
+        named.fit (1,:) char {mustBeMember(named.fit, {'none', 'gauss1', 'beta1', 'gamma1', 'gumbel1', 'gauss2', 'beta2', 'gamma2', 'gumbel2'})} = 'none'
+        named.solver (1,:) char {mustBeMember(named.solver, {'fit', 'opt'})} = 'fit'
         named.objnorm double = 2
         named.Aineq double = []
         named.bineq double = []
@@ -144,8 +146,11 @@ function rois = guihist(axroi, data, named)
         cla(ax{1}); hold(ax{1}, 'on'); box(ax{1}, 'on'); grid(ax{1}, 'on');
         xlabel(ax{1}, 'edges'); ylabel(ax{1}, named.norm);
         for i = 1:length(rois)
-            [counts, edges] = histcounts(select(rois{i}), 'Normalization', named.norm);
-            edges = edges(2:end);
+            if isempty(named.binedge)
+                [counts, edges] = histcounts(select(rois{i}), 'Normalization', named.norm);
+            else
+                [counts, edges] = histcounts(select(rois{i}), named.binedge, 'Normalization', named.norm);
+            end
             
             if ~isempty(named.range)
                 [edges, counts] = histcutrange(edges, counts, named.range);

@@ -4,7 +4,7 @@ function kernel = difkernel(type)
 %   kernel: [char array]    - difference schema
 
     arguments
-        named.type (1,:) char {mustBeMember(type, {'sobel', '4ord', '4ordgauss', '2ord'})}
+        type (1,:) char {mustBeMember(type, {'sobel', '4ord', '4ordgauss', '2ord'})}
     end
 
     switch type
@@ -15,6 +15,6 @@ function kernel = difkernel(type)
         case '4ordgauss'
             kernel = repmat([-1, 8, 0, -8, 1]'/12, 1, 5).*fspecial('gaussian', [5, 5], 2);
         case '2ord'
-            kernel = [1, 1, 1; -2, -2, -2, 1, 1, 1]
+            kernel = [1, 1, 1; -2, -2, -2; 1, 1, 1];
     end
 end

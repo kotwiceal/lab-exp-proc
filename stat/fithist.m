@@ -5,6 +5,7 @@ function varargout = fithist(named)
 %   x:              [n×1 double]        - statistical edges
 %   y:              [n×1 double]        - statistical counts
 %   norm:           [char array]        - type of statistics normalization
+%   binedge:        [double]            - bins count or edge grid 
 %   range:          [1×2 double]        - range to exclude data
 
 %   type:           [char array]        - approximation type
@@ -62,11 +63,12 @@ function varargout = fithist(named)
         named.data double = []
         named.x double = []
         named.y double = []
-        named.norm (1,:) char {mustBeMember(norm, {'count', 'pdf', 'probability', 'percentage', 'countdensity'})} = 'pdf'
+        named.norm (1,:) char {mustBeMember(named.norm, {'count', 'pdf', 'probability', 'percentage', 'countdensity'})} = 'pdf'
+        named.binedge double = []
         named.range double = []
         %% optimization parameters
-        named.type (1,:) char {mustBeMember(type, {'none', 'gauss1', 'beta1', 'gamma1', 'gumbel1', 'gauss2', 'beta2', 'gamma2', 'gumbel2'})} = 'gauss1'
-        named.solver (1,:) char {mustBeMember(solver, {'fit', 'opt'})} = 'fit'
+        named.type (1,:) char {mustBeMember(named.type, {'none', 'gauss1', 'beta1', 'gamma1', 'gumbel1', 'gauss2', 'beta2', 'gamma2', 'gumbel2'})} = 'gauss1'
+        named.solver (1,:) char {mustBeMember(named.solver, {'fit', 'opt'})} = 'fit'
         named.objnorm double = 2
         named.Aineq double = []
         named.bineq double = []
@@ -92,7 +94,11 @@ function varargout = fithist(named)
             x = named.x; y = named.y;
         end
     else
-        [y, x] = histcounts(named.data,'Normalization', named.norm);
+        if isempty(named.binedge)
+            [y, x] = histcounts(named.data, 'Normalization', named.norm);
+        else
+            [y, x] = histcounts(named.data, named.binedge, 'Normalization', named.norm);
+        end
         x = x(2:end);
     end
 
@@ -379,6 +385,8 @@ function varargout = fithist(named)
                 case 'opt'
                     f1 = @(a, x) a(1)*betapdf(a(2)*x-a(3), a(4), a(5)); f1 = @(a, x) f1(a(1:5), x);
                     f2 = @(a, x) a(1)*betapdf(a(2)*x-a(3), a(4), a(5)); f2 = @(a, x) f2(a(6:end), x);
+                    % f1 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f1 = @(a, x) f1(a(1:3), x);
+                    % f2 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f2 = @(a, x) f2(a(4:end), x);
                     fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
                     fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
                     fi = fitdist(named.data, 'beta'); % initial appriximation
@@ -388,7 +396,7 @@ function varargout = fithist(named)
         
                     coefi = [1, 1, mode(named.data), fi.a, fi.b, 1, 1, mode(named.data), fi.a, fi.b];
                     if isempty(named.x0); problem.x0 = coefi; end
-                    if isempty(named.lb); problem.lb = 0.1*coefi; end
+                    if isempty(named.lb); problem.lb = 0*coefi; end
                     if isempty(named.ub); problem.ub = 10*coefi; end
         
                     [coef, fval] = fmincon(problem);

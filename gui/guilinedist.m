@@ -39,10 +39,10 @@ function rois = guilinedist(axroi, data, named)
         data double
         named.x double = []
         named.z double = []
-        named.proj (1,:) char {mustBeMember(proj, {'horz', 'vert', 'line'})} = 'horz'
+        named.proj (1,:) char {mustBeMember(named.proj, {'horz', 'vert', 'line'})} = 'horz'
         %% roi and axis parameters
         named.mask double = []
-        named.interaction (1,:) char {mustBeMember(interaction, {'all', 'none', 'translate'})} = 'all'
+        named.interaction (1,:) char {mustBeMember(named.interaction, {'all', 'none', 'translate'})} = 'all'
         named.number int8 = 1
         named.xlim double = []
         named.ylim double = []
