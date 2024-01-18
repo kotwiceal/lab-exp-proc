@@ -30,15 +30,15 @@ function rois = guicrossspec(axroi, data, named)
     arguments
         axroi matlab.graphics.axis.Axes
         data double
-        named.type (1,:) char {mustBeMember(type, {'abs', 'real', 'imag'})} = 'abs'
+        named.type (1,:) char {mustBeMember(named.type, {'abs', 'real', 'imag'})} = 'abs'
         named.norm logical = true
         %% roi and axis parameters
         named.mask double = []
-        named.interaction (1,:) char {mustBeMember(interaction, {'all', 'none', 'translate'})} = 'translate'
-        named.aspect (1,:) char {mustBeMember(aspect, {'equal', 'auto'})} = 'equal'
+        named.interaction (1,:) char {mustBeMember(named.interaction, {'all', 'none', 'translate'})} = 'translate'
+        named.aspect (1,:) char {mustBeMember(named.aspect, {'equal', 'auto'})} = 'equal'
         named.clim double = []
-        named.cscale (1,:) char {mustBeMember(cscale, {'linear', 'log'})} = 'linear'
-        named.display (1,:) char {mustBeMember(display, {'imagesc', 'surf'})} = 'imagesc'
+        named.cscale (1,:) char {mustBeMember(named.cscale, {'linear', 'log'})} = 'linear'
+        named.display (1,:) char {mustBeMember(named.display, {'imagesc', 'surf'})} = 'imagesc'
     end
 
     select = @(roiobj) imcrop(data, roiobj.Position);
