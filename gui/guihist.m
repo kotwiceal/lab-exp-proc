@@ -1,28 +1,29 @@
-function rois = guihist(axroi, data, named)
+function rois = guihist(data, named)
 %% Visualize data statistics by means manually region selection.
 %% The function takes following arguments:
-%   axroi:          [matlab.graphics.axis.Axes]     - axis object of canvas that selection data events are being occured
 %   data:           [n×m... double]                 - multidimensional data
 %   x:              [n×m double]                    - spatial coordinate
 %   z:              [n×m double]                    - spatial coordinate
 %   range:          [1×2 double]                    - range to exclude data
 %   norm:           [char array]                    - type of statistics normalization
-%   binedge:        [double]                        - bins count or edge grid
+%   binedge:        [1×q double]                    - bins count or edge grid
 
 %   shape:          [char array]                    - type of region selection
-%   mask:           [double]                        - edge size to rectangle selection or n-row verxex to polygon selection 
+%   mask:           [1×2 or 1×4 t×2 double]         - edge size to rectangle selection or n-row verxex to polygon selection 
 %   interaction:    [char array]                    - region selection behaviour: 'translate', 'all'   
-%   number:         [int]                           - count of selection regions
-%   legend:         [logical]                       - show legend
+%   number:         [1×1 int]                       - count of selection regions
+%   legend:         [1×1 logical]                   - show legend
 %   xlim:           [1×2 double]                    - x axis limit
 %   ylim:           [1×2 double]                    - y axis limit
+%   clim:           [1×2 double]                    - color axis limit
+%   colormap:       [char array]                    - colormap of 2D field
 %   markersize:     [double]                        - masker size
-%   show_cdf:       [logical]                       - plot cdf of statistics
+%   cdf:            [1×1 logical]                   - plot cdf of statistics
+%   docked:         [1×1 logical]                   - docked figure
+%   aspect:         [char array]                    - axis ratio
 
-%   fit:            [char array]                    - type of statistics fit: 'none', 'beta1', 'beta2', 'gauss1', 'gauss1s', 'gauss2',
-%       'gauss2s1', 'gauss2s2', 'gamma1', 'gamm2'
-%   solver:         [char array]                    - execute fit or optimization: 'fit', 'opt'
-%   objnorm:        [double]                        - norm order at calculation objective function
+%   distname:       [char array]                    - type of statistics fit
+%   objnorm:        [1×1 double]                    - norm order at calculation objective function
 %   Aineq:          [p×l double]                    - linear optimization inequality constrain matrix
 %   bineq:          [l×1 double]                    - linear optimization inequality constrain right side
 %   Aeq:            [m×k double]                    - linear optimization equality constrain matrix
@@ -31,62 +32,50 @@ function rois = guihist(axroi, data, named)
 %   x0:             [1×k doule]                     - inital approximation
 %   lb:             [1×k doule]                     - lower bound of parameters
 %   ub:             [1×k doule]                     - upper bpund of parameters
-%   show_param:     [logical]                       - display of optimization result 
+%   mb:             [1×2 doule]                     - scale range of auto constrains
+%   disp:           [1×1 logical]                   - display of optimization result 
+
+%   quantile:       [1×1 double]                    - quantile threshold
+
 %% The function returns following results:
 %   rois:           [object]                        - ROI cell objects
 %% Examples:
 %% show histogram by specific realization with default parameters
-% clf; tiledlayout(2, 2);
-% nexttile; imagesc(data.dwdlf(:,:,1));
 % guihist(gca, data.dwdlf(:,:,1));
 %
 %% show histogram by all realization with default parameters (ndim(data.dwdlf) = 3)
-% clf; tiledlayout(2, 2);
-% nexttile; imagesc(data.dwdlf(:,:,1));
 % guihist(gca, data.dwdlf);
 %
 %% show histograms by all realization by two selection regions
-% clf; tiledlayout(2, 2);
-% nexttile; imagesc(data.dwdlf(:,:,1));
 % guihist(gca, data.dwdlf, number = 2);
 %% get raw data selected by gui
-% clf; tiledlayout(2, 2);
-% nexttile; imagesc(data.dwdlf(:,:,1));
 % rois = guihist(gca, data.dwdlf);
 % probe = guigetdata(rois{1}, data.dwdlf, shape = 'flatten');
 %% get raw data selected by two regions
-% clf; tiledlayout(2, 2);
-% nexttile; imagesc(data.dwdlf(:,:,1));
 % rois = guihist(gca, data.dwdlf, number = 2);
 % probe{1} = guigetdata(rois{1}, data.dwdlf, shape = 'flatten');
 % probe{2} = guigetdata(rois{2}, data.dwdlf, shape = 'flatten');
 %% show histogram by all realization with custom parameters, pdf is fitted by 'beta1' distribution, by solver fmincon with l2 norm and lower and upper constrains
-% clf; tiledlayout(2, 2);
-% nexttile; imagesc(data.dwdlf(:,:,1));
 % guihist(gca, data.dwdlf, mask = [25, 220, 25, 25], ...
-%     fit = 'beta1', solver = 'opt', objnorm = 2, lb = [1, 0, 0, 1, 1], ...
-%     ub = [1, 1e2, 0, 2e1, 1e4], norm = 'pdf', xlim = [0, 0.01], show_param = true, show_cdf = true);
+%     distname = 'beta1', objnorm = 2, lb = [1, 0, 0, 1, 1], ...
+%     ub = [1, 1e2, 0, 2e1, 1e4], norm = 'pdf', xlim = [0, 0.01], disp = true, cdf = true);
 %% show histogram by all realization with custom parameters, pdf is fitted by 'beta2' distribution, by solver fmincon with l2 norm and lower, upper and non-linear constrains
 % % description of 'beta2':
-% % f1 = @(a, x) a(1)*betapdf(a(2)*x-a(3), a(4), a(5)); f1 = @(a, x) f1(a(1:5), x);
-% % f2 = @(a, x) a(1)*betapdf(a(2)*x-a(3), a(4), a(5)); f2 = @(a, x) f2(a(6:end), x);
+% % f1 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f1 = @(a, x) f1(a(1:3), x);
+% % f2 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f2 = @(a, x) f2(a(4:end), x);
 % % fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
 %
 % % constrain function
-% nonlcon = @(x) nonlcon_beta2(x, rmean1 = [], rmode1 = [8e-4, 1.8e-3], rvar1 = [1e-7, 1e-6], ....
-%         ramp1 = [], rmean2 = [], rmode2 = [3e-3, 4e-3], rvar2 = [1e-6, 1e-2]);
+% nonlcon = @(x) nonlcon_statmode(x,distname='beta2',rmode1=[1e-4,6e-4],rvar1=[1e-8,1e-7],rmode2=[7e-4,5e-3],rvar2=[1e-7,1e-5]);
 % % boundary constrains
 % lb = [0, 1e-3, 0, 7.8, 6416, 1e-3, 1e-2, 0, 0, 0];
 % ub = [2, 2e1, 1e-2, 7.8, 6416, 10, 2e1, 1e-2, 1e3, 1e4];
 % % gui
-% clf; tiledlayout(2, 2);
-% nexttile; imagesc(mean(data.dwdlf(:,:,1), 3)); axis equal; clim([0, 0.03])
 % guihist(gca, data.dwdlf, mask = [250, 50, 25, 25], ...
-%     fit = 'beta2', solver = 'opt', objnorm = 2, lb = lb, ub = ub, nonlcon = nonlcon, ...
-%     norm = 'pdf', xlim = [0, 0.01], show_param = true, show_cdf = true);
+%     distname = 'beta2', objnorm = 2, lb = lb, ub = ub, nonlcon = nonlcon, ...
+%     norm = 'pdf', xlim = [0, 0.01], disp = true, cdf = true);
 
     arguments
-        axroi matlab.graphics.axis.Axes
         %% data parameters
         data double
         named.x double = []
@@ -102,11 +91,14 @@ function rois = guihist(axroi, data, named)
         named.legend logical = false
         named.xlim double = []
         named.ylim double = []
+        named.clim double = []
+        named.colormap (1,:) char = 'turbo'
         named.markersize double = 3
-        named.show_cdf logical = false
+        named.cdf logical = false
+        named.docked logical = false
+        named.aspect (1,:) char {mustBeMember(named.aspect, {'equal', 'auto'})} = 'equal'
         %% optimization parameters
-        named.fit (1,:) char {mustBeMember(named.fit, {'none', 'gauss1', 'beta1', 'gamma1', 'gumbel1', 'gauss2', 'beta2', 'gamma2', 'gumbel2'})} = 'none'
-        named.solver (1,:) char {mustBeMember(named.solver, {'fit', 'opt'})} = 'fit'
+        named.distname (1,:) char {mustBeMember(named.distname, {'none', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'none'
         named.objnorm double = 2
         named.Aineq double = []
         named.bineq double = []
@@ -116,10 +108,10 @@ function rois = guihist(axroi, data, named)
         named.x0 double = []
         named.lb double = []
         named.ub double = []
-        named.show_param logical = false
-        %% deprecated parameters
-        named.init char = 'gauss1'
-        named.regul double = []
+        named.mb double = [0, 10]
+        named.disp logical = false
+        %% other parameters
+        named.quantile double = 0.05
     end
 
     % define variables
@@ -151,9 +143,12 @@ function rois = guihist(axroi, data, named)
             else
                 [counts, edges] = histcounts(select(rois{i}), named.binedge, 'Normalization', named.norm);
             end
-            
+
+            edges = edges(2:end);
+
             if ~isempty(named.range)
-                [edges, counts] = histcutrange(edges, counts, named.range);
+                index = excludedata(edges, counts, 'range', named.range);
+                edges = edges(index); counts = counts(index); clear index;
             end
 
             switch named.norm
@@ -173,28 +168,25 @@ function rois = guihist(axroi, data, named)
         cla(ax{1}); hold(ax{1}, 'on'); box(ax{1}, 'on'); grid(ax{1}, 'on');
         xlabel(ax{1}, 'edges'); ylabel(ax{1}, named.norm);
 
-        if named.show_cdf
+        if named.cdf
             cla(ax{2}); hold(ax{2}, 'on'); box(ax{2}, 'on'); grid(ax{2}, 'on');
             xlabel(ax{2}, 'edges'); ylabel(ax{2}, 'cdf');
             ylim(ax{2}, [-0.1, 1.1])
         end
 
         for i = 1:length(rois)       
-            [edges, counts, f, modes, edges_fit, ~] = fithist(data = select(rois{i}), type = named.fit, ...
-                solver = named.solver, ...
+            [~, modes, edges_fit, ~, edges_raw, counts_raw, ] = fithist(data = select(rois{i}), ...
+                distname = named.distname, ...
                 objnorm = named.objnorm, ...
                 nonlcon = named.nonlcon, ...
                 lb = named.lb, ...
                 x0 = named.x0, ...
                 ub = named.ub, ...
-                init = named.init, ...
+                mb = named.mb, ...
                 range = named.range, ...
-                regul = named.regul, ...
-                show_param = named.show_param);
+                disp = named.disp);
 
-            disp(f)
-
-            plot(ax{1}, edges, counts, 'Color', rois{i}.UserData.color, ...
+            plot(ax{1}, edges_raw, counts_raw, 'Color', rois{i}.UserData.color, ...
                     'DisplayName', strcat("raw ", num2str(i)))
             for j = 1:size(modes, 2)
                 if named.number == 1
@@ -215,10 +207,18 @@ function rois = guihist(axroi, data, named)
                     'DisplayName', strcat("sum mode", num2str(i)))
             end
 
-            if named.show_cdf
+            if named.cdf
                 cdf = cumsum(modes, 1); cdf = cdf ./ max(cdf, [], 1);
                 if size(cdf, 2) == 2
                     cdf(:, 2) = 1 - cdf(:, 2);
+
+                    if named.disp
+                        [~, indcdfint] = min(abs(diff(cdf, 1, 2)));
+                        [~, indqntl] = min(abs(cdf(:, 1)-named.quantile));
+                        tab = [edges_fit(indcdfint); edges_fit(indqntl)];
+                        tab = array2table(tab, 'VariableNames', {'value'}, 'RowName', {'cdf intersection', char(strcat("quantile ", num2str(named.quantile)))});
+                        disp(tab);
+                    end
                 end
                 for j = 1:size(cdf, 2)
                     if named.number == 1
@@ -257,7 +257,7 @@ function rois = guihist(axroi, data, named)
 
     function event(~, ~)
         %% callback at moved event
-        switch named.fit
+        switch named.distname
             case 'none'
                 plot_raw_hist();
             otherwise
@@ -266,8 +266,28 @@ function rois = guihist(axroi, data, named)
         customize_appearance();
     end
 
+    if named.docked
+        figure('WindowStyle', 'Docked')
+    else
+        clf;
+    end
+    tiledlayout(2, 2);
+    nexttile; axroi = gca; 
+    switch disp_type
+        case 'node'
+            imagesc(axroi, data(:,:,1)); xlabel('x_{n}'); ylabel('z_{n}');
+        case 'spatial'
+            contourf(axroi, named.x, named.z, data(:,:,1), 100, 'LineStyle', 'None'); 
+            xlabel('x, mm'); ylabel('z, mm');
+    end
+    colorbar(axroi); colormap(axroi, named.colormap);
+    if ~isempty(named.clim)
+        clim(axroi, named.clim);
+    end
+    axis(axroi, named.aspect)
+
     nexttile; ax{1} = gca;
-    if named.show_cdf
+    if named.cdf
         nexttile; ax{2} = gca;
     end
     rois = guiselectregion(axroi, @event, shape = named.shape, ...
