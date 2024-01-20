@@ -18,7 +18,7 @@ function y = intrelfilter(x, named)
         x double
         named.norm (1,:) char {mustBeMember(named.norm, {'count', 'pdf', 'probability', 'percentage', 'countdensity'})} = 'pdf'
         named.binedge double = []
-        named.type (1,:) char {mustBeMember(named.type, {'gauss2', 'beta2', 'gamma2', 'gumbel2'})} = 'gumbel2'
+        named.distname (1,:) char {mustBeMember(named.distname, {'gauss2', 'beta2', 'beta2l', 'gamma2', 'gumbel2'})} = 'gumbel2'
         named.objnorm double = 2
         named.x0 double = []
         named.lb double = []
@@ -27,7 +27,7 @@ function y = intrelfilter(x, named)
     end
 
     try
-        [~, ~, ~, modes, ~, ~] = fithist(data = x(:), norm = named.norm, binedge = named.binedge, type = named.type, solver = 'opt', ...
+        [~, modes, ~, ~, ~, ~] = fithist(data = x(:), norm = named.norm, binedge = named.binedge, distname = named.distname, ...
             objnorm = named.objnorm, x0 = named.x0, lb = named.lb, ub = named.ub, nonlcon = named.nonlcon);
         modes_cs = cumsum(modes, 1);
         y = 1-modes_cs(end,1)/sum(modes_cs(end,:));

@@ -8,7 +8,7 @@ function varargout = fithist(named)
 %   binedge:        [double]            - bins count or edge grid 
 %   range:          [1×2 double]        - range to exclude data
 
-%   type:           [char array]        - approximation type
+%   distname:       [char array]        - approximation distribution name
 %   solver:         [char array]        - execute fit or optimization: 'fit', 'opt'
 %   objnorm:        [1×l double]        - norm order at calculation objective function
 %   Aineq:          [p×l double]        - linear optimization inequality constrain matrix
@@ -19,45 +19,41 @@ function varargout = fithist(named)
 %   x0:             [1×k doule]         - inital parameters
 %   lb:             [1×k doule]         - lower bound of parameters
 %   ub:             [1×k doule]         - upper bpund of parameters
-%   show_param:     [logical]           - display optimization result 
+%   mb:             [1×2 doule]         - scale range of auto constrains
+%   disp:           [1×1 logical]       - display optimization result and distribution parameters
 %% The function returns following results:
-%   x:              [n×1 double]        - statistical edges
-%   y:              [n×1 double]        - statistical counts
 %   f:              [1×1 cfit]          - fit object
 %   modes:          [n×k double]        - approximate distribution modes assembled to column vector mapped by specific edges grid
 %   edges:          [n×1 double]        - mesh of modes
 %   fval:           [1×l double]        - value of object function
+%   x:              [n×1 double]        - statistical edges
+%   y:              [n×1 double]        - statistical counts
 %% Examples:
 %% fit raw data by two beta distributions with lower, upper and non-linear constrains
 % % gui
-% clf; tiledlayout(2, 2);
-% nexttile; imagesc(data.dwdlf(:,:,1));
 % rois = guihist(gca, data.dwdlf);
 % probe = guigetdata(rois{1}, data.dwdlf, shape = 'flatten'); % get raw data
 %
 % % constrain function
-% nonlcon = @(x) nonlcon_beta2(x, rmean1 = [], rmode1 = [8e-4, 1.8e-3], rvar1 = [1e-7, 1e-6], ....
-%         ramp1 = [], rmean2 = [], rmode2 = [3e-3, 4e-3], rvar2 = [1e-6, 1e-2]);
+% nonlcon = @(x) nonlcon_statmode(x,distname='beta2',rmode1=[1e-4,6e-4],rvar1=[1e-8,1e-7],rmode2=[7e-4,5e-3],rvar2=[1e-7,1e-5]);
 % % boundary constrains
 % lb = [0, 1e-3, 0, 7.8, 6416, 1e-3, 1e-2, 0, 0, 0];
 % ub = [2, 2e1, 1e-2, 7.8, 6416, 10, 2e1, 1e-2, 1e3, 1e4];
 % % initial vector
 % x0 = [1, 1, 1e-3, 5, 1e3, 1, 1, 3e-3, 10, 2e3];
 % % fit
-% [x, y, f, modes, edges, fval] = fithist(data = probe, type = 'beta2', ...
-%     solver = 'opt', objnorm = 2, nonlcon = nonlcon, x0 = x0, lb = lb, ub = ub, show_param = true);
+% [f, modes, edges, fval, x, y] = fithist(data = probe, distname = 'beta2', ...
+%       objnorm = 2, nonlcon = nonlcon, x0 = x0, lb = lb, ub = ub, disp = true);
 %% fit pdf curve by two skew normal distributions
 % % gui
-% clf; tiledlayout(2, 2);
-% nexttile; imagesc(data.dwdlf(:,:,1));
 % rois = guihist(gca, data.dwdlf);
 % probe = guigetdata(rois{1}, data.dwdlf, shape = 'flatten'); % get raw data
 % [y, x] = histcounts(probe, 'normalization', 'pdf');
 % x = x(2:end);
 %
 % % fit
-% [f, modes, edges] = fithist(x = x, y = y, type = 'gauss2s1', solver = 'fit');
-
+% [f, modes, edges, ~, ~, ~] = fithist(x = x, y = y, type = 'beta2');
+    
     arguments
         %% data parameters
         named.data double = []
@@ -67,7 +63,7 @@ function varargout = fithist(named)
         named.binedge double = []
         named.range double = []
         %% optimization parameters
-        named.type (1,:) char {mustBeMember(named.type, {'none', 'gauss1', 'beta1', 'gamma1', 'gumbel1', 'gauss2', 'beta2', 'gamma2', 'gumbel2'})} = 'gauss1'
+        named.distname (1,:) char {mustBeMember(named.distname, {'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'gumbel2'
         named.solver (1,:) char {mustBeMember(named.solver, {'fit', 'opt'})} = 'fit'
         named.objnorm double = 2
         named.Aineq double = []
@@ -78,15 +74,13 @@ function varargout = fithist(named)
         named.x0 double = []
         named.lb double = []
         named.ub double = []
-        named.show_param logical = false
-        %% deprecated parameters
-        named.init char = 'gauss1'
-        named.regul double = []
+        named.mb double = [0, 10];
+        named.disp logical = false
     end
 
     warning off
 
-    x = []; y = []; modes = []; f = [];
+    x = []; y = []; modes = [];
 
     % prepare fitting data
     if isempty(named.data)
@@ -96,21 +90,20 @@ function varargout = fithist(named)
     else
         if isempty(named.binedge)
             [y, x] = histcounts(named.data, 'Normalization', named.norm);
+            edges = linspace(0, max(x), 1e3);
         else
             [y, x] = histcounts(named.data, named.binedge, 'Normalization', named.norm);
+            edges = named.binedge;
         end
         x = x(2:end);
     end
 
-    % exclude data
+    % exclude & prepare data
     if ~isempty(named.range)
         index = excludedata(x, y, 'range', named.range);
         x = x(index); y = y(index); clear index;
     end
-
     [x, y] = prepareCurveData(x, y);
-
-    edges = linspace(0, max(x), 1e3);
 
     % initialize optimization problem
     options = optimoptions('fmincon', 'Algorithm', 'interior-point', ...
@@ -128,484 +121,88 @@ function varargout = fithist(named)
     if ~isempty(named.ub); problem.ub = named.ub; end
 
     % selection fitting action
-    switch named.type
-        case 'gauss1'
-            switch named.solver
-                case 'fit'
-                    f = fit(x, y, 'gauss1');
-                    modes(:, 1) = f(edges); 
-                case 'opt'
-                    fa = @(a, x) a(1)*normpdf(x*a(2)-a(3), a(4), a(5)); % approximation function
-                    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
-                    fi = fitdist(named.data, 'normal'); % initial appriximation
-        
-                    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
-                    problem.objective = fobj;
-        
-                    coefi = [1, 1, 0, fi.mu, fi.sigma];
-                    if isempty(named.x0); problem.x0 = coefi; end
-                    if isempty(named.lb); problem.lb = 0.1*coefi; end
-                    if isempty(named.ub); problem.ub = 10*coefi; end
-        
-                    [coef, fval] = fmincon(problem);
-                    if named.show_param
-                        disp(strcat("solution: ", num2str(coef)));
-                        disp(strcat("fval: ", num2str(fval)))
-                    end
-                    f = @(x) fa(coef, x);
-                    modes(:, 1) = fa(coef, edges);
-            end
-        case 'gauss1s'
-            switch named.solver
-                case 'fit'
-                    fa = @(a, b, c, d, x) a*exp(-((x-b)/c).^2).*(1+erf(d*(x-b)/c));            
-                    % get parameters to initial appoximation
-                    fe = fit(x, y, 'gauss1');
-        
-                    % adjust solver configuration
-                    ft = fittype(fa, 'independent', 'x', 'coefficients', ["a", "b", "c", "d"]);
-                    opts = fitoptions('Method', 'NonlinearLeastSquares');
-                    opts.Algorithm = 'Trust-Region';
-                    opts.Display = 'Off';
-                    opts.Lower = zeros(1, 4);
-                    opts.StartPoint = [fe.a1, fe.b1, fe.c1, skewness(y)];
-                    opts.Upper = 5*opts.StartPoint;
-        
-                    f = fit(x, y, ft, opts);
-                    modes(:, 1) = f.a*exp(-((edges-f.b)/f.c).^2).*(1+erf(f.d*(edges-f.b)/f.c));
-                case 'opt'
-                    fa = @(a, x) a(1)*normpdf(x*a(2)-a(3), a(4), a(5)).*normcdf(a(6)*(x*a(2)-a(3)), a(4), a(5)); % approximation function
-                    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
-                    fi = fitdist(named.data, 'Normal'); % initial appriximation
-
-                    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
-                    problem.objective = fobj;
-
-                    coefi = [1, 1, 0, fi.mu, fi.sigma, skewness(named.data)];
-                    if isempty(named.x0); problem.x0 = coefi; end
-                    if isempty(named.lb); problem.lb = 0.1*coefi; end
-                    if isempty(named.ub); problem.ub = 10*coefi; end
-
-                    [coef, fval] = fmincon(problem);
-                    if named.show_param
-                        disp(strcat("solution: ", num2str(coef)));
-                        disp(strcat("fval: ", num2str(fval)))
-                    end
-                    f = @(x) fa(coef, x);
-                    modes(:, 1) = fa(coef, edges);
-            end
-        case 'gauss2'
-            switch named.solver
-                case 'fit'
-                    % fit function: two normal distributions
-                    f = fit(x, y, 'gauss2');
-                    modes(:, 1) = f.a1*exp(-((edges-f.b1)/f.c1).^2); 
-                    modes(:, 2) = f.a2*exp(-((edges-f.b2)/f.c2).^2);
-                case 'opt'
-                    f1 = @(a, x) a(1)*normpdf(x*a(2)-a(3), a(4), a(5)); f1 = @(a, x) f1(a(1:5), x);
-                    f2 = @(a, x) a(1)*normpdf(x*a(2)-a(3), a(4), a(5)); f2 = @(a, x) f2(a(6:end), x);
-                    fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
-                    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
-                    fi = fitdist(named.data, 'Normal'); % initial appriximation
-        
-                    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
-                    problem.objective = fobj;
-
-                    coefi = [1, 1, 0, fi.mu, fi.sigma, skewness(named.data), 1, 1, 0, fi.mu, fi.sigma, skewness(named.data)];
-                    if isempty(named.x0); problem.x0 = coefi; end
-                    if isempty(named.lb); problem.lb = 0.1*coefi; end
-                    if isempty(named.ub); problem.ub = 10*coefi; end
-        
-                    [coef, fval] = fmincon(problem);
-                    if named.show_param
-                        disp(strcat("solution: ", num2str(coef)));
-                        disp(strcat("fval: ", num2str(fval)))
-                    end
-                    f = @(x) fa(coef, x);
-                    modes(:, 1) = f1(coef, edges);
-                    modes(:, 2) = f2(coef, edges);
-            end
-        case 'gauss2s1'
-            switch named.solver
-                case 'fit'
-                    % fit function: normal + skew normal distributions
-                    fa = @(a, b, c, d, e, f, g, x) a*exp(-((x-b)/c).^2).*(1+erf(d*(x-b)/c))+e*exp(-((x-f)/g).^2);            
-        
-                    % adjust solver configuration
-                    ft = fittype(fa, 'independent', 'x', 'coefficients', ["a", "b", "c", "d", "e", "f", "g"]);
-                    opts = fitoptions('Method', 'NonlinearLeastSquares');
-                    opts.Algorithm = 'Trust-Region';
-                    opts.Display = 'Off';
-                    opts.Lower = zeros(1, 7);
-                    % opts.Upper = 10*opts.StartPoint;
-        
-                    % get parameters to initial appoximation
-                    try
-                        fe = fit(x, y, named.init);
-                    catch
-                        fe = fit(x, y, 'gauss1');
-                    end
-        
-                    switch named.init
-                        case 'gauss1'
-                            opts.StartPoint = [fe.a1, abs(fe.b1), fe.c1, skewness(y), fe.a1, abs(fe.b1), fe.c1];
-                        case 'gauss2'
-                            if isempty(named.regul)
-                                opts.StartPoint = [fe.a1, fe.b1, fe.c1, skewness(y), fe.a2, fe.b2, fe.c2];
-                            else
-                                opts.StartPoint = [fe.a1, fe.b1, fe.c1, skewness(y), fe.a2, named.regul(1), named.regul(2)];
-                            end
-                    end
-        
-                    
-                    if isempty(named.regul)
-                        opts.Upper = 10*opts.StartPoint;
-                    else
-                        opts.Lower = [0, named.regul(3), named.regul(4), named.regul(5), 0, 0, 0];
-                        % opts.Upper = [5*fe.a1, named.regul(3), named.regul(4), named.regul(5), named.regul(1), named.regul(2)];
-                        opts.Upper = [10*opts.StartPoint(1:5), named.regul(1), named.regul(2)];
-                    end
-                    
-                    f = fit(x, y, ft, opts);
-                    modes(:, 1) = f.e*exp(-((edges-f.f)/f.g).^2);
-                    modes(:, 2) = f.a*exp(-((edges-f.b)/f.c).^2).*(1+erf(f.d*(edges-f.b)/f.c));
-                case 'opt'
-                    f1 = @(a, x) a(1)*normpdf(x*a(2)-a(3), a(4), a(5)); f1 = @(a, x) f1(a(1:5), x);
-                    f2 = @(a, x) a(1)*normpdf(x*x(2)-a(3), a(4), a(5)).*normcdf(a(6)*(x*a(2)-a(3)), a(4), a(5)); f2 = @(a, x) f2(a(6:end), x);
-                    fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
-                    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
-                    fi = fitdist(named.data, 'Normal'); % initial appriximation
-        
-                    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
-                    problem.objective = fobj;
-
-                    coefi = [1, 1, 0, fi.mu, fi.sigma, 1, 1, 0, fi.mu, fi.sigma, skewness(named.data)];
-                    if isempty(named.x0); problem.x0 = coefi; end
-                    if isempty(named.lb); problem.lb = 0.1*coefi; end
-                    if isempty(named.ub); problem.ub = 10*coefi; end
-        
-                    [coef, fval] = fmincon(problem);
-                    if named.show_param
-                        disp(strcat("solution: ", num2str(coef)));
-                        disp(strcat("fval: ", num2str(fval)))
-                    end
-                    f = @(x) fa(coef, x);
-                    modes(:, 1) = f1(coef, edges);
-                    modes(:, 2) = f2(coef, edges);
-            end
-        case 'gauss2s2'
-            switch named.solver
-                case 'fit'
-                    % fit function: 2 x skew normal distributions
-                    fa = @(a, b, c, d, e, f, g, h, x) a*exp(-((x-b)/c).^2).*(1+erf(d*(x-b)/c))+e*exp(-((x-f)/g).^2).*(1+erf(h*(x-f)/g));            
-        
-                    % adjust solver configuration
-                    ft = fittype(fa, 'independent', 'x', 'coefficients', ["a", "b", "c", "d", "e", "f", "g", "h"]);
-                    opts = fitoptions('Method', 'NonlinearLeastSquares');
-                    opts.Algorithm = 'Trust-Region';
-                    opts.Display = 'Off';
-                    opts.Lower = zeros(1, 8);
-        
-                    % get parameters to initial appoximation
-                    try
-                        fe = fit(x, y, named.init);
-                    catch
-                        fe = fit(x, y, 'gauss1');
-                    end
-        
-                    switch named.init
-                        case 'gauss1'
-                            opts.StartPoint = [fe.a1, abs(fe.b1), fe.c1, skewness(y), fe.a1, abs(fe.b1), fe.c1, skewness(y)];
-                        case 'gauss2'
-                            if isempty(named.regul)
-                                opts.StartPoint = [fe.a1, fe.b1, fe.c1, skewness(y), fe.a2, fe.b2, fe.c2, skewness(y)];
-                            else
-                                opts.StartPoint = [fe.a1, fe.b1, fe.c1, skewness(y), fe.a2, named.regul(1), named.regul(2), named.regul(3)];
-                            end
-                    end    
-        
-                    opts.Upper = 10*opts.StartPoint;
-
-                    f = fit(x, y, ft, opts);
-                    modes(:, 1) = f.e*exp(-((edges-f.f)/f.g).^2).*(1+erf(f.h*(edges-f.f)/f.g));
-                    modes(:, 2) = f.a*exp(-((edges-f.b)/f.c).^2).*(1+erf(f.d*(edges-f.b)/f.c));
-    
-                case 'opt'
-                    f1 = @(a, x) a(1)*normpdf(x*a(2)-a(3), a(4), a(5)).*normcdf(a(6)*(x*a(4)-a(5)), a(4), a(5)); f1 = @(a, x) f1(a(1:6), x);
-                    f2 = @(a, x) a(1)*normpdf(x*a(2)-a(3), a(4), a(5)).*normcdf(a(6)*(x*a(4)-a(5)), a(4), a(5)); f2 = @(a, x) f2(a(7:end), x);
-                    fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
-                    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
-                    fi = fitdist(named.data, 'Normal'); % initial appriximation
-        
-                    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
-                    problem.objective = fobj;
-
-                    coefi = [1, 1, 0, fi.mu, fi.sigma, skewness(named.data), 1, 1, 0, fi.mu, fi.sigma, skewness(named.data)];
-                    if isempty(named.x0); problem.x0 = coefi; end
-                    if isempty(named.lb); problem.lb = 0.1*coefi; end
-                    if isempty(named.ub); problem.ub = 10*coefi; end
-        
-                    [coef, fval] = fmincon(problem);
-                    if named.show_param
-                        disp(strcat("solution: ", num2str(coef)));
-                        disp(strcat("fval: ", num2str(fval)))
-                    end
-                    f = @(x) fa(coef, x);
-                    modes(:, 1) = f1(coef, edges);
-                    modes(:, 2) = f2(coef, edges);
-            end
+    switch named.distname
         case 'beta1'
-            switch named.solver
-                case 'fit'
-                    f = fitdist(named.data, 'beta');
-                    modes(:, 1) = f.pdf(edges);
-                case 'opt'
-                    fa = @(a, x) a(1)*betapdf(x*a(2)-a(3), a(4), a(5)); % approximation function
-                    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
-                    fi = fitdist(named.data, 'beta'); % initial appriximation
-        
-                    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
-                    problem.objective = fobj;
-        
-                    coefi = [1, 1, mode(named.data), fi.a, fi.b];
-                    if isempty(named.x0); problem.x0 = coefi; end
-                    if isempty(named.lb); problem.lb = 0.1*coefi; end
-                    if isempty(named.ub); problem.ub = 10*coefi; end
-        
-                    [coef, fval] = fmincon(problem);
-                    if named.show_param
-                        disp(strcat("solution: ", num2str(coef)));
-                        disp(strcat("fval: ", num2str(fval)))
-                    end
-                    f = @(x) fa(coef, x);
-                    modes(:, 1) = fa(coef, edges);
-            end
+            fa = @(a, x) a(1)*betapdf(x, a(2), a(3)); % approximation function
+            fi = fitdist(named.data, 'beta'); % initial appriximation
+            coefi = [1, fi.a, fi.b]; % initial vector
+        case 'beta1l'
+            fa = @(a, x) a(1)*betapdf(x*a(2)-a(3), a(4), a(5)); % approximation function
+            fi = fitdist(named.data, 'beta'); % initial appriximation
+            coefi = [1, 1, mode(named.data), fi.a, fi.b]; % initial vector
         case 'beta2'
-            switch named.solver
-                case 'opt'
-                    f1 = @(a, x) a(1)*betapdf(a(2)*x-a(3), a(4), a(5)); f1 = @(a, x) f1(a(1:5), x);
-                    f2 = @(a, x) a(1)*betapdf(a(2)*x-a(3), a(4), a(5)); f2 = @(a, x) f2(a(6:end), x);
-                    % f1 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f1 = @(a, x) f1(a(1:3), x);
-                    % f2 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f2 = @(a, x) f2(a(4:end), x);
-                    fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
-                    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
-                    fi = fitdist(named.data, 'beta'); % initial appriximation
-        
-                    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
-                    problem.objective = fobj;
-        
-                    coefi = [1, 1, mode(named.data), fi.a, fi.b, 1, 1, mode(named.data), fi.a, fi.b];
-                    if isempty(named.x0); problem.x0 = coefi; end
-                    if isempty(named.lb); problem.lb = 0*coefi; end
-                    if isempty(named.ub); problem.ub = 10*coefi; end
-        
-                    [coef, fval] = fmincon(problem);
-
-                    if named.show_param
-                        disp(strcat("solution: ", num2str(coef)));
-                        disp(strcat("fval: ", num2str(fval)))
-                        % advance
-                        a = coef;
-                        modess = [1/a(2)*((a(4)-1)/(a(4)+a(5)-2)+a(3)), ...
-                            1/a(7)*((a(9)-1)/(a(9)+a(10)-2)+a(8))];
-                        means = [1/a(2)*(a(4)/(a(4)+a(5))+a(3)), ...
-                            1/a(7)*(a(9)/(a(9)+a(10))+a(8))];
-                        vars = [a(4)*a(5)/(a(4)+a(5))^2/(a(4)+a(5)+1)/a(2)^2, ...
-                            a(9)*a(10)/(a(9)+a(10))^2/(a(9)+a(10)+1)/a(7)^2];
-                        amps = [a(1)*betapdf(a(2)*modess(1)-a(3), a(4), a(5)), ...
-                            a(6)*betapdf(a(7)*modess(2)-a(8), a(9), a(10))]; 
-                        disp(strcat("modes: ", num2str(modess)))
-                        disp(strcat("means: ", num2str(means)))
-                        disp(strcat("vars: ", num2str(vars)))
-                        disp(strcat("amps: ", num2str(amps)))
-                        try
-                            disp(strcat("nonlcon(coef): ", num2str(problem.nonlcon(coef))))
-                        catch
-                        end
-                    end
-
-                    f = @(x) fa(coef, x);
-                    modes(:, 1) = f1(coef, edges);
-                    modes(:, 2) = f2(coef, edges);
-            end
+            f1 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f1 = @(a, x) f1(a(1:3), x);
+            f2 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f2 = @(a, x) f2(a(4:end), x);
+            fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
+            fi = fitdist(named.data, 'beta'); % initial appriximation
+            coefi = [1, fi.a, fi.b, 1, fi.a, fi.b]; % initial vector
+        case 'beta2l'
+            f1 = @(a, x) a(1)*betapdf(a(2)*x-a(3), a(4), a(5)); f1 = @(a, x) f1(a(1:5), x);
+            f2 = @(a, x) a(1)*betapdf(a(2)*x-a(3), a(4), a(5)); f2 = @(a, x) f2(a(6:end), x);
+            fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
+            fi = fitdist(named.data, 'beta'); % initial appriximation
+            coefi = [1, 1, mode(named.data), fi.a, fi.b, 1, 1, mode(named.data), fi.a, fi.b]; % initial vector
         case 'gamma1'
-            switch named.solver
-                case 'fit'
-                    f = fitdist(named.data, 'gamma');
-                    modes(:, 1) = f.pdf(edges);
-                case 'opt'
-                    fa = @(a, x) a(1)*gampdf(x*a(2)-a(3), a(4), a(5)); % approximation function
-                    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
-                    fi = fitdist(named.data, 'gamma'); % initial appriximation
-        
-                    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
-                    problem.objective = fobj;
-        
-                    coefi = [1, 1, mode(named.data), fi.a, fi.b];
-                    if isempty(named.x0); problem.x0 = coefi; end
-                    if isempty(named.lb); problem.lb = 0.1*coefi; end
-                    if isempty(named.ub); problem.ub = 10*coefi; end
-        
-                    [coef, fval] = fmincon(problem);
-                    if named.show_param
-                        disp(strcat("solution: ", num2str(coef)));
-                        disp(strcat("fval: ", num2str(fval)))
-                    end
-                    f = @(x) fa(coef, x);
-                    modes(:, 1) = fa(coef, edges);
-            end
+            fa = @(a, x) a(1)*gampdf(x, a(2), a(3)); % approximation function
+            fi = fitdist(named.data, 'gamma'); % initial appriximation    
+            coefi = [1, fi.a, fi.b]; % initial vector
         case 'gamma2'
-            switch named.solver
-                case 'opt'
-                    f1 = @(a, x) a(1)*gampdf(x*a(2)-a(3), a(4), a(5)); f1 = @(a, x) f1(a(1:5), x);
-                    f2 = @(a, x) a(1)*gampdf(x*a(2)-a(3), a(4), a(5)); f2 = @(a, x) f2(a(6:end), x);
-                    fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
-                    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
-                    fi = fitdist(named.data, 'gamma'); % initial appriximation
-        
-                    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
-                    problem.objective = fobj;
-        
-                    coefi = [1, 1, mode(named.data), fi.a, fi.b, 1, 1, mode(named.data), fi.a, fi.b];
-                    if isempty(named.x0); problem.x0 = coefi; end
-                    if isempty(named.lb); problem.lb = 0.1*coefi; end
-                    if isempty(named.ub); problem.ub = 10*coefi; end
-        
-                    [coef, fval] = fmincon(problem);
-                    if named.show_param
-                        disp(strcat("solution: ", num2str(coef)));
-                        disp(strcat("fval: ", num2str(fval)))
-                    end
-                    f = @(x) fa(coef, x);
-                    modes(:, 1) = f1(coef, edges);
-                    modes(:, 2) = f2(coef, edges);
-            end
-        case 'gaussbeta'
-            switch named.solver
-                case 'fit'
-                    edges = [];
-                case 'opt'
-                    f1 = @(a, x) a(1)*normpdf(x*a(2)-a(3), a(4), a(5)); f1 = @(a, x) f1(a(1:5), x);
-                    f2 = @(a, x) a(1)*betapdf(x*a(2)-a(3), a(4), a(5)); f2 = @(a, x) f2(a(6:end), x);
-                    fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
-                    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
-                    fi = cell(1, 2); % initial appriximation
-                    fi{1} = fitdist(named.data, 'normal');
-                    fi{2} = fitdist(named.data, 'beta');
-        
-                    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
-                    problem.objective = fobj;
-        
-                    coefi = [1, 1, mode(named.data), fi{1}.mu, fi{1}.sigma, 1, 1, 0, fi{2}.a, fi{2}.b];
-                    if isempty(named.x0); problem.x0 = coefi; end
-                    if isempty(named.lb); problem.lb = 0.1*coefi; end
-                    if isempty(named.ub); problem.ub = 10*coefi; end
-        
-                    [coef, fval] = fmincon(problem);
-                    if named.show_param
-                        disp(strcat("solution: ", num2str(coef)));
-                        disp(strcat("fval: ", num2str(fval)))
-                    end
-                    f = @(x) fa(coef, x);
-                    modes(:, 1) = f1(coef, edges);
-                    modes(:, 2) = f2(coef, edges);
-            end
+            f1 = @(a, x) a(1)*gampdf(x, a(2), a(3)); f1 = @(a, x) f1(a(1:3), x);
+            f2 = @(a, x) a(1)*gampdf(x, a(2), a(3)); f2 = @(a, x) f2(a(4:end), x);
+            fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
+            fi = fitdist(named.data, 'gamma'); % initial appriximation
+            coefi = [1, fi.a, fi.b, 1, fi.a, fi.b]; % initial vector
         case 'gumbel1'
-            switch named.solver
-                case 'fit'
-                    f = fitdist(named.data, 'ev');
-                    modes(:, 1) = f.pdf(edges);
-                case 'opt'
-                    % fa = @(a, x) a(1)*evpdf(x*a(2)-a(3), a(4), a(5)); % approximation function
-                    fa = @(a, x) a(1)/a(3)*exp(-(x-a(2))/a(3)-exp(-(x-a(2))/a(3)));
-                    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
-                    fi = fitdist(named.data, 'ev'); % initial appriximation
-        
-                    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
-                    problem.objective = fobj;
-        
-                    % coefi = [1, 1, mode(named.data), fi.mu, fi.sigma];
-                    coefi = [1, fi.mu, fi.sigma];
-                    if isempty(named.x0); problem.x0 = coefi; end
-                    if isempty(named.lb); problem.lb = 0.1*coefi; end
-                    if isempty(named.ub); problem.ub = 10*coefi; end
-        
-                    [coef, fval] = fmincon(problem);
-                    if named.show_param
-                        disp(strcat("solution: ", num2str(coef)));
-                        disp(strcat("fval: ", num2str(fval)))
-                    end
-                    f = @(x) fa(coef, x);
-                    modes(:, 1) = fa(coef, edges);
-            end
+            % fa = @(a, x) a(1)*evpdf(x, a(2), a(3)); % approximation function
+            fa = @(a, x) a(1)/a(3)*exp(-(x-a(2))/a(3)-exp(-(x-a(2))/a(3)));
+            fi = fitdist(named.data, 'ev'); % initial appriximation
+            coefi = [1, fi.mu, fi.sigma]; % initial vector
         case 'gumbel2'
-            switch named.solver
-                case 'fit'
-                    f = [];
-                case 'opt'
-                    f1 = @(a, x) a(1)/a(3)*exp(-(x-a(2))/a(3)-exp(-(x-a(2))/a(3))); f1 = @(a, x) f1(a(1:3), x);
-                    f2 = @(a, x) a(1)/a(3)*exp(-(x-a(2))/a(3)-exp(-(x-a(2))/a(3))); f2 = @(a, x) f2(a(4:6), x);
-                    % f1 = @(a, x) a(1)*evpdf(x*a(2)-a(3), a(4), a(5)); f1 = @(a, x) f1(a(1:5), x);
-                    % f2 = @(a, x) a(1)*evpdf(x*a(2)-a(3), a(4), a(5)); f2 = @(a, x) f2(a(6:end), x);
-                    fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
-                    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
-                    fi = fitdist(named.data, 'ev'); % initial appriximation
-        
-                    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
-                    problem.objective = fobj;
+            % f1 = @(a, x) a(1)*evpdf(x, a(2), a(3)); f1 = @(a, x) f1(a(1:3), x);
+            % f2 = @(a, x) a(1)*evpdf(x, a(2), a(3)); f2 = @(a, x) f2(a(4:end), x);
+            f1 = @(a, x) a(1)/a(3)*exp(-(x-a(2))/a(3)-exp(-(x-a(2))/a(3))); f1 = @(a, x) f1(a(1:3), x);
+            f2 = @(a, x) a(1)/a(3)*exp(-(x-a(2))/a(3)-exp(-(x-a(2))/a(3))); f2 = @(a, x) f2(a(4:end), x);
+            fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
+            fi = fitdist(named.data, 'ev'); % initial appriximation
+            coefi = [1, fi.mu, fi.sigma, 1, fi.mu, fi.sigma]; % initial vector 
+    end
 
-                    % coefi = [1, 1, 0, fi.mu, fi.sigma, 1, 1, 0, fi.mu, fi.sigma];
-                    coefi = [1, fi.mu, fi.sigma, 1, fi.mu, fi.sigma];
-                    if isempty(named.x0); problem.x0 = coefi; end
-                    if isempty(named.lb); problem.lb = 0.1*coefi; end
-                    if isempty(named.ub); problem.ub = 10*coefi; end
-        
-                    [coef, fval] = fmincon(problem);
-                    if named.show_param
-                        disp(strcat("solution: ", num2str(coef)));
-                        disp(strcat("fval: ", num2str(fval)));
-                        % advance
-                        ec = 0.57721;
-                        modess = [coef(2), coef(5)];
-                        means = [coef(2)+coef(3)*ec, coef(5)+coef(6)*ec];
-                        vars = [pi^2/6*coef(3)^2, pi^2/6*coef(6)^2];
-                        amps = [coef(1)/coef(3)*exp(-(modess(1)-coef(2))/coef(3)-exp(-(modess(1)-coef(2))/coef(3))), ...
-                            coef(4)/coef(6)*exp(-(modess(2)-coef(5))/coef(6)-exp(-(modess(2)-coef(5))/coef(6)))];
-                        disp(strcat("modes: ", num2str(modess)))
-                        disp(strcat("means: ", num2str(means)))
-                        disp(strcat("vars: ", num2str(vars)))
-                        disp(strcat("amps: ", num2str(amps)))
-                        try
-                            disp(strcat("nonlcon(coef): ", num2str(problem.nonlcon(coef))))
-                        catch
-                        end
-                    end
-                    f = @(x) fa(coef, x);
-                    modes(:, 1) = f1(coef, edges);
-                    modes(:, 2) = f2(coef, edges);
-            end
+    % define objective function
+    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
+    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
+    problem.objective = fobj;
 
-        otherwise
-            f = []; fval = [];
-            modes = zeros(size(edges));
+    % auto constraints
+    if isempty(named.x0); problem.x0 = coefi; end
+    if isempty(named.lb); problem.lb = named.mb(1)*coefi; end
+    if isempty(named.ub); problem.ub = named.mb(2)*coefi; end
+
+    % solve problem
+    [coef, fval] = fmincon(problem);
+    f = @(x) fa(coef, x);
+
+    % separate statistical modes
+    if exist('f1', 'var') && exist('f2', 'var')
+        modes(:, 1) = f1(coef, edges);
+        modes(:, 2) = f2(coef, edges);
+    else
+        modes(:, 1) = fa(coef, edges);
+    end
+
+    if named.disp
+        tab = array2table(coef, 'VariableNames', split(num2str(1:size(coef, 2))), 'RowName', {'solution'});
+        disp(tab);
+        distparam(coef, distname = named.distname, disp = true);
     end
 
     % select outputs
+    varargout{1} = f;
+    varargout{2} = modes;
+    varargout{3} = edges;
+    varargout{4} = fval;
+
     if isempty(named.x) && isempty(named.y)
-        varargout{1} = x;
-        varargout{2} = y;
-        varargout{3} = f;
-        varargout{4} = modes;
-        varargout{5} = edges;
-        switch named.solver
-            case 'opt'
-                varargout{6} = fval;  
-            otherwise
-                varargout{6} = [];
-        end
-    else
-        varargout{1} = f;
-        varargout{2} = modes;
-        varargout{3} = edges;
+        varargout{5} = x;
+        varargout{6} = y;
     end
 end

@@ -1,5 +1,8 @@
 function [c, ceq] = nonlcon_statmode(x, options)
+%% Non-linear constraint function for two mode distribution fitting
 %% The function takes following arguments:
+%   x:         [1×n double]         - parameter vector
+%   distname:  [char array]         - approximation distribution name
 %   mean1:     [1×2 double]         - constraints of mean value the first mode
 %   mode1:     [1×2 double]         - constraints of mode value the first mode
 %   var1:      [1×2 double]         - constraints of variance value the first mode
@@ -14,7 +17,7 @@ function [c, ceq] = nonlcon_statmode(x, options)
 
     arguments
         x double
-        options.type (1,:) char {mustBeMember(options.type, {'beta2', 'gumbel2'})} = 'gumbel2'
+        options.distname (1,:) char {mustBeMember(options.distname, {'gamma2', 'beta2', 'beta2l', 'gumbel2'})} = 'gumbel2'
 
         options.mean1 double = []
         options.mode1 double = []
@@ -29,26 +32,11 @@ function [c, ceq] = nonlcon_statmode(x, options)
 
     c = []; ceq = [];
 
-    switch options.type
-        case 'beta2'
-            modes = [(x(2)-1)/(x(2)+x(3)-1), (x(5)-1)/(x(5)+x(6)-1)];
-            means = [x(2)/(x(2)+x(3)), x(5)/(x(5)+x(6))];
-            vars = [x(2)*x(3)/(x(2)+x(3))^2/(x(2)+x(3)+1), x(5)*x(6)/(x(5)+x(6))^2/(x(5)+x(6)+1)];
-            amps = [x(1)*betapdf(modes(1), x(2), x(3)), x(4)*betapdf(modes(2), x(5), x(6))]; 
-        case 'beta2l'
-            modes = [1/x(2)*((x(4)-1)/(x(4)+x(5)-2)+x(3)), 1/x(7)*((x(9)-1)/(x(9)+x(10)-2)+x(8))];
-            means = [1/x(2)*(x(4)/(x(4)+x(5))+x(3)), 1/x(7)*(x(9)/(x(9)+x(10))+x(8))];
-            vars = [x(4)*x(5)/(x(4)+x(5))^2/(x(4)+x(5)+1)/x(2)^2, ...
-                x(9)*x(10)/(x(9)+x(10))^2/(x(9)+x(10)+1)/x(7)^2];
-            amps = [x(1)*betapdf(x(2)*modes(1)-x(3), x(4), x(5)), x(6)*betapdf(x(7)*modes(2)-x(8), x(9), x(10))]; 
-        case 'gumbel2'
-            ec = 0.57721;
-            modes = [x(2), x(5)];
-            means = [x(2)+x(3)*ec, x(5)+x(6)*ec];
-            vars = [pi^2/6*x(3)^2, pi^2/6*x(6)^2];
-            amps = [x(1)/x(3)*exp(-(modes(1)-x(2))/x(3)-exp(-(modes(1)-x(2))/x(3))), ...
-                x(4)/x(6)*exp(-(modes(2)-x(5))/x(6)-exp(-(modes(2)-x(5))/x(6)))];
-    end
+    param = distparam(x, distname = options.distname);
+    modes = param.mode;
+    means = param.mean;
+    vars = param.variance;
+    amps = param.amplitude;
 
     c = [c, means(1)-means(2)];
     c = [c, modes(1)-modes(2)];

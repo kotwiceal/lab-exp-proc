@@ -4,7 +4,7 @@ function y = qntlfilter(x, named)
 %% The function takes following arguments:
 %   x:              [n×m double]        - multidimensional data
 %   quantile:       [1×1 double]        - quantile threshold of cumulative distribution
-%   type:           [char array]        - name of approximation family distribution
+%   distname:       [char array]        - name of approximation family distribution
 %   objnorm:        [1×1 double]        - norm order of objective function
 %   x0:             [1×k doule]         - inital parameters
 %   lb:             [1×k doule]         - lower bound of parameters
@@ -18,7 +18,7 @@ function y = qntlfilter(x, named)
         named.quantile double = 0.05
         named.norm (1,:) char {mustBeMember(named.norm, {'count', 'pdf', 'probability', 'percentage', 'countdensity'})} = 'pdf'
         named.binedge double = []
-        named.type (1,:) char {mustBeMember(named.type, {'gauss2', 'beta2', 'gamma2', 'gumbel2'})} = 'gumbel2'
+        named.distname (1,:) char {mustBeMember(named.distname, {'gauss2', 'beta2', 'beta2l', 'gamma2', 'gumbel2'})} = 'gumbel2'
         named.objnorm double = 2
         named.x0 double = []
         named.lb double = []
@@ -27,7 +27,7 @@ function y = qntlfilter(x, named)
     end
 
     try
-        [~, ~, ~, modes, edges, ~] = fithist(data = x(:), norm = named.norm, binedge = named.binedge, type = named.type, solver = 'opt', ...
+        [~, modes, edges, ~, ~, ~] = fithist(data = x(:), norm = named.norm, binedge = named.binedge, distname = named.distname, ...
             objnorm = named.objnorm, x0 = named.x0, lb = named.lb, ub = named.ub, nonlcon = named.nonlcon);
         modes_cs = cumsum(modes, 1); modes_cs = modes_cs ./ max(modes_cs, [], 1);
         modes_cs(:, 2) = 1 - modes_cs(:, 2);

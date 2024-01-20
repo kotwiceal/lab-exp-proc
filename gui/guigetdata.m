@@ -14,7 +14,7 @@ function result = guigetdata(roi, data, named)
         arguments
             roi 
             data double
-            named.shape (1,:) char {mustBeMember(named.shape, {'raw', 'flatten'})} = 'raw'
+            named.shape (1,:) char {mustBeMember(named.shape, {'raw', 'cut', 'flatten'})} = 'raw'
             named.type (1,:) char {mustBeMember(named.type, {'node', 'spatial'})} = 'node'
             named.x double = []
             named.z double = []
@@ -38,6 +38,13 @@ function result = guigetdata(roi, data, named)
             case 'raw'
                 data(~index) = nan;
                 result = data;
+            case 'cut'
+                temporary = [];
+                data = reshape(data, [sz(1:2), prod(sz(3:end))]);
+                for i = 1:prod(sz(3:end))
+                    temporary(:,:,i) = imcrop(data(:,:,i), roi.Position);
+                end
+                result = reshape(temporary, [size(temporary, 1:2), sz(3:end)]);
             case 'flatten'
                 result = data(index);
         end
