@@ -9,13 +9,18 @@ function param = distparam(x, named)
 
     arguments
         x double
-        named.distname (1,:) char {mustBeMember(named.distname, {'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'gumbel2'
+        named.distname (1,:) char {mustBeMember(named.distname, {'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'gumbel2'
         named.disp logical = false
     end
 
     param = struct();
 
     switch named.distname
+        case 'chi21'
+            param.mean = x(1);
+            param.mode = max([0, x(1)-2]);
+            param.variance = 2*x(1);
+            param.amplitude = chi2pdf(param.mode, x(1));
         case 'beta1'
             param.mean = x(2)/(x(2)+x(3));
             param.mode = (x(2)-1)/(x(2)+x(3)-2);

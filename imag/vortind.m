@@ -1,13 +1,13 @@
 function result = vortind(u, w, named)
 %% Process a vortex identification criteria
 %% The function takes following arguments:
-%   u:          [n×m×... double]    - first vector component
-%   w:          [n×m×... double]    - second vector component
-%   type:       [char array]        - type of vortex identification criteria
-%   threshold:  [logical]           - apply threshold 
-%   filter:     [char array]        - difference schema
-%   smooth:     [char array]        - smooth filter
-%   kernel:     [double k×l]        - kernel of smooth filter
+%   u:              [n×m×... double]    - first vector component
+%   w:              [n×m×... double]    - second vector component
+%   type:           [char array]        - type of vortex identification criteria
+%   threshold:      [1×1 logical]       - apply threshold 
+%   diffilter:      [char array]        - difference schema
+%   prefilter:      [char array]        - smooth filter
+%   prefiltkernel:  [1×2 double]        - kernel of smooth filter
 %
 %% The function returns following results:
 %   result:     [n×mx... double]    - vortex identification criteria
@@ -16,23 +16,23 @@ function result = vortind(u, w, named)
         u double
         w double
         named.type (1,:) char {mustBeMember(named.type, {'q', 'l2', 'd'})} = 'q'
-        named.difkernel (1,:) char {mustBeMember(named.difkernel, {'sobel', '4ord', '4ordgauss', '2ord'})} = 'sobel'
+        named.diffilter (1,:) char {mustBeMember(named.diffilter, {'sobel', '4ord', '4ordgauss', '2ord'})} = 'sobel'
         named.threshold logical = true
-        named.smooth (1,:) char {mustBeMember(named.smooth, {'average', 'gaussian', 'none'})} = 'gaussian'
-        named.kernel double = [3, 3]
+        named.prefilter (1,:) char {mustBeMember(named.prefilter, {'average', 'gaussian', 'none'})} = 'gaussian'
+        named.prefiltkernel double = [3, 3]
     end
 
-    Gx = difkernel(named.difkernel); Gz = Gx';
+    Gx = difkernel(named.diffilter); Gz = Gx';
 
     dudx = imfilter(u, Gx); dudz = imfilter(u, Gz);
     dwdx = imfilter(w, Gx); dwdz = imfilter(w, Gz);
 
     % prefiltering
-    switch named.smooth
+    switch named.prefilter
         case 'none'
         otherwise
             try
-                kernel = fspecial(named.smooth, named.kernel);
+                kernel = fspecial(named.smooth, named.prefiltkernel);
                 dudx = imfilter(dudx, kernel); dudz = imfilter(dudz, kernel);
                 dwdx = imfilter(dwdx, kernel); dwdz = imfilter(dwdz, kernel);
             catch

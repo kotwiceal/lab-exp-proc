@@ -7,6 +7,7 @@ function rois = guihist(data, named)
 %   range:          [1×2 double]                    - range to exclude data
 %   norm:           [char array]                    - type of statistics normalization
 %   binedge:        [1×q double]                    - bins count or edge grid
+%   normalize:      [char array]                    - data normalization
 
 %   shape:          [char array]                    - type of region selection
 %   mask:           [1×2 or 1×4 t×2 double]         - edge size to rectangle selection or n-row verxex to polygon selection 
@@ -83,6 +84,7 @@ function rois = guihist(data, named)
         named.range double = []
         named.norm (1,:) char {mustBeMember(named.norm, {'count', 'pdf', 'cdf', 'cumcount', 'probability', 'percentage', 'countdensity'})} = 'count'
         named.binedge double = []
+        named.normalize (1,:) char {mustBeMember(named.normalize, {'none', 'zscore', 'norm', 'center'})} = 'none'
         %% roi and axis parameters
         named.shape (1,:) char {mustBeMember(named.shape, {'rect', 'poly'})} = 'rect'
         named.mask double = []
@@ -98,7 +100,7 @@ function rois = guihist(data, named)
         named.docked logical = false
         named.aspect (1,:) char {mustBeMember(named.aspect, {'equal', 'auto'})} = 'equal'
         %% optimization parameters
-        named.distname (1,:) char {mustBeMember(named.distname, {'none', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'none'
+        named.distname (1,:) char {mustBeMember(named.distname, {'none', 'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'none'
         named.objnorm double = 2
         named.Aineq double = []
         named.bineq double = []
@@ -184,6 +186,7 @@ function rois = guihist(data, named)
                 ub = named.ub, ...
                 mb = named.mb, ...
                 range = named.range, ...
+                normalize = named.normalize, ...
                 disp = named.disp);
 
             plot(ax{1}, edges_raw, counts_raw, 'Color', rois{i}.UserData.color, ...

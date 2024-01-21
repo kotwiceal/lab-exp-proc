@@ -78,7 +78,7 @@ function [intermittency, binarized] = procinterm(data, named)
                 distname = named.distname, x0 = named.x0, lb = named.lb, ub = named.ub, nonlcon = named.nonlcon);
             threshold = nlpfilter(data, named.kernel, @(x) nlkernel(x), strides = named.strides, type = 'deep');
             threshold = imresize(threshold, sz(1:2));
-            if ~isempty(named.smooth_threshold) threshold = medfilt2(threshold, named.smooth_threshold); end
+            if ~isempty(named.smooth_threshold); threshold = medfilt2(threshold, named.smooth_threshold); end
             binarized = data ./ threshold;
             binarized(binarized >= 1) = 1;
             binarized(binarized < 1) = 0;
@@ -88,7 +88,7 @@ function [intermittency, binarized] = procinterm(data, named)
                 distname = named.distname, x0 = named.x0, lb = named.lb, ub = named.ub, nonlcon = named.nonlcon);
             threshold = nlpfilter(data, named.kernel, @(x) nlkernel(x), strides = named.strides, type = 'deep');
             threshold = imresize(threshold, sz(1:2));
-            if ~isempty(named.smooth_threshold) threshold = medfilt2(threshold, named.smooth_threshold); end
+            if ~isempty(named.smooth_threshold); threshold = medfilt2(threshold, named.smooth_threshold); end
             binarized = data ./ threshold;
             binarized(binarized >= 1) = 1;
             binarized(binarized < 1) = 0;
@@ -100,6 +100,6 @@ function [intermittency, binarized] = procinterm(data, named)
             intermittency = imresize(intermittency, sz(1:2));
     end
 
-    if ~isempty(named.smooth_intermittency) intermittency = medfilt2(intermittency, named.smooth_intermittency); end
+    if ~isempty(named.smooth_intermittency); intermittency = medfilt2(intermittency, named.smooth_intermittency); end
 
 end
