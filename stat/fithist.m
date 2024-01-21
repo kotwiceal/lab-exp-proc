@@ -7,6 +7,7 @@ function varargout = fithist(named)
 %   norm:           [char array]        - type of statistics normalization
 %   binedge:        [double]            - bins count or edge grid 
 %   range:          [1×2 double]        - range to exclude data
+%   normalize:      [char array]        - data normalization
 
 %   distname:       [char array]        - approximation distribution name
 %   solver:         [char array]        - execute fit or optimization: 'fit', 'opt'
@@ -62,8 +63,9 @@ function varargout = fithist(named)
         named.norm (1,:) char {mustBeMember(named.norm, {'count', 'pdf', 'probability', 'percentage', 'countdensity'})} = 'pdf'
         named.binedge double = []
         named.range double = []
+        named.normalize (1,:) char {mustBeMember(named.normalize, {'none', 'zscore', 'norm', 'center'})} = 'none'
         %% optimization parameters
-        named.distname (1,:) char {mustBeMember(named.distname, {'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'gumbel2'
+        named.distname (1,:) char {mustBeMember(named.distname, {'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'gumbel2'
         named.solver (1,:) char {mustBeMember(named.solver, {'fit', 'opt'})} = 'fit'
         named.objnorm double = 2
         named.Aineq double = []
@@ -88,6 +90,13 @@ function varargout = fithist(named)
             x = named.x; y = named.y;
         end
     else
+        % normalization
+        switch named.normalize
+            case 'none'
+            otherwise
+                named.data = normalize(named.data, named.normalize);
+        end
+
         if isempty(named.binedge)
             [y, x] = histcounts(named.data, 'Normalization', named.norm);
             edges = linspace(0, max(x), 1e3);
@@ -122,6 +131,9 @@ function varargout = fithist(named)
 
     % selection fitting action
     switch named.distname
+        case 'chi21'
+            fa = @(a, x) chi2pdf(x, a(1)); % approximation function
+            coefi = 3; % initial vector
         case 'beta1'
             fa = @(a, x) a(1)*betapdf(x, a(2), a(3)); % approximation function
             fi = fitdist(named.data, 'beta'); % initial appriximation
