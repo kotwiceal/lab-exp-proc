@@ -10,6 +10,7 @@ function y = qntlfilter(x, named)
 %   lb:             [1×k doule]         - lower bound of parameters
 %   ub:             [1×k doule]         - upper bpund of parameters
 %   nonlcon:        [funtion_handle]    - non-linear optimization constrain function
+%   root:           [char array]        - method to find root of two cdf intersection
 %% The function returns following results:
 %   y:              [double]            - filter step result
 
@@ -24,15 +25,29 @@ function y = qntlfilter(x, named)
         named.lb double = []
         named.ub double = []
         named.nonlcon = []
+        named.root (1,:) char {mustBeMember(named.root, {'diff', 'fsolve', 'fminbnd'})} = 'diff'
     end
 
     try
         [~, modes, edges, ~, ~, ~] = fithist(data = x(:), norm = named.norm, binedge = named.binedge, distname = named.distname, ...
             objnorm = named.objnorm, x0 = named.x0, lb = named.lb, ub = named.ub, nonlcon = named.nonlcon);
-        modes_cs = cumsum(modes, 1); modes_cs = modes_cs ./ max(modes_cs, [], 1);
-        modes_cs(:, 2) = 1 - modes_cs(:, 2);
-        [~, index] = min(abs(modes_cs(:, 1)-named.quantile));
-        y = edges(index);
+        cdf = cumsum(modes, 1); cdf = cdf ./ max(cdf, [], 1);
+        cdf(:, 2) = 1 - cdf(:, 2);
+        switch named.root
+            case 'diff'
+                [~, index] = min(abs(cdf(:, 1)-named.quantile)); y = edges(index);
+            case 'fsolve'
+                [~, index] = min(abs(cdf(:, 1)-named.quantile)); y = edges(index);
+                [edges0, cdf10] = prepareCurveData(edges, cdf(:,1)); fcdf10 = fit(edges0, cdf10, 'linearinterp'); % fit cdf of mode 1
+                problem = struct('objective', @(x) norm(fcdf10(x)-quantile, 2), 'options', ...
+                    optimoptions('fsolve', 'Algorithm', 'trust-region', ...
+                        'MaxFunctionEvaluations', 1e4, 'MaxIterations', 3e3, 'DiffMaxChange', 1e-4, 'Display', 'Off'), ...
+                        'x0', y, 'lb', min(edges), 'ub', max(edges), 'solver', 'fsolve'); 
+                y = fsolve(problem);
+            case 'fminbnd'
+                [edges0, cdf10] = prepareCurveData(edges, cdf(:,1)); fcdf10 = fit(edges0, cdf10, 'linearinterp'); % fit cdf of mode 1
+                y = fminbnd(@(x) norm(fcdf10(x)-quantile, 2), min(edges), max(edges));
+        end
     catch
         y = nan;
     end

@@ -7,21 +7,16 @@ function rois = guiautocorr(data, named)
 %   aspect:         [char array]                    - axis aspect ratio: 'equal', 'auto' 
 %   clim:           [1×2 double]                    - color axis limit
 %   cscale:         [char array]                    - colormap scale
-%   display:        [char array]                    - display type: 'imagesc', 'surf' 
+%   display:        [char array]                    - display type: 'imagesc', 'surf'
+%   docked:         [1×1 logical]                   - docker figure
+%   colormap:       [char array]                    - colormap
 %% The function returns following results:
 %   rois:           [object]                        - ROI cell objects
 %% Examples
 %% show auto-correlation of signal with default parameters
-% data = rand(270, 320);
-% clf; tiledlayout(1, 2);
-% nexttile; imagesc(data);
-% guiautocorr(gca, data);
-%
+% guiautocorr(data);
 %% show auto-correlation of signal with custom parameters
-% data = rand(270, 320);
-% clf; tiledlayout(1, 2);
-% nexttile; imagesc(data);
-% guiautocorr(gca, data, mask = [100, 150, 25, 25], display = 'surf', clim = [0, 1], aspect = 'auto');
+% guiautocorr(data, mask = [100, 150, 25, 25], display = 'surf', clim = [0, 1], aspect = 'auto');
     
     arguments
         data double
@@ -35,6 +30,7 @@ function rois = guiautocorr(data, named)
         named.cscale (1,:) char {mustBeMember(named.cscale, {'linear', 'log'})} = 'linear'
         named.display (1,:) char {mustBeMember(named.display, {'imagesc', 'surf'})} = 'imagesc'
         named.docked logical = false
+        named.colormap (1,:) char = 'turbo'
     end
 
     if isempty(named.x) && isempty(named.y)
@@ -78,7 +74,7 @@ function rois = guiautocorr(data, named)
                 end
         end
 
-        colorbar(ax); colormap(ax, 'turbo');
+        colorbar(ax); colormap(ax, named.colormap);
         set(ax, 'ColorScale', named.cscale); 
         if ~isempty(named.clim)
             clim(ax, named.clim);
@@ -99,6 +95,7 @@ function rois = guiautocorr(data, named)
         case 'spatial'
             contourf(axroi, named.x, named.y, data, 'LineStyle', 'None'); 
     end
+    colormap(axroi, named.colormap);
 
     nexttile; ax = gca;
     rois = guiselectregion(axroi, @event, shape = 'rect', ...
