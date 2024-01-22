@@ -1,4 +1,4 @@
-function [intermittency, binarized] = procinterm(data, named)
+function varargout = procinterm(data, named)
 %% Intermittency processing.
 %% The function takes following arguments:
 %   data:           [n×m... double]     - multidimensional data
@@ -28,8 +28,28 @@ function [intermittency, binarized] = procinterm(data, named)
 %   var2:           [1×2 double]         - constraints of variance value the second mode
 %   amp2:           [1×2 double]         - constraints of amplitude value the second mode
 
-%   smooth_intermittency: [1×2 double]      - smooth kernel of imtermittensy field
-%   smooth_threshold: [1×2 double]          - smooth kernel of threshold field
+%   prefitler:      [char array]         - method to filter threshold field
+%   prefiltkernel:  [1×2 double]         - kernel of filtering threshold field
+
+%   postfitler:     [char array]         - method to filter intermittency field
+%   postfiltkernel: [1×2 double]         - kernel of filtering intermittency field
+%% The function returns following results:
+%   intermittency:              [n×m double]
+%   binarized:                  [n×m... double]
+%   threshold:                  [n×m... double]
+%% Examples:
+%% process intermittency by default settings
+% procinterm(data.dwdl)
+%% process intermittency by custom settings
+% % constrain function
+% nonlcon = @(x) nonlcon_statmode(x,distname='gumbel2',mode1=[1e-4,6e-4],var1=[1e-8,1e-7],mode2=[7e-4,5e-3],var2=[1e-7,1e-5]);
+% % boundary constrains
+% lb = [0, 0, 0, 0, 0, 0];
+% ub = [2, 5e-3, 5e-3, 2, 5e-3, 5e-3];
+% % initial approximation
+% x0 = [0.80857,0.00027965,0.000113,0.19571,0.00060174,0.00039031];
+% [interm, binar, thresh] = procinterm(data.dwdl,distname='gumbel2',method='cdf-intersection', ...
+%     x0=x0,lb=lb,ub=ub,nonlcon=nonlcon,binedge=linspace(0,5e-3,500),root='fminbnd');
 
     arguments
         data double
@@ -39,7 +59,8 @@ function [intermittency, binarized] = procinterm(data, named)
         %% algorithm parameters
         named.method (1,:) char {mustBeMember(named.method, {'quantile-threshold', 'cdf-intersection', 'integral-ratio'})} = 'integral-ratio'
         named.distname (1,:) char {mustBeMember(named.distname, {'gamma2', 'beta2', 'beta2l', 'gumbel2'})} = 'gumbel2'
-        named.quantile double = 0.05
+        named.quantile double = 0.2
+        named.root (1,:) char {mustBeMember(named.root, {'diff', 'fsolve', 'fminbnd'})} = 'diff'
         %% processing parameters
         named.kernel double = [30, 30]
         named.strides double = [5, 5]
@@ -58,9 +79,12 @@ function [intermittency, binarized] = procinterm(data, named)
         named.rmode2 double = [7e-4,5e-3]
         named.rvar2 double = [1e-7,1e-5]
         named.ramp2 double = []
+        %% pre-pocessing parameters
+        named.prefilter (1,:) char {mustBeMember(named.prefilter, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'median'
+        named.prefiltkernel double = [15, 15]
         %% post-processing parameters
-        named.smooth_intermittency double = [15, 15]
-        named.smooth_threshold double = [15, 15]
+        named.postfitler (1,:) char {mustBeMember(named.postfitler, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'median'
+        named.postfiltkernel double = [15, 15]
     end
 
     intermittency = []; binarized = [];
@@ -74,25 +98,47 @@ function [intermittency, binarized] = procinterm(data, named)
 
     switch named.method
         case 'quantile-threshold'
-            nlkernel = @(x) qntlfilter(x, quantile = named.quantile, norm = named.norm, binedge = named.binedge, ...
+            nlkernel = @(x) qntlfilter(x, quantile = named.quantile, norm = named.norm, binedge = named.binedge, root = named.root, ...
                 distname = named.distname, x0 = named.x0, lb = named.lb, ub = named.ub, nonlcon = named.nonlcon);
             threshold = nlpfilter(data, named.kernel, @(x) nlkernel(x), strides = named.strides, type = 'deep');
             threshold = imresize(threshold, sz(1:2));
-            if ~isempty(named.smooth_threshold); threshold = medfilt2(threshold, named.smooth_threshold); end
+            switch named.prefilter
+                case 'median'
+                    threshold = medfilt2(threshold, named.prefiltkernel);
+                case 'wiener'
+                    threshold = wiener2(threshold, named.prefiltkernel);
+                case 'gaussian'
+                    threshold = imfilter(threshold, fspecial('gaussian', named.prefiltkernel));
+                case 'average'
+                    threshold = imfilter(threshold, fspecial('average', named.prefiltkernel));
+            end
             binarized = data ./ threshold;
             binarized(binarized >= 1) = 1;
             binarized(binarized < 1) = 0;
             intermittency = mean(binarized, 3);
+            varargout{2} = binarized;
+            varargout{3} = threshold;
         case 'cdf-intersection'
-            nlkernel = @(x) cdfintfilter(x, norm = named.norm, binedge = named.binedge, ...
+            nlkernel = @(x) cdfintfilter(x, norm = named.norm, binedge = named.binedge, root = named.root, ...
                 distname = named.distname, x0 = named.x0, lb = named.lb, ub = named.ub, nonlcon = named.nonlcon);
             threshold = nlpfilter(data, named.kernel, @(x) nlkernel(x), strides = named.strides, type = 'deep');
             threshold = imresize(threshold, sz(1:2));
-            if ~isempty(named.smooth_threshold); threshold = medfilt2(threshold, named.smooth_threshold); end
+            switch named.prefilter
+                case 'median'
+                    threshold = medfilt2(threshold, named.prefiltkernel);
+                case 'wiener'
+                    threshold = wiener2(threshold, named.prefiltkernel);
+                case 'gaussian'
+                    threshold = imfilter(threshold, fspecial('gaussian', named.prefiltkernel));
+                case 'average'
+                    threshold = imfilter(threshold, fspecial('average', named.prefiltkernel));
+            end
             binarized = data ./ threshold;
             binarized(binarized >= 1) = 1;
             binarized(binarized < 1) = 0;
             intermittency = mean(binarized, 3);
+            varargout{2} = binarized;
+            varargout{3} = threshold;
         case 'integral-ratio'
             nlkernel = @(x) intrelfilter(x, norm = named.norm, binedge = named.binedge, ...
                 distname = named.distname, x0 = named.x0, lb = named.lb, ub = named.ub, nonlcon = named.nonlcon);
@@ -100,6 +146,17 @@ function [intermittency, binarized] = procinterm(data, named)
             intermittency = imresize(intermittency, sz(1:2));
     end
 
-    if ~isempty(named.smooth_intermittency); intermittency = medfilt2(intermittency, named.smooth_intermittency); end
+    switch named.postfitler
+        case 'median'
+            intermittency = medfilt2(intermittency, named.postfiltkernel);
+        case 'wiener'
+            intermittency = wiener2(intermittency, named.postfiltkernel);
+        case 'gaussian'
+            intermittency = imfilter(intermittency, fspecial('gaussian', named.postfiltkernel));
+        case 'average'
+            intermittency = imfilter(intermittency, fspecial('average', named.postfiltkernel));
+    end
+
+    varargout{1} = intermittency;
 
 end

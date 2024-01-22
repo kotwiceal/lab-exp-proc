@@ -1,7 +1,6 @@
-function rois = guilinedist(axroi, data, named)
+function rois = guilinedist(data, named)
 %% Visualize data distribution along specified lines.
 %% The function takes following arguments:
-%   axroi:              [matlab.graphics.axis.Axes]     - axis object of canvas that selection data events are being occured
 %   data:               [n×m... double]                 - multidimensional data
 %   x:                  [n×m double]                    - spatial coordinate
 %   z:                  [n×m double]                    - spatial coordinate
@@ -12,30 +11,25 @@ function rois = guilinedist(axroi, data, named)
 %   number:             [int]                           - count of selection regions
 %   xlim:               [1×2 double]                    - x axis limit
 %   ylim:               [1×2 double]                    - y axis limit
+%   clim:               [1×2 double]                    - colorbar limit
 %   displayname:        [string array]                  - list of labeled curves
 %   legend:             [1×1 logical]                   - show legend
+%   docked:             [1×1 logical]                   - docker figure
+%   colormap:           [char array]                    - colormap
+%   aspect:             [char array]                    - axis ratio
 %% The function returns following results:
 %   rois:               [object]                        - ROI cell objects
 %% Examples:
 %% show distribution along horizontal projection of drawn line, 2D field is presented in spatial coordinates
-% clf; tiledlayout(2, 2);
-% nexttile; contourf(data.x, data.z, data.vmn(:,:,1), 50, 'linestyle', 'none'); clim([0, 1]);
-% guilinedist(gca, data.vmn(:,:,1), x = data.x, z = data.z);
+% guilinedist(data.vmn(:,:,1), x = data.x, z = data.z);
 %% show distribution along vertical projection of drawn line, 2D field is presented in node coordinates
-% clf; tiledlayout(2, 2);
-% nexttile; imagesc(data.vmn(:,:,1)); clim([0, 1]);
-% guilinedist(gca, data.vmn(:,:,1), proj = 'vert');
+% guilinedist(data.vmn(:,:,1), proj = 'vert');
 %% show several distributions along drawn line, 2D field is presented in node coordinates
-% clf; tiledlayout(2, 2);
-% nexttile; imagesc(data.vmn(:,:,1)); clim([0, 1]);
-% guilinedist(gca, data.vmn(:,:,1:5), proj = 'line');
+% guilinedist(data.vmn(:,:,1:5), proj = 'line');
 %% show distribution along several drawn lines, 2D field is presented in node coordinates
-% clf; tiledlayout(2, 2);
-% nexttile; imagesc(data.vmn(:,:,1)); clim([0, 1]);
 % guilinedist(gca, data.vmn(:,:,1:5), proj = 'line', number = 3);
 
     arguments
-        axroi matlab.graphics.axis.Axes
         data double
         named.x double = []
         named.z double = []
@@ -46,8 +40,12 @@ function rois = guilinedist(axroi, data, named)
         named.number int8 = 1
         named.xlim double = []
         named.ylim double = []
+        named.clim double = [0, 1]
         named.displayname string = []
         named.legend logical = false
+        named.docked logical = false
+        named.colormap (1,:) char = 'turbo'
+        named.aspect (1,:) char {mustBeMember(named.aspect, {'equal', 'auto'})} = 'equal'
     end
 
     warning off
@@ -155,6 +153,46 @@ function rois = guilinedist(axroi, data, named)
         end
         customize_appearance();
     end
+
+    if named.docked
+        figure('WindowStyle', 'Docked')
+    else
+        clf;
+    end
+    switch ndims(data)
+        case 2
+            tiledlayout(1, 2);
+        case 3
+            tiledlayout(ceil(size(data, 3)/2)+1, 2);
+    end
+    switch disp_type
+        case 'node'
+            for i = 1:size(data, 3)
+                nexttile; imagesc(data(:,:,i)); xlabel('x_{n}'); ylabel('z_{n}'); colormap(named.colormap);
+                if ~isempty(named.clim); clim(named.clim); end
+                if ~isempty(named.displayname); title(named.displayname(i), 'FontWeight', 'Normal'); end
+            end
+        case 'spatial'
+            if ismatrix(named.x) && ismatrix(named.z)
+                for i = 1:size(data, 3)
+                    nexttile; contourf(named.x, named.z, data(:,:,i), 100, 'LineStyle', 'None'); 
+                    xlabel('x, mm'); ylabel('z, mm'); colormap(named.colormap);
+                    if ~isempty(named.clim); clim(named.clim); end
+                    axis(named.aspect);
+                    if ~isempty(named.displayname); title(named.displayname(i), 'FontWeight', 'Normal'); end
+                end
+            else
+                for i = 1:size(data, 3)
+                    nexttile; contourf(named.x(:,:,i), named.z(:,:,i), data(:,:,1), 100, 'LineStyle', 'None'); 
+                    xlabel('x, mm'); ylabel('z, mm'); colormap(named.colormap);
+                    if ~isempty(named.clim); clim(named.clim); end
+                    axis(named.aspect);
+                    if ~isempty(named.displayname); title(named.displayname(i), 'FontWeight', 'Normal'); end
+                end
+            end
+    end
+
+    axroi = gca;
 
     nexttile; ax = gca;
     rois = guiselectregion(axroi, @event, shape = 'line', ...
