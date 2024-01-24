@@ -76,14 +76,14 @@ function param = distparam(x, named)
             param.variance = [x(2)*x(3)^2, x(5)*x(6)^2];
         case 'gumbel1'
             ec = 0.57721;
-            param.mean = x(2);
-            param.mode = x(2)+x(3)*ec;
+            param.mean = x(2)+x(3)*ec;
+            param.mode = x(2);
             param.variance = pi^2/6*x(3)^2;
             param.amplitude = x(1)/x(3)*exp(-(param.mode-x(2))/x(3)-exp(-(param.mode-x(2))/x(3)));
         case 'gumbel2'
             ec = 0.57721;
-            param.mean = [x(2), x(5)];
-            param.mode = [x(2)+x(3)*ec, x(5)+x(6)*ec];
+            param.mean = [x(2)+x(3)*ec, x(5)+x(6)*ec]; 
+            param.mode = [x(2), x(5)];
             param.variance = [pi^2/6*x(3)^2, pi^2/6*x(6)^2];
             param.amplitude = [x(1)/x(3)*exp(-(param.mode(1)-x(2))/x(3)-exp(-(param.mode(1)-x(2))/x(3))), ...
                 x(4)/x(6)*exp(-(param.mode(2)-x(5))/x(6)-exp(-(param.mode(2)-x(5))/x(6)))];

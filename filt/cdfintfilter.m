@@ -18,11 +18,13 @@ function y = cdfintfilter(x, named)
         named.norm (1,:) char {mustBeMember(named.norm, {'count', 'pdf', 'probability', 'percentage', 'countdensity'})} = 'pdf'
         named.binedge double = []
         named.distname (1,:) char {mustBeMember(named.distname, {'gauss2', 'beta2', 'beta2l', 'gamma2', 'gumbel2'})} = 'gumbel2'
+        %% optimization parameters
         named.objnorm double = 2
         named.x0 double = []
         named.lb double = []
         named.ub double = []
         named.nonlcon = []
+        %% algorithm parameters
         named.root (1,:) char {mustBeMember(named.root, {'diff', 'fsolve', 'fminbnd'})} = 'diff'
     end
 
