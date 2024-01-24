@@ -40,12 +40,13 @@ function rois = guilinedist(data, named)
         named.number int8 = 1
         named.xlim double = []
         named.ylim double = []
-        named.clim double = [0, 1]
+        named.clim double = []
         named.displayname string = []
         named.legend logical = false
         named.docked logical = false
         named.colormap (1,:) char = 'turbo'
         named.aspect (1,:) char {mustBeMember(named.aspect, {'equal', 'auto'})} = 'equal'
+        named.location (1,:) char {mustBeMember(named.location, {'north','south','east','west','northeast','northwest','southeast','southwest','northoutside','southoutside','eastoutside','westoutside','northeastoutside','northwestoutside','southeastoutside','southwestoutside','best','bestoutside','layout','none'})} = 'best'
     end
 
     warning off
@@ -114,7 +115,7 @@ function rois = guilinedist(data, named)
 
         if ~isempty(named.xlim); xlim(ax, named.xlim); end
         if ~isempty(named.ylim); ylim(ax, named.ylim); end
-        if named.legend; legend(ax, 'Location', 'Best'); end
+        if named.legend; legend(ax, 'Location', named.location); end
     end
 
     function event(~, ~)
@@ -159,12 +160,7 @@ function rois = guilinedist(data, named)
     else
         clf;
     end
-    switch ndims(data)
-        case 2
-            tiledlayout(1, 2);
-        case 3
-            tiledlayout(ceil(size(data, 3)/2)+1, 2);
-    end
+    tiledlayout('flow');
     switch disp_type
         case 'node'
             for i = 1:size(data, 3)
