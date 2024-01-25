@@ -1,4 +1,4 @@
-function rois = guihist(data, named)
+function varargout = guihist(data, named)
 %% Visualize data statistics by means manually region selection.
 %% The function takes following arguments:
 %   data:           [n×m... double]                 - multidimensional data
@@ -8,6 +8,7 @@ function rois = guihist(data, named)
 %   norm:           [char array]                    - type of statistics normalization
 %   binedge:        [1×q double]                    - bins count or edge grid
 %   normalize:      [char array]                    - data normalization
+%   getdata:        [char array]                    - data extraction method
 
 %   shape:          [char array]                    - type of region selection
 %   mask:           [1×2 or 1×4 t×2 double]         - edge size to rectangle selection or n-row verxex to polygon selection 
@@ -39,25 +40,24 @@ function rois = guihist(data, named)
 %   quantile:       [1×1 double]                    - quantile threshold
 
 %% The function returns following results:
-%   rois:           [object]                        - ROI cell objects
+%   getdata:        [function_handle]               - return cells stored raw or distribution
 %% Examples:
 %% show histogram by specific realization with default parameters
-% guihist(gca, data.dwdlf(:,:,1));
-%
+% guihist(data.dwdlf(:,:,1));
 %% show histogram by all realization with default parameters (ndim(data.dwdlf) = 3)
-% guihist(gca, data.dwdlf);
-%
+% guihist(data.dwdlf);
 %% show histograms by all realization by two selection regions
 % guihist(gca, data.dwdlf, number = 2);
 %% get raw data selected by gui
-% rois = guihist(gca, data.dwdlf);
-% probe = guigetdata(rois{1}, data.dwdlf, shape = 'flatten');
+% gd = guihist(data.dwdlf);
+% probe = gd();
 %% get raw data selected by two regions
-% rois = guihist(gca, data.dwdlf, number = 2);
-% probe{1} = guigetdata(rois{1}, data.dwdlf, shape = 'flatten');
-% probe{2} = guigetdata(rois{2}, data.dwdlf, shape = 'flatten');
+% gd = guihist(gca, data.dwdlf, number = 2);
+% probes = gd();
+% probe{1} = probes{1};
+% probe{2} = probes{2};
 %% show histogram by all realization with custom parameters, pdf is fitted by 'beta1' distribution, by solver fmincon with l2 norm and lower and upper constrains
-% guihist(gca, data.dwdlf, mask = [25, 220, 25, 25], ...
+% guihist(data.dwdlf, mask = [25, 220, 25, 25], ...
 %     distname = 'beta1', objnorm = 2, lb = [1, 0, 0, 1, 1], ...
 %     ub = [1, 1e2, 0, 2e1, 1e4], norm = 'pdf', xlim = [0, 0.01], disp = true, cdf = true);
 %% show histogram by all realization with custom parameters, pdf is fitted by 'beta2' distribution, by solver fmincon with l2 norm and lower, upper and non-linear constrains
@@ -72,7 +72,7 @@ function rois = guihist(data, named)
 % lb = [0, 1e-3, 0, 7.8, 6416, 1e-3, 1e-2, 0, 0, 0];
 % ub = [2, 2e1, 1e-2, 7.8, 6416, 10, 2e1, 1e-2, 1e3, 1e4];
 % % gui
-% guihist(gca, data.dwdlf, mask = [250, 50, 25, 25], ...
+% guihist(data.dwdlf, mask = [250, 50, 25, 25], ...
 %     distname = 'beta2', objnorm = 2, lb = lb, ub = ub, nonlcon = nonlcon, ...
 %     norm = 'pdf', xlim = [0, 0.01], disp = true, cdf = true);
 
@@ -85,6 +85,7 @@ function rois = guihist(data, named)
         named.norm (1,:) char {mustBeMember(named.norm, {'count', 'pdf', 'cdf', 'cumcount', 'probability', 'percentage', 'countdensity'})} = 'count'
         named.binedge double = []
         named.normalize (1,:) char {mustBeMember(named.normalize, {'none', 'zscore', 'norm', 'center'})} = 'none'
+        named.getdata (1,:) char {mustBeMember(named.getdata, {'raw', 'dist'})} = 'raw'
         %% roi and axis parameters
         named.shape (1,:) char {mustBeMember(named.shape, {'rect', 'poly'})} = 'rect'
         named.mask double = []
@@ -113,7 +114,7 @@ function rois = guihist(data, named)
         named.mb double = [0, 10]
         named.disp logical = false
         %% other parameters
-        named.quantile double = 0.05
+        named.quantile double = 0.1
     end
 
     % define variables
@@ -133,6 +134,23 @@ function rois = guihist(data, named)
         case 'spatial'
             select = @(roiobj) guigetdata(roiobj, data, shape = 'flatten', ...
                 type = 'spatial', x = named.x, z = named.z);
+    end
+
+    function result = getdata()
+        %% extract data from selectors
+        result = cell(1, numel(rois));
+        switch named.getdata
+            case 'raw'
+                for i = 1:length(rois)       
+                    result{i} = select(rois{i});
+                end
+            case 'dist'
+                for i = 1:length(rois)       
+                    [~, ~, ~, ~, edges_raw, counts_raw] = fithist(data = select(rois{i}), ...
+                        distname = 'none', range = named.range, normalize = named.normalize);
+                    result{i} = [edges_raw, counts_raw];
+                end
+        end
     end
 
     function plot_raw_hist()
@@ -177,7 +195,7 @@ function rois = guihist(data, named)
         end
 
         for i = 1:length(rois)       
-            [~, modes, edges_fit, ~, edges_raw, counts_raw, ] = fithist(data = select(rois{i}), ...
+            [~, modes, edges_fit, ~, edges_raw, counts_raw] = fithist(data = select(rois{i}), ...
                 distname = named.distname, ...
                 objnorm = named.objnorm, ...
                 nonlcon = named.nonlcon, ...
@@ -297,5 +315,7 @@ function rois = guihist(data, named)
         mask = named.mask, interaction = named.interaction, number = named.number);
 
     event();
+
+    varargout{1} = @() getdata();
 
 end

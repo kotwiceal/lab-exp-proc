@@ -65,7 +65,7 @@ function varargout = fithist(named)
         named.range double = []
         named.normalize (1,:) char {mustBeMember(named.normalize, {'none', 'zscore', 'norm', 'center'})} = 'none'
         %% optimization parameters
-        named.distname (1,:) char {mustBeMember(named.distname, {'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'gumbel2'
+        named.distname (1,:) char {mustBeMember(named.distname, {'none', 'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'gumbel2'
         named.solver (1,:) char {mustBeMember(named.solver, {'fit', 'opt'})} = 'fit'
         named.objnorm double = 2
         named.Aineq double = []
@@ -179,32 +179,36 @@ function varargout = fithist(named)
             coefi = [1, fi.mu, fi.sigma, 1, fi.mu, fi.sigma]; % initial vector 
     end
 
-    % define objective function
-    fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
-    fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
-    problem.objective = fobj;
-
-    % auto constraints
-    if isempty(named.x0); problem.x0 = coefi; end
-    if isempty(named.lb); problem.lb = named.mb(1)*coefi; end
-    if isempty(named.ub); problem.ub = named.mb(2)*coefi; end
-
-    % solve problem
-    [coef, fval] = fmincon(problem);
-    f = @(x) fa(coef, x);
-
-    % separate statistical modes
-    if exist('f1', 'var') && exist('f2', 'var')
-        modes(:, 1) = f1(coef, edges);
-        modes(:, 2) = f2(coef, edges);
-    else
-        modes(:, 1) = fa(coef, edges);
-    end
-
-    if named.disp
-        tab = array2table(coef, 'VariableNames', split(num2str(1:size(coef, 2))), 'RowName', {'solution'});
-        disp(tab);
-        distparam(coef, distname = named.distname, disp = true);
+    try
+        % define objective function
+        fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
+        fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
+        problem.objective = fobj;
+    
+        % auto constraints
+        if isempty(named.x0); problem.x0 = coefi; end
+        if isempty(named.lb); problem.lb = named.mb(1)*coefi; end
+        if isempty(named.ub); problem.ub = named.mb(2)*coefi; end
+    
+        % solve problem
+        [coef, fval] = fmincon(problem);
+        f = @(x) fa(coef, x);
+    
+        % separate statistical modes
+        if exist('f1', 'var') && exist('f2', 'var')
+            modes(:, 1) = f1(coef, edges);
+            modes(:, 2) = f2(coef, edges);
+        else
+            modes(:, 1) = fa(coef, edges);
+        end
+    
+        if named.disp
+            tab = array2table(coef, 'VariableNames', split(num2str(1:size(coef, 2))), 'RowName', {'solution'});
+            disp(tab);
+            distparam(coef, distname = named.distname, disp = true);
+        end
+    catch
+        f = []; modes = []; edges = []; fval = [];
     end
 
     % select outputs
