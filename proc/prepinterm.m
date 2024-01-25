@@ -1,5 +1,5 @@
 function result = prepinterm(data, kwargs)
-%% Intermittency processing.
+%% Prepare data to process intermittency.
 %% The function takes following arguments:
 %   data:               [struct]            - stucture of PIV data reterned by import_vc7 function
 %   type:               [char array]        - process algorithm
@@ -21,12 +21,12 @@ function result = prepinterm(data, kwargs)
 
     arguments
         data struct
-        kwargs.type (1,:) char {mustBeMember(kwargs.type, {'dirgrad', 'l2'})} = 'drigrad'
+        kwargs.type (1,:) char {mustBeMember(kwargs.type, {'dirgrad', 'l2', 'vm'})} = 'drigrad'
         % preprosessing parameters
         kwargs.diffilter (1,:) char {mustBeMember(kwargs.diffilter, {'sobel', '4ord', '4ordgauss', '2ord'})} = '4ord'
-        % preprocessing parameters
         kwargs.prefilter (1,:) char {mustBeMember(kwargs.prefilter, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'gaussian'
         kwargs.prefiltkernel double = [3, 3]
+        kwargs.fillmissmeth (1,:) char {mustBeMember(kwargs.fillmissmeth, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'none'
         % dirgrad parameters
         kwargs.angle double = deg2rad(-22)
         kwargs.component (1,:) char {mustBeMember(kwargs.component, {'dudl', 'dudn', 'dwdl', 'dwdn'})} = 'dwdl'
@@ -37,14 +37,25 @@ function result = prepinterm(data, kwargs)
 
     result = [];
 
+    u = data.u; w = data.w;
+
     % normalize velocity
     if isfield(data, 'U') && isfield(data, 'W')
         Vm = hypot(data.U, data.W);
-        u = data.u./Vm;
-        w = data.w./Vm;
-    else
-        u = data.u;
-        w = data.w; 
+        u = u./Vm;
+        w = w./Vm;
+    end
+
+    % fillmissing
+    if kwargs.fillmissmeth ~= "none"
+        sz = size(u);
+        u = reshape(u, [sz(1:2), prod(sz(3:end))]);
+        w = reshape(w, [sz(1:2), prod(sz(3:end))]);
+        parfor i = 1:prod(sz(3:end))
+            u(:,:,i) = fillmissing2(u(:,:,i), kwargs.fillmissmeth);
+            w(:,:,i) = fillmissing2(w(:,:,i), kwargs.fillmissmeth);
+        end
+        u = reshape(u, sz); w = reshape(w, sz);
     end
 
     % process
@@ -56,6 +67,8 @@ function result = prepinterm(data, kwargs)
         case 'l2'
             result = vortind(u, w, type = 'l2', diffilter = kwargs.diffilter, prefilter = kwargs.prefilter, ...
                 prefiltkernel = kwargs.prefiltkernel);
+        case 'vm'
+            result = hypot(u, w);
     end
 
     % postprocessing
