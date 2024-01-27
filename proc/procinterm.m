@@ -69,7 +69,7 @@ function varargout = procinterm(data, named)
         named.distance (1,:) char {mustBeMember(named.distance, {'sqeuclidean', 'cityblock', 'cosine', 'correlation', 'hamming'})} = 'sqeuclidean'
         named.fillholes logical = false;
         named.batch logical = true
-        named.cnnversion (1,:) char {mustBeMember(named.cnnversion, {'0.1'})} = '0.1'
+        named.cnnversion (1,:) char {mustBeMember(named.cnnversion, {'0.1', '0.2', '0.3', '0.4', '0.5'})} = '0.1'
         %% processing parameters
         named.kernel double = [30, 30]
         named.strides double = [5, 5]
@@ -192,10 +192,18 @@ function varargout = procinterm(data, named)
             folder = d(1).folder;
             switch named.cnnversion
                 case '0.1'
-                    load(fullfile(folder, 'net', 'cnn_interm.mat'));
+                    load(fullfile(folder, 'net', 'cnn_interm_v0.1.mat'));
+                case '0.2'
+                    load(fullfile(folder, 'net', 'cnn_interm_v0.2.mat'));
+                case '0.3'
+                    load(fullfile(folder, 'net', 'cnn_interm_v0.3.mat'));
+                case '0.4'
+                    load(fullfile(folder, 'net', 'cnn_interm_v0.4.mat'));
+                case '0.5'
+                    load(fullfile(folder, 'net', 'cnn_interm_v0.5.mat'));
             end
             for i = 1:size(data, 3)
-                temporary = uint8(mat2gray(data(:,:,i), [0, 1.2]) * 255);
+                temporary = uint8(mat2gray(data(:,:,i), [0, 1.5]) * 255);
                 binarized(:, :, i) = double(semanticseg(temporary, net)) - 1;
             end
             varargout{2} = binarized;

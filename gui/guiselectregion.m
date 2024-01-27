@@ -44,13 +44,15 @@ function rois = guiselectregion(axroi, event, named)
     rois = cell(1, named.number);
 
     for i = 1:named.number
+        j = rem(i, numel(colors));
+        if j == 0; j = 1; end
         if isempty(named.mask)
-            roimethods{i} = @(ax) roimethod(ax, 'Color', colors{i}, 'InteractionsAllowed', named.interaction);
+            roimethods{i} = @(ax) roimethod(ax, 'Color', colors{j}, 'InteractionsAllowed', named.interaction);
         else
-            roimethods{i} = @(ax) roimethod(ax, 'Color', colors{i}, 'InteractionsAllowed', named.interaction, 'Position', position);
+            roimethods{i} = @(ax) roimethod(ax, 'Color', colors{j}, 'InteractionsAllowed', named.interaction, 'Position', position);
         end
         rois{i} = roimethods{i}(axroi);
-        rois{i}.UserData = struct('color', colors{i});
+        rois{i}.UserData = struct('color', colors{j});
         addlistener(rois{i}, 'ROIMoved', event);
     end
     
