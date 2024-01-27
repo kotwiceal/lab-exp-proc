@@ -136,7 +136,7 @@ function varargout = guihist(data, named)
                 type = 'spatial', x = named.x, z = named.z);
     end
 
-    function result = getdata()
+    function result = roisgetdata()
         %% extract data from selectors
         result = cell(1, numel(rois));
         switch named.getdata
@@ -316,6 +316,6 @@ function varargout = guihist(data, named)
 
     event();
 
-    varargout{1} = @() getdata();
+    varargout{1} = @() roisgetdata();
 
 end

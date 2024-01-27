@@ -6,6 +6,7 @@ function result = prepinterm(data, kwargs)
 %   diffilter:          [char array]        - filter type for differentiating the velocity field
 %   prefilter:          [char array]        - prefiltering velocity field
 %   prefiltkernel:      [1×2 double]        - kernel of prefilter
+%   fillmissmeth:       [char array]        - method of filling missing data
 %   angle:              [1×1 double]        - anlge of directed gradient [rad]
 %   component:          [char array]        - derivative component
 %   postfitler:         [char array]        - portfiltering of processed field

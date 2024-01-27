@@ -18,16 +18,21 @@ function result = guigetdata(roi, data, named)
             named.type (1,:) char {mustBeMember(named.type, {'node', 'spatial'})} = 'node'
             named.x double = []
             named.z double = []
+            named.position double = []
         end
         sz = size(data);
 
         switch named.type
             case 'node'
                 index = createMask(roi);
+                named.position = roi.Position;
             case 'spatial'
                 pos = roi.Position;
                 mask = [pos(1), pos(2); pos(1)+pos(3), pos(2); pos(1)+pos(3), pos(2)+pos(4); pos(1), pos(2)+pos(4)];
                 index = inpolygon(named.x(:), named.z(:), mask(:, 1), mask(:, 2));
+                % [r, c] = ind2sub(sz, index);
+                [r, c] = ind2sub(sz, find(index==1));
+                named.position = [min(r), min(c), max(r)-min(r), max(c)-min(c)];
         end
 
         if ~ismatrix(data)
@@ -39,12 +44,10 @@ function result = guigetdata(roi, data, named)
                 data(~index) = nan;
                 result = data;
             case 'cut'
-                temporary = [];
-                data = reshape(data, [sz(1:2), prod(sz(3:end))]);
-                for i = 1:prod(sz(3:end))
-                    temporary(:,:,i) = imcrop(data(:,:,i), roi.Position);
-                end
-                result = reshape(temporary, [size(temporary, 1:2), sz(3:end)]);
+                named.position = floor(named.position);
+                result = data(named.position(2):named.position(2)+named.position(4), ...
+                    named.position(1):named.position(1)+named.position(3), :);
+                result = reshape(result, [size(result, 1:2), sz(3:end)]);
             case 'flatten'
                 result = data(index);
         end
