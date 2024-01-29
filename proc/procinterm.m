@@ -14,6 +14,9 @@ function varargout = procinterm(data, named)
 %   fillholes:      [1×1 logical]       - fill closed domain of processed fields
 %   batch:          [1×1 logical]       - clustering of data by all realization
 %   cnnversion:     [char array]        - version of convolutional neural network
+%   network:        [object]            - instance of sequence network
+%   map:            [1×2 double]        - mapping data range to specified
+%   crop:           [1×4 double]        - crop data: [x0, y0, width, height]
 %
 %   kernel:         [1×2 double]        - size of processing window
 %   strides:        [1×2 double]        - strides of processing window
@@ -69,7 +72,10 @@ function varargout = procinterm(data, named)
         named.distance (1,:) char {mustBeMember(named.distance, {'sqeuclidean', 'cityblock', 'cosine', 'correlation', 'hamming'})} = 'sqeuclidean'
         named.fillholes logical = false;
         named.batch logical = true
-        named.cnnversion (1,:) char {mustBeMember(named.cnnversion, {'0.1', '0.2', '0.3', '0.4', '0.5'})} = '0.1'
+        named.cnnversion (1,:) char {mustBeMember(named.cnnversion, {'0.1', '0.2', '0.3', '0.4', '0.5', '0.6'})} = '0.1'
+        named.network = []
+        named.crop double = [20, 20, 230, 280];
+        named.map double = [0, 1.5]
         %% processing parameters
         named.kernel double = [30, 30]
         named.strides double = [5, 5]
@@ -80,14 +86,14 @@ function varargout = procinterm(data, named)
         named.lb double = []
         named.ub double = []
         %% restriction parameters
-        named.rmean1 double = []
-        named.rmode1 double = [1e-4,6e-4]
-        named.rvar1 double = [1e-8,1e-7]
-        named.ramp1 double = []
-        named.rmean2 double = []
-        named.rmode2 double = [7e-4,5e-3]
-        named.rvar2 double = [1e-7,1e-5]
-        named.ramp2 double = []
+        named.mean1 double = []
+        named.mode1 double = [1e-4,6e-4]
+        named.var1 double = [1e-8,1e-7]
+        named.amp1 double = []
+        named.mean2 double = []
+        named.mode2 double = [7e-4,5e-3]
+        named.var2 double = [1e-7,1e-5]
+        named.amp2 double = []
         %% pre-pocessing parameters
         named.prefilter (1,:) char {mustBeMember(named.prefilter, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'median'
         named.prefiltkernel double = [15, 15]
@@ -99,8 +105,8 @@ function varargout = procinterm(data, named)
     intermittency = []; binarized = [];
 
     if isempty(named.nonlcon)
-        named.nonlcon = @(x) nonlcon_statmode(x, distname = named.distname, rmean1 = named.rmean1, rmode1 = named.rmode1, ...
-            rvar1 = named.rvar1, ramp1 = named.ramp1, rmean2 = named.rmean2, rmode2 = named.rmode2, rvar2 = named.rvar2, ramp2 = named.ramp2);
+        named.nonlcon = @(x) nonlcon_statmode(x, distname = named.distname, mean1 = named.mean1, mode1 = named.mode1, ...
+            var1 = named.var1, amp1 = named.amp1, mean2 = named.mean2, mode2 = named.mode2, var2 = named.var2, amp2 = named.amp2);
     end
 
     sz = size(data);
@@ -188,26 +194,8 @@ function varargout = procinterm(data, named)
             intermittency = mean(binarized, 3);
             varargout{2} = binarized;
         case 'cnn'
-            d = dir(fullfile(fileparts(mfilename('fullpath')), '..'));
-            folder = d(1).folder;
-            switch named.cnnversion
-                case '0.1'
-                    load(fullfile(folder, 'net', 'cnn_interm_v0.1.mat'));
-                case '0.2'
-                    load(fullfile(folder, 'net', 'cnn_interm_v0.2.mat'));
-                case '0.3'
-                    load(fullfile(folder, 'net', 'cnn_interm_v0.3.mat'));
-                case '0.4'
-                    load(fullfile(folder, 'net', 'cnn_interm_v0.4.mat'));
-                case '0.5'
-                    load(fullfile(folder, 'net', 'cnn_interm_v0.5.mat'));
-            end
-            for i = 1:size(data, 3)
-                temporary = uint8(mat2gray(data(:,:,i), [0, 1.5]) * 255);
-                binarized(:, :, i) = double(semanticseg(temporary, net)) - 1;
-            end
+            [intermittency, binarized] = predinterm(data, network = named.network, version = named.cnnversion, crop = named.crop, map = named.map);
             varargout{2} = binarized;
-            intermittency = mean(binarized, 3);
         case 'cluster-kernel'
             nlkernel = @(x) clustfilter(x, k = 2, distance = named.distance);
             intermittency = nlpfilter(data, named.kernel, @(x) nlkernel(x), strides = named.strides, type = 'deep');
