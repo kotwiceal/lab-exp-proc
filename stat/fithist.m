@@ -1,4 +1,4 @@
-function varargout = fithist(named)
+function varargout = fithist(kwargs)
 %% Analytical approximation of one-dimensional statistical distribution.
 %% The function takes following arguments:
 %   data:           [m×1 double]        - statistical data
@@ -57,27 +57,27 @@ function varargout = fithist(named)
     
     arguments
         %% data parameters
-        named.data double = []
-        named.x double = []
-        named.y double = []
-        named.norm (1,:) char {mustBeMember(named.norm, {'count', 'pdf', 'probability', 'percentage', 'countdensity'})} = 'pdf'
-        named.binedge double = []
-        named.range double = []
-        named.normalize (1,:) char {mustBeMember(named.normalize, {'none', 'zscore', 'norm', 'center'})} = 'none'
+        kwargs.data double = []
+        kwargs.x double = []
+        kwargs.y double = []
+        kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'count', 'pdf', 'probability', 'percentage', 'countdensity'})} = 'pdf'
+        kwargs.binedge double = []
+        kwargs.range double = []
+        kwargs.normalize (1,:) char {mustBeMember(kwargs.normalize, {'none', 'zscore', 'norm', 'center'})} = 'none'
         %% optimization parameters
-        named.distname (1,:) char {mustBeMember(named.distname, {'none', 'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'gumbel2'
-        named.solver (1,:) char {mustBeMember(named.solver, {'fit', 'opt'})} = 'fit'
-        named.objnorm double = 2
-        named.Aineq double = []
-        named.bineq double = []
-        named.Aeq double = []
-        named.beq double = []
-        named.nonlcon = []
-        named.x0 double = []
-        named.lb double = []
-        named.ub double = []
-        named.mb double = [0, 10];
-        named.disp logical = false
+        kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'none', 'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'gumbel2'
+        kwargs.solver (1,:) char {mustBeMember(kwargs.solver, {'fit', 'opt'})} = 'fit'
+        kwargs.objnorm double = 2
+        kwargs.Aineq double = []
+        kwargs.bineq double = []
+        kwargs.Aeq double = []
+        kwargs.beq double = []
+        kwargs.nonlcon = []
+        kwargs.x0 double = []
+        kwargs.lb double = []
+        kwargs.ub double = []
+        kwargs.mb double = [0, 10];
+        kwargs.disp logical = false
     end
 
     warning off
@@ -85,31 +85,31 @@ function varargout = fithist(named)
     x = []; y = []; modes = [];
 
     % prepare fitting data
-    if isempty(named.data)
-        if ~(isempty(named.x) && isempty(named.y))
-            x = named.x; y = named.y;
+    if isempty(kwargs.data)
+        if ~(isempty(kwargs.x) && isempty(kwargs.y))
+            x = kwargs.x; y = kwargs.y;
         end
     else
         % normalization
-        switch named.normalize
+        switch kwargs.normalize
             case 'none'
             otherwise
-                named.data = normalize(named.data, named.normalize);
+                kwargs.data = normalize(kwargs.data, kwargs.normalize);
         end
 
-        if isempty(named.binedge)
-            [y, x] = histcounts(named.data, 'Normalization', named.norm);
-            edges = linspace(0, max(x), 1e3);
+        if isempty(kwargs.binedge)
+            [y, x] = histcounts(kwargs.data, 'Normalization', kwargs.norm);
+            edges = linspace(min(x), max(x), 1e3);
         else
-            [y, x] = histcounts(named.data, named.binedge, 'Normalization', named.norm);
-            edges = named.binedge;
+            [y, x] = histcounts(kwargs.data, kwargs.binedge, 'Normalization', kwargs.norm);
+            edges = kwargs.binedge;
         end
         x = x(2:end);
     end
 
     % exclude & prepare data
-    if ~isempty(named.range)
-        index = excludedata(x, y, 'range', named.range);
+    if ~isempty(kwargs.range)
+        index = excludedata(x, y, 'range', kwargs.range);
         x = x(index); y = y(index); clear index;
     end
     [x, y] = prepareCurveData(x, y);
@@ -120,54 +120,54 @@ function varargout = fithist(named)
         'DiffMaxChange', 1e-4, 'Display', 'Off');
     problem = struct(options = options, solver = 'fmincon');
 
-    if ~isempty(named.Aineq); problem.Aineq = named.Aineq; end
-    if ~isempty(named.bineq); problem.bineq = named.bineq; end
+    if ~isempty(kwargs.Aineq); problem.Aineq = kwargs.Aineq; end
+    if ~isempty(kwargs.bineq); problem.bineq = kwargs.bineq; end
 
-    if ~isempty(named.nonlcon); problem.nonlcon = named.nonlcon; end
+    if ~isempty(kwargs.nonlcon); problem.nonlcon = kwargs.nonlcon; end
 
-    if ~isempty(named.x0); problem.x0 = named.x0; end
-    if ~isempty(named.lb); problem.lb = named.lb; end
-    if ~isempty(named.ub); problem.ub = named.ub; end
+    if ~isempty(kwargs.x0); problem.x0 = kwargs.x0; end
+    if ~isempty(kwargs.lb); problem.lb = kwargs.lb; end
+    if ~isempty(kwargs.ub); problem.ub = kwargs.ub; end
 
     % selection fitting action
-    switch named.distname
+    switch kwargs.distname
         case 'chi21'
             fa = @(a, x) chi2pdf(x, a(1)); % approximation function
             coefi = 3; % initial vector
         case 'beta1'
             fa = @(a, x) a(1)*betapdf(x, a(2), a(3)); % approximation function
-            fi = fitdist(named.data, 'beta'); % initial appriximation
+            fi = fitdist(kwargs.data, 'beta'); % initial appriximation
             coefi = [1, fi.a, fi.b]; % initial vector
         case 'beta1l'
             fa = @(a, x) a(1)*betapdf(x*a(2)-a(3), a(4), a(5)); % approximation function
-            fi = fitdist(named.data, 'beta'); % initial appriximation
-            coefi = [1, 1, mode(named.data), fi.a, fi.b]; % initial vector
+            fi = fitdist(kwargs.data, 'beta'); % initial appriximation
+            coefi = [1, 1, mode(kwargs.data), fi.a, fi.b]; % initial vector
         case 'beta2'
             f1 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f1 = @(a, x) f1(a(1:3), x);
             f2 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f2 = @(a, x) f2(a(4:end), x);
             fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
-            fi = fitdist(named.data, 'beta'); % initial appriximation
+            fi = fitdist(kwargs.data, 'beta'); % initial appriximation
             coefi = [1, fi.a, fi.b, 1, fi.a, fi.b]; % initial vector
         case 'beta2l'
             f1 = @(a, x) a(1)*betapdf(a(2)*x-a(3), a(4), a(5)); f1 = @(a, x) f1(a(1:5), x);
             f2 = @(a, x) a(1)*betapdf(a(2)*x-a(3), a(4), a(5)); f2 = @(a, x) f2(a(6:end), x);
             fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
-            fi = fitdist(named.data, 'beta'); % initial appriximation
-            coefi = [1, 1, mode(named.data), fi.a, fi.b, 1, 1, mode(named.data), fi.a, fi.b]; % initial vector
+            fi = fitdist(kwargs.data, 'beta'); % initial appriximation
+            coefi = [1, 1, mode(kwargs.data), fi.a, fi.b, 1, 1, mode(kwargs.data), fi.a, fi.b]; % initial vector
         case 'gamma1'
             fa = @(a, x) a(1)*gampdf(x, a(2), a(3)); % approximation function
-            fi = fitdist(named.data, 'gamma'); % initial appriximation    
+            fi = fitdist(kwargs.data, 'gamma'); % initial appriximation    
             coefi = [1, fi.a, fi.b]; % initial vector
         case 'gamma2'
             f1 = @(a, x) a(1)*gampdf(x, a(2), a(3)); f1 = @(a, x) f1(a(1:3), x);
             f2 = @(a, x) a(1)*gampdf(x, a(2), a(3)); f2 = @(a, x) f2(a(4:end), x);
             fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
-            fi = fitdist(named.data, 'gamma'); % initial appriximation
+            fi = fitdist(kwargs.data, 'gamma'); % initial appriximation
             coefi = [1, fi.a, fi.b, 1, fi.a, fi.b]; % initial vector
         case 'gumbel1'
             % fa = @(a, x) a(1)*evpdf(x, a(2), a(3)); % approximation function
             fa = @(a, x) a(1)/a(3)*exp(-(x-a(2))/a(3)-exp(-(x-a(2))/a(3)));
-            fi = fitdist(named.data, 'ev'); % initial appriximation
+            fi = fitdist(kwargs.data, 'ev'); % initial appriximation
             coefi = [1, fi.mu, fi.sigma]; % initial vector
         case 'gumbel2'
             % f1 = @(a, x) a(1)*evpdf(x, a(2), a(3)); f1 = @(a, x) f1(a(1:3), x);
@@ -175,20 +175,20 @@ function varargout = fithist(named)
             f1 = @(a, x) a(1)/a(3)*exp(-(x-a(2))/a(3)-exp(-(x-a(2))/a(3))); f1 = @(a, x) f1(a(1:3), x);
             f2 = @(a, x) a(1)/a(3)*exp(-(x-a(2))/a(3)-exp(-(x-a(2))/a(3))); f2 = @(a, x) f2(a(4:end), x);
             fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
-            fi = fitdist(named.data, 'ev'); % initial appriximation
+            fi = fitdist(kwargs.data, 'ev'); % initial appriximation
             coefi = [1, fi.mu, fi.sigma, 1, fi.mu, fi.sigma]; % initial vector 
     end
 
     try
         % define objective function
         fy = fit(x, y, 'linearinterp'); % linear interpolation of fitted curve
-        fobj = @(a) norm(fa(a, x)-fy(x), named.objnorm); % objective function
+        fobj = @(a) norm(fa(a, x)-fy(x), kwargs.objnorm); % objective function
         problem.objective = fobj;
     
         % auto constraints
-        if isempty(named.x0); problem.x0 = coefi; end
-        if isempty(named.lb); problem.lb = named.mb(1)*coefi; end
-        if isempty(named.ub); problem.ub = named.mb(2)*coefi; end
+        if isempty(kwargs.x0); problem.x0 = coefi; end
+        if isempty(kwargs.lb); problem.lb = kwargs.mb(1)*coefi; end
+        if isempty(kwargs.ub); problem.ub = kwargs.mb(2)*coefi; end
     
         % solve problem
         [coef, fval] = fmincon(problem);
@@ -202,10 +202,10 @@ function varargout = fithist(named)
             modes(:, 1) = fa(coef, edges);
         end
     
-        if named.disp
+        if kwargs.disp
             tab = array2table(coef, 'VariableNames', split(num2str(1:size(coef, 2))), 'RowName', {'solution'});
             disp(tab);
-            distparam(coef, distname = named.distname, disp = true);
+            distparam(coef, distname = kwargs.distname, disp = true);
         end
     catch
         f = []; modes = []; edges = []; fval = [];
@@ -217,7 +217,7 @@ function varargout = fithist(named)
     varargout{3} = edges;
     varargout{4} = fval;
 
-    if isempty(named.x) && isempty(named.y)
+    if isempty(kwargs.x) && isempty(kwargs.y)
         varargout{5} = x;
         varargout{6} = y;
     end

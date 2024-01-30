@@ -1,4 +1,4 @@
-function varargout = guihist(data, named)
+function varargout = guihist(data, kwargs)
 %% Visualize data statistics by means manually region selection.
 %% The function takes following arguments:
 %   data:           [n×m... double]                 - multidimensional data
@@ -79,49 +79,49 @@ function varargout = guihist(data, named)
     arguments
         %% data parameters
         data double
-        named.x double = []
-        named.z double = []
-        named.range double = []
-        named.norm (1,:) char {mustBeMember(named.norm, {'count', 'pdf', 'cdf', 'cumcount', 'probability', 'percentage', 'countdensity'})} = 'count'
-        named.binedge double = []
-        named.normalize (1,:) char {mustBeMember(named.normalize, {'none', 'zscore', 'norm', 'center'})} = 'none'
-        named.getdata (1,:) char {mustBeMember(named.getdata, {'raw', 'dist'})} = 'raw'
+        kwargs.x double = []
+        kwargs.z double = []
+        kwargs.range double = []
+        kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'count', 'pdf', 'cdf', 'cumcount', 'probability', 'percentage', 'countdensity'})} = 'pdf'
+        kwargs.binedge double = []
+        kwargs.normalize (1,:) char {mustBeMember(kwargs.normalize, {'none', 'zscore', 'norm', 'center'})} = 'none'
+        kwargs.getdata (1,:) char {mustBeMember(kwargs.getdata, {'raw', 'dist'})} = 'raw'
         %% roi and axis parameters
-        named.shape (1,:) char {mustBeMember(named.shape, {'rect', 'poly'})} = 'rect'
-        named.mask double = []
-        named.interaction (1,:) char {mustBeMember(named.interaction, {'all', 'none', 'translate'})} = 'all'
-        named.number int8 = 1
-        named.legend logical = false
-        named.xlim double = []
-        named.ylim double = []
-        named.clim double = []
-        named.colormap (1,:) char = 'turbo'
-        named.markersize double = 3
-        named.cdf logical = false
-        named.docked logical = false
-        named.aspect (1,:) char {mustBeMember(named.aspect, {'equal', 'auto'})} = 'equal'
+        kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'rect', 'poly'})} = 'rect'
+        kwargs.mask double = []
+        kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
+        kwargs.number int8 = 1
+        kwargs.legend logical = false
+        kwargs.xlim double = []
+        kwargs.ylim double = []
+        kwargs.clim double = []
+        kwargs.colormap (1,:) char = 'turbo'
+        kwargs.markersize double = 3
+        kwargs.cdf logical = false
+        kwargs.docked logical = false
+        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal'
         %% optimization parameters
-        named.distname (1,:) char {mustBeMember(named.distname, {'none', 'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'none'
-        named.objnorm double = 2
-        named.Aineq double = []
-        named.bineq double = []
-        named.Aeq double = []
-        named.beq double = []
-        named.nonlcon = []
-        named.x0 double = []
-        named.lb double = []
-        named.ub double = []
-        named.mb double = [0, 10]
-        named.disp logical = false
+        kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'none', 'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'none'
+        kwargs.objnorm double = 2
+        kwargs.Aineq double = []
+        kwargs.bineq double = []
+        kwargs.Aeq double = []
+        kwargs.beq double = []
+        kwargs.nonlcon = []
+        kwargs.x0 double = []
+        kwargs.lb double = []
+        kwargs.ub double = []
+        kwargs.mb double = [0, 10]
+        kwargs.disp logical = false
         %% other parameters
-        named.quantile double = 0.1
+        kwargs.quantile double = 0.1
     end
 
     % define variables
     mode_markers = {'-o', '-s', '-x', '-<', '->', '-^'};
 
     % define dispalying type
-    if isempty(named.x) && isempty(named.z)
+    if isempty(kwargs.x) && isempty(kwargs.z)
         disp_type = 'node';
     else
         disp_type = 'spatial';
@@ -133,21 +133,30 @@ function varargout = guihist(data, named)
             select = @(roiobj) guigetdata(roiobj, data, shape = 'flatten');
         case 'spatial'
             select = @(roiobj) guigetdata(roiobj, data, shape = 'flatten', ...
-                type = 'spatial', x = named.x, z = named.z);
+                type = 'spatial', x = kwargs.x, z = kwargs.z);
     end
 
     function result = roisgetdata()
         %% extract data from selectors
         result = cell(1, numel(rois));
-        switch named.getdata
+        switch kwargs.getdata
             case 'raw'
-                for i = 1:length(rois)       
-                    result{i} = select(rois{i});
+                % normalization
+                switch kwargs.normalize
+                    case 'none'
+                        for i = 1:length(rois)       
+                            result{i} = select(rois{i});
+                        end
+                    otherwise
+                        for i = 1:length(rois)     
+                            result{i} = normalize(select(rois{i}), kwargs.normalize);
+                        end
                 end
             case 'dist'
                 for i = 1:length(rois)       
                     [~, ~, ~, ~, edges_raw, counts_raw] = fithist(data = select(rois{i}), ...
-                        distname = 'none', range = named.range, normalize = named.normalize);
+                        distname = 'none', norm = kwargs.norm, range = kwargs.range, ...
+                        normalize = kwargs.normalize, binedge = kwargs.binedge);
                     result{i} = [edges_raw, counts_raw];
                 end
         end
@@ -156,22 +165,22 @@ function varargout = guihist(data, named)
     function plot_raw_hist()
         %% show statistic of raw data
         cla(ax{1}); hold(ax{1}, 'on'); box(ax{1}, 'on'); grid(ax{1}, 'on');
-        xlabel(ax{1}, 'edges'); ylabel(ax{1}, named.norm);
+        xlabel(ax{1}, 'edges'); ylabel(ax{1}, kwargs.norm);
         for i = 1:length(rois)
-            if isempty(named.binedge)
-                [counts, edges] = histcounts(select(rois{i}), 'Normalization', named.norm);
+            if isempty(kwargs.binedge)
+                [counts, edges] = histcounts(select(rois{i}), 'Normalization', kwargs.norm);
             else
-                [counts, edges] = histcounts(select(rois{i}), named.binedge, 'Normalization', named.norm);
+                [counts, edges] = histcounts(select(rois{i}), kwargs.binedge, 'Normalization', kwargs.norm);
             end
 
             edges = edges(2:end);
 
-            if ~isempty(named.range)
-                index = excludedata(edges, counts, 'range', named.range);
+            if ~isempty(kwargs.range)
+                index = excludedata(edges, counts, 'range', kwargs.range);
                 edges = edges(index); counts = counts(index); clear index;
             end
 
-            switch named.norm
+            switch kwargs.norm
                 case 'cdf'
                     plot(ax{1}, edges, 1-counts, 'Color', rois{i}.UserData.color, ...
                         'DisplayName', strcat("raw ", num2str(i)))
@@ -186,9 +195,9 @@ function varargout = guihist(data, named)
     function plot_fit_hist()
         %% show statistic of fitted data
         cla(ax{1}); hold(ax{1}, 'on'); box(ax{1}, 'on'); grid(ax{1}, 'on');
-        xlabel(ax{1}, 'edges'); ylabel(ax{1}, named.norm);
+        xlabel(ax{1}, 'edges'); ylabel(ax{1}, kwargs.norm);
 
-        if named.cdf
+        if kwargs.cdf
             cla(ax{2}); hold(ax{2}, 'on'); box(ax{2}, 'on'); grid(ax{2}, 'on');
             xlabel(ax{2}, 'edges'); ylabel(ax{2}, 'cdf');
             ylim(ax{2}, [-0.1, 1.1])
@@ -196,31 +205,31 @@ function varargout = guihist(data, named)
 
         for i = 1:length(rois)       
             [~, modes, edges_fit, ~, edges_raw, counts_raw] = fithist(data = select(rois{i}), ...
-                distname = named.distname, ...
-                objnorm = named.objnorm, ...
-                nonlcon = named.nonlcon, ...
-                lb = named.lb, ...
-                x0 = named.x0, ...
-                ub = named.ub, ...
-                mb = named.mb, ...
-                range = named.range, ...
-                normalize = named.normalize, ...
-                disp = named.disp);
+                distname = kwargs.distname, ...
+                objnorm = kwargs.objnorm, ...
+                nonlcon = kwargs.nonlcon, ...
+                lb = kwargs.lb, ...
+                x0 = kwargs.x0, ...
+                ub = kwargs.ub, ...
+                mb = kwargs.mb, ...
+                range = kwargs.range, ...
+                normalize = kwargs.normalize, ...
+                disp = kwargs.disp);
 
             plot(ax{1}, edges_raw, counts_raw, 'Color', rois{i}.UserData.color, ...
                     'DisplayName', strcat("raw ", num2str(i)))
             for j = 1:size(modes, 2)
-                if named.number == 1
+                if kwargs.number == 1
                     plot(ax{1}, edges_fit, modes(:, j), ...
                         'DisplayName', strcat("mode", num2str(j), " ", num2str(i)))
                 else
                     plot(ax{1}, edges_fit, modes(:, j), mode_markers{j}, 'Color', rois{i}.UserData.color, ...
-                        'MarkerSize', named.markersize, ...
+                        'MarkerSize', kwargs.markersize, ...
                         'DisplayName', strcat("mode", num2str(j), " ", num2str(i)))
                 end
             end
 
-            if named.number == 1
+            if kwargs.number == 1
                 plot(ax{1}, edges_fit, sum(modes, 2), ...
                     'DisplayName', strcat("sum mode", num2str(i)))
             else
@@ -228,26 +237,26 @@ function varargout = guihist(data, named)
                     'DisplayName', strcat("sum mode", num2str(i)))
             end
 
-            if named.cdf
+            if kwargs.cdf
                 cdf = cumsum(modes, 1); cdf = cdf ./ max(cdf, [], 1);
                 if size(cdf, 2) == 2
                     cdf(:, 2) = 1 - cdf(:, 2);
 
-                    if named.disp
+                    if kwargs.disp
                         [~, indcdfint] = min(abs(diff(cdf, 1, 2)));
-                        [~, indqntl] = min(abs(cdf(:, 1)-named.quantile));
+                        [~, indqntl] = min(abs(cdf(:, 1)-kwargs.quantile));
                         tab = [edges_fit(indcdfint); edges_fit(indqntl)];
-                        tab = array2table(tab, 'VariableNames', {'value'}, 'RowName', {'cdf intersection', char(strcat("quantile ", num2str(named.quantile)))});
+                        tab = array2table(tab, 'VariableNames', {'value'}, 'RowName', {'cdf intersection', char(strcat("quantile ", num2str(kwargs.quantile)))});
                         disp(tab);
                     end
                 end
                 for j = 1:size(cdf, 2)
-                    if named.number == 1
+                    if kwargs.number == 1
                         plot(ax{2}, edges_fit, cdf(:, j), ...
                             'DisplayName', strcat("mode", num2str(j), " ", num2str(i)))
                     else
                         plot(ax{2}, edges_fit, cdf(:, j), mode_markers{j}, 'Color', rois{i}.UserData.color, ...
-                            'MarkerSize', named.markersize, ...
+                            'MarkerSize', kwargs.markersize, ...
                             'DisplayName', strcat("mode", num2str(j), " ", num2str(i)))
                     end
                 end
@@ -257,19 +266,19 @@ function varargout = guihist(data, named)
 
     function customize_appearance()
         %% change figure appearance
-        if ~isempty(named.xlim)
+        if ~isempty(kwargs.xlim)
             for i = 1:length(ax)
-                xlim(ax{i}, named.xlim)
+                xlim(ax{i}, kwargs.xlim)
             end
         end
 
-        if ~isempty(named.ylim)
+        if ~isempty(kwargs.ylim)
             for i = 1:length(ax)
-                ylim(ax{i}, named.ylim)
+                ylim(ax{i}, kwargs.ylim)
             end
         end
 
-        if named.legend
+        if kwargs.legend
             for i = 1:length(ax)
                 legend(ax{i}, 'Location', 'Best')
             end
@@ -278,7 +287,7 @@ function varargout = guihist(data, named)
 
     function event(~, ~)
         %% callback at moved event
-        switch named.distname
+        switch kwargs.distname
             case 'none'
                 plot_raw_hist();
             otherwise
@@ -287,7 +296,7 @@ function varargout = guihist(data, named)
         customize_appearance();
     end
 
-    if named.docked
+    if kwargs.docked
         figure('WindowStyle', 'Docked')
     else
         clf;
@@ -298,21 +307,21 @@ function varargout = guihist(data, named)
         case 'node'
             imagesc(axroi, data(:,:,1)); xlabel('x_{n}'); ylabel('z_{n}');
         case 'spatial'
-            contourf(axroi, named.x, named.z, data(:,:,1), 100, 'LineStyle', 'None'); 
+            contourf(axroi, kwargs.x, kwargs.z, data(:,:,1), 100, 'LineStyle', 'None'); 
             xlabel('x, mm'); ylabel('z, mm');
     end
-    colorbar(axroi); colormap(axroi, named.colormap);
-    if ~isempty(named.clim)
-        clim(axroi, named.clim);
+    colorbar(axroi); colormap(axroi, kwargs.colormap);
+    if ~isempty(kwargs.clim)
+        clim(axroi, kwargs.clim);
     end
-    axis(axroi, named.aspect)
+    axis(axroi, kwargs.aspect)
 
     nexttile; ax{1} = gca;
-    if named.cdf
+    if kwargs.cdf
         nexttile; ax{2} = gca;
     end
-    rois = guiselectregion(axroi, @event, shape = named.shape, ...
-        mask = named.mask, interaction = named.interaction, number = named.number);
+    rois = guiselectregion(axroi, @event, shape = kwargs.shape, ...
+        mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);
 
     event();
 

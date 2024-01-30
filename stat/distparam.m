@@ -1,4 +1,4 @@
-function param = distparam(x, named)
+function param = distparam(x, kwargs)
 %% Processing of distribution parameters.
 %% The function takes following arguments:
 %   x:          [1×n double]            - parameter vector
@@ -9,13 +9,13 @@ function param = distparam(x, named)
 
     arguments
         x double
-        named.distname (1,:) char {mustBeMember(named.distname, {'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'gumbel2'
-        named.disp logical = false
+        kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'gumbel2'
+        kwargs.disp logical = false
     end
 
     param = struct();
 
-    switch named.distname
+    switch kwargs.distname
         case 'chi21'
             param.mean = x(1);
             param.mode = max([0, x(1)-2]);
@@ -89,7 +89,7 @@ function param = distparam(x, named)
                 x(4)/x(6)*exp(-(param.mode(2)-x(5))/x(6)-exp(-(param.mode(2)-x(5))/x(6)))];
     end
 
-    if named.disp
+    if kwargs.disp
         tab = [param.mean; param.mode; param.variance; param.amplitude];
         if iscolumn(tab)
             tab = array2table(tab, 'VariableNames', {'full'}, 'RowName', {'mean', 'mode', 'variance', 'amplitude'});

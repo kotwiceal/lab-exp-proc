@@ -42,7 +42,7 @@ function varargout = predinterm(data, kwargs)
         binarized = padarray(binarized, [sz(1)-kwargs.crop(1)-kwargs.crop(3), sz(2)-kwargs.crop(2)-kwargs.crop(4)], 0, 'post');
     end
 
-    intermittency = mean(binarized, 3);
+    intermittency = mean(binarized, 3, 'omitmissing');
 
     varargout{1} = intermittency;
     varargout{2} = binarized;
