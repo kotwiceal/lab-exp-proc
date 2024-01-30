@@ -1,4 +1,4 @@
-function [c, ceq] = nonlcon_statmode(x, options)
+function [c, ceq] = nonlcon_statmode(x, kwargs)
 %% Non-linear constraint function for two mode distribution fitting
 %% The function takes following arguments:
 %   x:         [1×n double]         - parameter vector
@@ -17,22 +17,22 @@ function [c, ceq] = nonlcon_statmode(x, options)
 
     arguments
         x double
-        options.distname (1,:) char {mustBeMember(options.distname, {'gamma2', 'beta2', 'beta2l', 'gumbel2'})} = 'gumbel2'
+        kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'gamma2', 'beta2', 'beta2l', 'gumbel2'})} = 'gumbel2'
 
-        options.mean1 double = []
-        options.mode1 double = []
-        options.var1 double = []
-        options.amp1 double = []
+        kwargs.mean1 double = []
+        kwargs.mode1 double = []
+        kwargs.var1 double = []
+        kwargs.amp1 double = []
 
-        options.mean2 double = []
-        options.mode2 double = []
-        options.var2 double = []
-        options.amp2 double = []
+        kwargs.mean2 double = []
+        kwargs.mode2 double = []
+        kwargs.var2 double = []
+        kwargs.amp2 double = []
     end
 
     c = []; ceq = [];
 
-    param = distparam(x, distname = options.distname);
+    param = distparam(x, distname = kwargs.distname);
     modes = param.mode;
     means = param.mean;
     vars = param.variance;
@@ -44,51 +44,51 @@ function [c, ceq] = nonlcon_statmode(x, options)
 
     %% mode 1
     % mean range restriction
-    if ~isempty(options.mean1)
-        c = [c, options.mean1(1)-means(1)];
-        c = [c, means(1)-options.mean1(2)];
+    if ~isempty(kwargs.mean1)
+        c = [c, kwargs.mean1(1)-means(1)];
+        c = [c, means(1)-kwargs.mean1(2)];
     end
 
     % mode range restriction
-    if ~isempty(options.mode1)
-        c = [c, options.mode1(1)-modes(1)];
-        c = [c, modes(1)-options.mode1(2)];
+    if ~isempty(kwargs.mode1)
+        c = [c, kwargs.mode1(1)-modes(1)];
+        c = [c, modes(1)-kwargs.mode1(2)];
     end
 
     % variance range restriction
-    if ~isempty(options.var1)
-        c = [c, options.var1(1)-vars(1)];
-        c = [c, vars(1)-options.var1(2)];
+    if ~isempty(kwargs.var1)
+        c = [c, kwargs.var1(1)-vars(1)];
+        c = [c, vars(1)-kwargs.var1(2)];
     end
 
     % amplitude range restriction
-    if ~isempty(options.amp1)
-        c = [c, options.amp1(1)-amps(1)];
-        c = [c, amps(1)-options.amp1(2)];
+    if ~isempty(kwargs.amp1)
+        c = [c, kwargs.amp1(1)-amps(1)];
+        c = [c, amps(1)-kwargs.amp1(2)];
     end
     %% mode 2
     % mean range restriction
-    if ~isempty(options.mean2)
-        c = [c, options.mean2(1)-means(2)];
-        c = [c, means(2)-options.mean2(2)];
+    if ~isempty(kwargs.mean2)
+        c = [c, kwargs.mean2(1)-means(2)];
+        c = [c, means(2)-kwargs.mean2(2)];
     end
 
     % mode range restriction
-    if ~isempty(options.mode2)
-        c = [c, options.mode2(1)-modes(2)];
-        c = [c, modes(2)-options.mode2(2)];
+    if ~isempty(kwargs.mode2)
+        c = [c, kwargs.mode2(1)-modes(2)];
+        c = [c, modes(2)-kwargs.mode2(2)];
     end
 
     % variance range restriction
-    if ~isempty(options.var2)
-        c = [c, options.var2(1)-vars(2)];
-        c = [c, vars(2)-options.var2(2)];
+    if ~isempty(kwargs.var2)
+        c = [c, kwargs.var2(1)-vars(2)];
+        c = [c, vars(2)-kwargs.var2(2)];
     end
 
     % amplitude range restriction
-    if ~isempty(options.amp2)
-        c = [c, options.amp2(1)-amps(2)];
-        c = [c, amps(2)-options.amp2(2)];
+    if ~isempty(kwargs.amp2)
+        c = [c, kwargs.amp2(1)-amps(2)];
+        c = [c, amps(2)-kwargs.amp2(2)];
     end
 
 end

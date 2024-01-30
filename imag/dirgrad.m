@@ -1,4 +1,4 @@
-function varargout = dirgrad(u, w, angle, named)
+function varargout = dirgrad(u, w, angle, kwargs)
 %% Process a directed gradient of multidimensional data
 %% The function takes following arguments:
 %   u:              [n×m×... double]    - first vector component
@@ -6,8 +6,8 @@ function varargout = dirgrad(u, w, angle, named)
 %   angle:          [1×1 double]        - angle rotation [rad];
 %   component:      [char array]        - returned directed derivatives
 %   diffilter:      [char array]        - difference schema
-%   prefilter:      [char array]        - smooth prefiltering
-%   prefiltkernel:  [1×2 double]        - kernel of smooth filter
+%   prefilt:        [char array]        - smooth prefiltering
+%   prefiltker:     [1×2 double]        - kernel of smooth filter
 %
 %% The function returns following results:
 %   dudl: [l×n×... double]
@@ -21,10 +21,10 @@ function varargout = dirgrad(u, w, angle, named)
         u double
         w double
         angle double
-        named.component (1,:) char {mustBeMember(named.component, {'dudl', 'dudn', 'dwdl', 'dwdn', 'all'})} = 'dwdl'
-        named.diffilter (1,:) char {mustBeMember(named.diffilter, {'sobel', '4ord', '4ordgauss', '2ord'})} = 'sobel'
-        named.prefilter (1,:) char {mustBeMember(named.prefilter, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'gaussian'
-        named.prefiltkernel double = [3, 3]
+        kwargs.component (1,:) char {mustBeMember(kwargs.component, {'dudl', 'dudn', 'dwdl', 'dwdn', 'all'})} = 'dwdl'
+        kwargs.diffilter (1,:) char {mustBeMember(kwargs.diffilter, {'sobel', '4ord', '4ordgauss', '2ord'})} = 'sobel'
+        kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'gaussian'
+        kwargs.prefiltker double = [3, 3]
     end
 
     mat = [cos(angle)^2, cos(angle)*sin(angle), cos(angle)*sin(angle), sin(angle)^2; ...
@@ -34,37 +34,18 @@ function varargout = dirgrad(u, w, angle, named)
 
     sz = size(u); u = u(:, :, :); w = w(:, :, :);
 
-    switch named.prefilter
-        case 'average'
-            kernel = fspecial(named.prefilter, named.prefiltkernel);
-            u = imfilter(u, kernel); w = imfilter(w, kernel);
+    % velocity prefiltering
+    u = imagfilter(u, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
+    w = imagfilter(w, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
 
-        case 'gaussian'
-            kernel = fspecial(named.prefilter, named.prefiltkernel);
-            u = imfilter(u, kernel); w = imfilter(w, kernel);
-
-        case 'median'
-            kernel = named.prefiltkernel;
-            for i = 1:prod(sz(3:end))
-                u(:, :, i) = medfilt2(u(:, :, i), kernel);
-                w(:, :, i) = medfilt2(w(:, :, i), kernel);
-            end
-
-        case 'wiener'
-            kernel = named.prefiltkernel;
-            for i = 1:prod(sz(3:end))
-                u(:, :, i) = wiener2(u(:, :, i), kernel);
-                w(:, :, i) = wiener2(w(:, :, i), kernel);
-            end
-    end
-
-    Gx = difkernel(named.diffilter); Gz = Gx';
-
+    % derivation
+    Gx = difkernel(kwargs.diffilter); Gz = Gx';
     dudx = imfilter(u, Gx); dudz = imfilter(u, Gz);
     dwdx = imfilter(w, Gx); dwdz = imfilter(w, Gz);
         
+    % rotate
     vr = mat' * [dudx(:), dudz(:), dwdx(:), dwdz(:)]';
-    switch named.component
+    switch kwargs.component
         case 'dudl'
             varargout{1} = reshape(vr(1, :), sz);
         case 'dudn'

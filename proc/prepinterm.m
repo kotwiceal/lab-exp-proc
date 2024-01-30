@@ -5,35 +5,42 @@ function result = prepinterm(data, kwargs)
 %   type:               [char array]        - process algorithm
 %   diffilter:          [char array]        - filter type for differentiating the velocity field
 %   prefilter:          [char array]        - prefiltering velocity field
-%   prefiltkernel:      [1×2 double]        - kernel of prefilter
+%   prefiltker:         [1×2 double]        - kernel of prefilter
 %   fillmissmeth:       [char array]        - method of filling missing data
 %   angle:              [1×1 double]        - anlge of directed gradient [rad]
 %   component:          [char array]        - derivative component
-%   postfitler:         [char array]        - portfiltering of processed field
-%   postfiltkernel:     [1×2 double]        - kernel of postfilter
+%   threshold:          [1×1 logical]       - apply threshold 
+%   pow:                [1×1 double]        - raise to the power of processing value
+%   eigord:             [1×1 double]        - eigen-value order
+%   postfilt:           [char array]        - portfiltering of processed field
+%   postfiltker:        [1×2 double]        - kernel of postfilter
 %% The function returns following results:
 %   result:             [n×m... double]     - prcessed field
 %% Examples:
 %% process a velocity directed gradient
 % data.dwdl = prepinterm(data, type = 'dirgrad');
 %% process a lambda-2 criteria with custom settings
-% data.dwdl = prepinterm(data, type = 'l2', diffilter = 'sobel', prefilter = 'wiener', ...
-%       prefiltkernel = [15, 15], postfitler = 'median', postfiltkernel = [15, 15]);
+% data.dwdl = prepinterm(data, type = 'l2', diffilter = 'sobel', prefilt = 'wiener', ...
+%       prefiltker = [15, 15], postfilt = 'median', postfiltker = [15, 15]);
 
     arguments
         data struct
         kwargs.type (1,:) char {mustBeMember(kwargs.type, {'dirgrad', 'l2', 'vm'})} = 'drigrad'
         % preprosessing parameters
         kwargs.diffilter (1,:) char {mustBeMember(kwargs.diffilter, {'sobel', '4ord', '4ordgauss', '2ord'})} = '4ord'
-        kwargs.prefilter (1,:) char {mustBeMember(kwargs.prefilter, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'gaussian'
-        kwargs.prefiltkernel double = [3, 3]
+        kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'gaussian'
+        kwargs.prefiltker double = [3, 3]
         kwargs.fillmissmeth (1,:) char {mustBeMember(kwargs.fillmissmeth, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'none'
         % dirgrad parameters
         kwargs.angle double = deg2rad(-22)
         kwargs.component (1,:) char {mustBeMember(kwargs.component, {'dudl', 'dudn', 'dwdl', 'dwdn'})} = 'dwdl'
+        % l2 parameters
+        kwargs.threshold (1,:) char {mustBeMember(kwargs.threshold, {'none', 'neg', 'pos'})} = 'none'
+        kwargs.pow double = 2
+        kwargs.eigord double = 1
         % postprocessing parameters
-        kwargs.postfitler (1,:) char {mustBeMember(kwargs.postfitler, {'none', 'median', 'wiener', 'median-wiener', 'gaussian', 'average'})} = 'median-wiener'
-        kwargs.postfiltkernel double = [10, 10]
+        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'gaussian', 'average', 'median', 'wiener', 'median-wiener', 'mode'})} = 'median-wiener'
+        kwargs.postfiltker double = [10, 10]
     end
 
     result = [];
@@ -59,40 +66,22 @@ function result = prepinterm(data, kwargs)
         u = reshape(u, sz); w = reshape(w, sz);
     end
 
-    % process
+    % processing
     switch kwargs.type
         case 'dirgrad'
             result = dirgrad(u, w, kwargs.angle, component = kwargs.component, diffilter = kwargs.diffilter, ...
-                prefilter = kwargs.prefilter, prefiltkernel = kwargs.prefiltkernel);
-            result = result.^2;
+                prefilt = kwargs.prefilt, prefiltker = kwargs.prefiltker);
+            if ~isempty(kwargs.pow)
+                result = result.^kwargs.pow;
+            end
         case 'l2'
-            result = vortind(u, w, type = 'l2', diffilter = kwargs.diffilter, prefilter = kwargs.prefilter, ...
-                prefiltkernel = kwargs.prefiltkernel);
+            result = vortind(u, w, type = 'l2', diffilter = kwargs.diffilter, prefilt = kwargs.prefilt, ...
+                prefiltker = kwargs.prefiltker, threshold = kwargs.threshold, pow = kwargs.pow, eigord = kwargs.eigord);
         case 'vm'
             result = hypot(u, w);
     end
 
     % postprocessing
-    switch kwargs.postfitler
-        case 'median-wiener'
-            for i = 1:size(result, 3)
-                result(:,:,i) = medfilt2(result(:,:,i), kwargs.postfiltkernel);
-            end
-            for i = 1:size(result, 3)
-                result(:,:,i) = wiener2(result(:,:,i), kwargs.postfiltkernel);
-            end
-        case 'median'
-            for i = 1:size(result, 3)
-                result(:,:,i) = medfilt2(result(:,:,i), kwargs.postfiltkernel);
-            end
-        case 'wiener'
-            for i = 1:size(result, 3)
-                result(:,:,i) = wiener2(result(:,:,i), kwargs.postfiltkernel);
-            end
-        case 'gaussian'
-            result = imfilter(result, fspecial(kwargs.postfitler, kwargs.postfiltkernel));
-        case 'average'
-            result = imfilter(result, fspecial(kwargs.postfitler, kwargs.postfiltkernel));
-    end
+    result = imagfilter(result, filt = kwargs.postfilt, filtker = kwargs.postfiltker);
 
 end
