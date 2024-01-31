@@ -1,13 +1,15 @@
-function [scan, data, raw] = import_cta(folder, named)
+function [scan, data, raw] = loadcta(folder, named)
 %% Import hot-wire data from specified folder with/without subfolders.
 %% The function takes following arguments:
 %   folder:             [char array]
 %   subfolders:         [logical]
 %   extension:          [char array]
 %% The function returns following results:
-%   scan:               [n×l0×k×... double]
-%   data:               [k×11×... double]
-%   raw:                [l×m double]
+%   scan:               [n×10×m×... double] 
+%   data:               [k×11×m×... double]
+%   raw:                [l×3×k double]
+
+% n - number of samples at spectra processing, k - number of measurements, l - number of measurement samples
 %% Examples:
 %% get scan & data from specified folder
 % [scan, data, raw] = import_cta('\turb_jet_noise\test')

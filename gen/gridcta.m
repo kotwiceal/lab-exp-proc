@@ -15,7 +15,48 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
 %   scan:           [knm×3 double]          - scan table
 %   scancor:        [knm×3 double]          - corrected scan table
 %% Examples:
-% gridcta(0:200:1000, -3000:500:3000, 200:100:1000, 'scan_1')
+
+%% build 1D scannig table (vertical profile) and save in scan_1d.txt
+% gridcta(0, 0, 0:50:1000, filename = 'scan_1d')
+
+%% build 2D scannig table (cross-section) and save in scan_2d.txt
+% gridcta(0, -3000:500:3000, 0:50:1000, filename = 'scan_2d')
+
+%% build 2D scannig table (volume) and save in scan_3d.txt
+% gridcta(0:200:1000, -3000:500:3000, 0:50:1000, filename = 'scan_3d')
+
+%% build 1D scannig table (vertical profile), correct base and save in scan_1dc.txt
+% gridcta(0, 0, 200:100:1000, ax10 = 0, ax20 = 0, ax30 = -35, filename = 'scan_1dc')
+
+%% build 2D scannig table (cross-section-transverse), correct base and save in scan_2dc.txt
+% gridcta(0, -1000:500:1000, 200:100:1000, ax10 = 0, ax20 = [-1200, -800, -400, 0, 400, 800, 1000], ...
+%   ax30 = [-10, 20, -30, 40, -50, 60, -70], filename = 'scan_2dc')
+
+%% build 2D scannig table (cross-section-longitudinal), correct base and save in scan_2dc.txt
+% gridcta(0:100:600, 800, 200:100:1000, ax10 = 0:200:1200, ...
+%    ax20 = 800, ax30 = [-10, 20, -30, 40, -50, 60, -70], filename = 'scan_2dc')
+
+%% build 3D scannig table (horizon-plane-section), correct base (grid-wise notation {ax10, ax20, ax30}) and save in scan_2dc.txt
+% gridcta(0:100:1000, -800:200:800, 200, ax10 = 0:400:2000, ax20 = -1000:500:1000, ...
+%   ax30 = 100*rand(6, 5), filename = 'scan_2dc')
+
+%% build 3D scannig table (horizon-plane-section), correct base (point-wise notation {ax10, ax20, ax30}) and save in scan_2dc.txt
+% ax10 = [0, 0, 0, 0, 500, 500, 500, 1000, 1000, 1000, 1000, 1000];
+% ax20 = [-1000, -800, 800, 1000, -1200, 600, 1200, -2000, -1000, -500, 0, 1000];
+% ax30 = 100*rand(1, numel(ax10));
+% gridcta(0:100:1000, -800:200:800, 500, ax10 = ax10, ax20 = ax20, ax30 = ax30, ...
+%   filename = 'scan_3dc', pointwise = true)
+
+%% build 3D scannig table (volume), correct base (grid-wise notation {ax10, ax20, ax30})  and save in scan_3dc.txt
+% gridcta(0:100:1000, -800:200:800, 200:100:1000, ax10 = 0:400:2000, ax20 = -1000:500:1000, ...
+%   ax30 = 100*rand(6, 5), filename = 'scan_3dc')
+
+%% build 3D scannig table (volume), correct base (point-wise notation {ax10, ax20, ax30}) and save in scan_3dc.txt
+% ax10 = [0, 0, 0, 0, 500, 500, 500, 1000, 1000, 1000, 1000, 1000];
+% ax20 = [-1000, -800, 800, 1000, -1200, 600, 1200, -2000, -1000, -500, 0, 1000];
+% ax30 = 100*rand(1, numel(ax10));
+% gridcta(0:100:1000, -800:200:800, 200:100:1000, ax10 = ax10, ax20 = ax20, ax30 = ax30, ...
+%   filename = 'scan_3dc', pointwise = true)
 
     arguments
         ax1 double
@@ -23,11 +64,13 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
         ax3 double
         kwargs.filename (1,:) char = ''
         kwargs.scanorder double = [3, 2, 1]
-        kwargs.axorder double = [3, 2, 1]
+        kwargs.axorder double = [1, 2, 3]
         kwargs.ax10 double = []
         kwargs.ax20 double = []
         kwargs.ax30 double = []
         kwargs.show logical = true
+        kwargs.delimiter (1,:) char = 'tab'
+        kwargs.pointwise logical = false
     end
 
     nax1 = size(ax1, 2);
@@ -45,25 +88,30 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
     iscorbase = ~(isempty(kwargs.ax10) && isempty(kwargs.ax20) && isempty(kwargs.ax30));
 
     if iscorbase
-        if numel(kwargs.ax10) == 1
-            type = 'poly02';
+        if (numel(kwargs.ax10) == 1) && (numel(kwargs.ax20) == 1) && (numel(kwargs.ax30) == 1) 
+            scancor = scan;
+            scancor(:, 3) = scancor(:, 3) - kwargs.ax30;
+            kwargs.ax10 = ax1;
+            kwargs.ax20 = ax2;
+        else
+            if numel(kwargs.ax10) == 1
+                type = 'poly02';
+            end
+            if numel(kwargs.ax20) == 1
+                type = 'poly20';
+            end
+            if (numel(kwargs.ax10) ~= 1) && (numel(kwargs.ax20) ~= 1)
+                type = 'poly22';
+            end
+            if ~kwargs.pointwise
+                [kwargs.ax10, kwargs.ax20] = meshgrid(kwargs.ax10, kwargs.ax20);
+            end
+            [ax10, ax20, ax30] = prepareSurfaceData(kwargs.ax10, kwargs.ax20, kwargs.ax30);
+            ft = fit([ax10, ax20], ax30, type);
+            scancor = scan;
+            ax3s = ft(scancor(:,1), scancor(:,2));
+            scancor(:, 3) = scancor(:, 3) - round(ax3s);
         end
-        if numel(kwargs.ax20) == 1
-            type = 'poly20';
-        end
-        if (numel(kwargs.ax10) ~= 1) && (numel(kwargs.ax20) ~= 1)
-            type = 'poly22';
-        end
-        [kwargs.ax10, kwargs.ax20] = meshgrid(kwargs.ax10, kwargs.ax20);
-        [ax10, ax20, ax30] = prepareSurfaceData(kwargs.ax10, kwargs.ax20, kwargs.ax30);
-        ft = fit([ax10, ax20], ax30, type);
-        scancor = scan;
-        ax3s = ft(scancor(:,1), scancor(:,2));
-        scancor(:, 3) = scancor(:, 3) - ax3s;
-    end
-
-    if ~isempty(kwargs.filename)
-        dlmwrite(strcat(kwargs.filename, '.txt'), ceil(scan)', '\t');
     end
 
     if (kwargs.show)
@@ -89,6 +137,13 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
     if exist('scancor', 'var')
         scancor = scancor(:, kwargs.axorder);
         varargout{2} = scancor;
+        tab = scancor;
+    else
+        tab = scan;
+    end
+
+    if ~isempty(kwargs.filename)
+        writematrix(tab, strcat(kwargs.filename, '.txt'), 'Delimiter', kwargs.delimiter);
     end
 
 end
