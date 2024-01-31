@@ -164,7 +164,7 @@ function rois = guilinedist(data, named)
     switch disp_type
         case 'node'
             for i = 1:size(data, 3)
-                nexttile; imagesc(data(:,:,i)); xlabel('x_{n}'); ylabel('z_{n}'); colormap(named.colormap);
+                nexttile; imagesc(data(:,:,i)); xlabel('x_{n}'); ylabel('z_{n}'); colormap(named.colormap); axis(named.aspect);
                 if ~isempty(named.clim); clim(named.clim); end
                 if ~isempty(named.displayname); title(named.displayname(i), 'FontWeight', 'Normal'); end
             end

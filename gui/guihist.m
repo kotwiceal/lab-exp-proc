@@ -37,6 +37,15 @@ function varargout = guihist(data, kwargs)
 %   mb:             [1×2 doule]                     - scale range of auto constrains
 %   disp:           [1×1 logical]                   - display of optimization result 
 
+%   mean1:          [1×2 double]         - constraints of mean value the first mode
+%   mode1:          [1×2 double]         - constraints of mode value the first mode
+%   var1:           [1×2 double]         - constraints of variance value the first mode
+%   amp1:           [1×2 double]         - constraints of amplitude value the first mode
+%   mean2:          [1×2 double]         - constraints of mean value the second mode
+%   mode2:          [1×2 double]         - constraints of mode value the second mode
+%   var2:           [1×2 double]         - constraints of variance value the second mode
+%   amp2:           [1×2 double]         - constraints of amplitude value the second mode
+
 %   quantile:       [1×1 double]                    - quantile threshold
 
 %% The function returns following results:
@@ -113,6 +122,15 @@ function varargout = guihist(data, kwargs)
         kwargs.ub double = []
         kwargs.mb double = [0, 10]
         kwargs.disp logical = false
+        %% restriction parameters
+        kwargs.mean1 double = []
+        kwargs.mode1 double = []
+        kwargs.var1 double = []
+        kwargs.amp1 double = []
+        kwargs.mean2 double = []
+        kwargs.mode2 double = []
+        kwargs.var2 double = []
+        kwargs.amp2 double = []
         %% other parameters
         kwargs.quantile double = 0.1
     end
@@ -134,6 +152,14 @@ function varargout = guihist(data, kwargs)
         case 'spatial'
             select = @(roiobj) guigetdata(roiobj, data, shape = 'flatten', ...
                 type = 'spatial', x = kwargs.x, z = kwargs.z);
+    end
+
+    % auto build non-linear constrain function
+    temporary = isempty(cat(1, kwargs.mean1, kwargs.mode1, kwargs.var1, kwargs.amp1, kwargs.mean2, ...
+        kwargs.mode2, kwargs.var2, kwargs.amp2));
+    if isempty(kwargs.nonlcon) || ~temporary
+        kwargs.nonlcon = @(x) nonlcon_statmode(x, distname = kwargs.distname, mean1 = kwargs.mean1, mode1 = kwargs.mode1, ...
+            var1 = kwargs.var1, amp1 = kwargs.amp1, mean2 = kwargs.mean2, mode2 = kwargs.mode2, var2 = kwargs.var2, amp2 = kwargs.amp2);
     end
 
     function result = roisgetdata()
