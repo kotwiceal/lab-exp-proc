@@ -76,7 +76,7 @@ function varargout = guihist(data, kwargs)
 % % fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
 %
 % % constrain function
-% nonlcon = @(x) nonlcon_statmode(x,distname='beta2',rmode1=[1e-4,6e-4],rvar1=[1e-8,1e-7],rmode2=[7e-4,5e-3],rvar2=[1e-7,1e-5]);
+% nonlcon = @(x) nonlconfitdist(x,distname='beta2',rmode1=[1e-4,6e-4],rvar1=[1e-8,1e-7],rmode2=[7e-4,5e-3],rvar2=[1e-7,1e-5]);
 % % boundary constrains
 % lb = [0, 1e-3, 0, 7.8, 6416, 1e-3, 1e-2, 0, 0, 0];
 % ub = [2, 2e1, 1e-2, 7.8, 6416, 10, 2e1, 1e-2, 1e3, 1e4];
@@ -158,7 +158,7 @@ function varargout = guihist(data, kwargs)
     temporary = isempty(cat(1, kwargs.mean1, kwargs.mode1, kwargs.var1, kwargs.amp1, kwargs.mean2, ...
         kwargs.mode2, kwargs.var2, kwargs.amp2));
     if isempty(kwargs.nonlcon) || ~temporary
-        kwargs.nonlcon = @(x) nonlcon_statmode(x, distname = kwargs.distname, mean1 = kwargs.mean1, mode1 = kwargs.mode1, ...
+        kwargs.nonlcon = @(x) nonlconfitdist(x, distname = kwargs.distname, mean1 = kwargs.mean1, mode1 = kwargs.mode1, ...
             var1 = kwargs.var1, amp1 = kwargs.amp1, mean2 = kwargs.mean2, mode2 = kwargs.mode2, var2 = kwargs.var2, amp2 = kwargs.amp2);
     end
 

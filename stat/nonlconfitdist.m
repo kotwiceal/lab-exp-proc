@@ -1,4 +1,4 @@
-function [c, ceq] = nonlcon_statmode(x, kwargs)
+function [c, ceq] = nonlconfitdist(x, kwargs)
 %% Non-linear constraint function for two mode distribution fitting
 %% The function takes following arguments:
 %   x:         [1×n double]         - parameter vector

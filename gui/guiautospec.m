@@ -1,5 +1,5 @@
 function rois = guiautospec(axroi, data, named)
-%% Visualalize auto-spectra of selected by rectangle ROI data.
+%% Visualize auto-spectra of selected by rectangle ROI data.
 %   axroi:          [matlab.graphics.axis.Axes]     - axis object of canvas that selection data events are being occured
 %   data:           [n×m double]                    - matrix data
 %   mask:           [1×2 double]                    - size of rectangle selection

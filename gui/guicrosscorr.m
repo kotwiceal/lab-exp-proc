@@ -1,5 +1,5 @@
 function rois = guicrosscorr(axroi, data, named)
-%% Visualalize cross-correlation function of selected by rectangle ROI data.
+%% Visualize cross-correlation function of selected by rectangle ROI data.
 %% The function takes following arguments:
 %   axroi:          [matlab.graphics.axis.Axes]     - axis object of canvas that selection data events are being occured
 %   data:           [n×m double]                    - matrix data
