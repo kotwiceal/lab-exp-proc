@@ -1,5 +1,5 @@
 function rois = guiautocorr(data, named)
-%% Visualalize auto-correlation function of selected by rectangle ROI data.
+%% Visualize auto-correlation function of selected by rectangle ROI data.
 %% The function takes following arguments:
 %   data:           [n×m double]                    - matrix data
 %   mask:           [1×2 double]                    - size of rectangle selection

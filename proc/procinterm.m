@@ -51,7 +51,7 @@ function varargout = procinterm(data, kwargs)
 % procinterm(data.dwdl)
 %% process intermittency by custom settings
 % % constrain function
-% nonlcon = @(x) nonlcon_statmode(x,distname='gumbel2',mode1=[1e-4,6e-4],var1=[1e-8,1e-7],mode2=[7e-4,5e-3],var2=[1e-7,1e-5]);
+% nonlcon = @(x) nonlconfitdist(x,distname='gumbel2',mode1=[1e-4,6e-4],var1=[1e-8,1e-7],mode2=[7e-4,5e-3],var2=[1e-7,1e-5]);
 % % boundary constrains
 % lb = [0, 0, 0, 0, 0, 0];
 % ub = [2, 5e-3, 5e-3, 2, 5e-3, 5e-3];
@@ -109,7 +109,7 @@ function varargout = procinterm(data, kwargs)
     intermittency = []; binarized = [];
 
     if isempty(kwargs.nonlcon)
-        kwargs.nonlcon = @(x) nonlcon_statmode(x, distname = kwargs.distname, mean1 = kwargs.mean1, mode1 = kwargs.mode1, ...
+        kwargs.nonlcon = @(x) nonlconfitdist(x, distname = kwargs.distname, mean1 = kwargs.mean1, mode1 = kwargs.mode1, ...
             var1 = kwargs.var1, amp1 = kwargs.amp1, mean2 = kwargs.mean2, mode2 = kwargs.mode2, var2 = kwargs.var2, amp2 = kwargs.amp2);
     end
 
