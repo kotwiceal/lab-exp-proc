@@ -1,4 +1,4 @@
-function rois = guicrosscorr(axroi, data, named)
+function rois = guicrosscorr(axroi, data, kwargs)
 %% Visualize cross-correlation function of selected by rectangle ROI data.
 %% The function takes following arguments:
 %   axroi:          [matlab.graphics.axis.Axes]     - axis object of canvas that selection data events are being occured
@@ -28,14 +28,14 @@ function rois = guicrosscorr(axroi, data, named)
     arguments
         axroi matlab.graphics.axis.Axes
         data double
-        named.type (1,:) char {mustBeMember(named.type, {'xcorr', 'mul'})} = 'xcorr'
+        kwargs.type (1,:) char {mustBeMember(kwargs.type, {'xcorr', 'mul'})} = 'xcorr'
         %% roi and axis parameters
-        named.mask double = []
-        named.interaction (1,:) char {mustBeMember(named.interaction, {'all', 'none', 'translate'})} = 'translate'
-        named.aspect (1,:) char {mustBeMember(named.aspect, {'equal', 'manual'})} = 'equal'
-        named.clim double = []
-        named.cscale (1,:) char {mustBeMember(named.cscale, {'linear', 'log'})} = 'linear'
-        named.display (1,:) char {mustBeMember(named.display, {'imagesc', 'surf'})} = 'imagesc'
+        kwargs.mask double = []
+        kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'translate'
+        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'manual'})} = 'equal'
+        kwargs.clim double = []
+        kwargs.cscale (1,:) char {mustBeMember(kwargs.cscale, {'linear', 'log'})} = 'linear'
+        kwargs.display (1,:) char {mustBeMember(kwargs.display, {'imagesc', 'surf'})} = 'imagesc'
     end
 
     select = @(roiobj) imcrop(data, roiobj.Position);
@@ -50,7 +50,7 @@ function rois = guicrosscorr(axroi, data, named)
         end
 
         % process
-        switch named.type
+        switch kwargs.type
             case 'xcorr'
                 frame = xcorr2(value(:, :, 1), value(:, :, 2));
             case 'mul'
@@ -58,23 +58,23 @@ function rois = guicrosscorr(axroi, data, named)
         end
 
         cla(ax); 
-        switch named.display
+        switch kwargs.display
             case 'imagesc'
                 imagesc(ax, frame); 
             case 'surf'
                 surf(ax, frame);
         end
         colorbar(ax); colormap(ax, 'turbo');
-        set(ax, 'ColorScale', named.cscale); 
-        if ~isempty(named.clim)
-            clim(ax, named.clim);
+        set(ax, 'ColorScale', kwargs.cscale); 
+        if ~isempty(kwargs.clim)
+            clim(ax, kwargs.clim);
         end
-        axis(ax, named.aspect)
+        axis(ax, kwargs.aspect)
     end
 
     nexttile; ax = gca;
     rois = guiselectregion(axroi, @event, shape = 'rect', ...
-        mask = named.mask, interaction = named.interaction, number = 2);
+        mask = kwargs.mask, interaction = kwargs.interaction, number = 2);
 
     event();
 

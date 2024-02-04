@@ -10,7 +10,13 @@ function varargout = procinterm(data, kwargs)
 %   distname:       [char array]        - type of statistics fit
 %   quantile:       [1×1 double]        - quantile threshold
 %   root:           [char array]        - method to find root of two cdf intersection
-%   fitinit:        [1×1 logical]       - advanced initializing approximation of optimization problem
+%   fitdistinit:    [1×1 logical]       - advanced initializing approximation of optimization problem
+%   fitdistcoef:    [n×m×k double]      - fit approximation coefficients
+%   fitdistfilt:    [char array]        - filter name to filter initial fit coefficients
+%   fitdistfiltker: [1×2 double]        - filter size to filter initial fit coefficients
+%   weight:         [n×m... double]     - gridded window function by shape initial data to perform weighted filtering
+%   weightname:     [char array]        - name of window function 
+%   weightparam:    [1×k double]        - parameters of window function 
 %   distance:       [char array]        - cluster method metric
 %   fillholes:      [1×1 logical]       - fill closed domain of processed fields
 %   batch:          [1×1 logical]       - clustering of data by all realization
@@ -68,9 +74,16 @@ function varargout = procinterm(data, kwargs)
         kwargs.method (1,:) char {mustBeMember(kwargs.method, {'quantile-threshold', 'cdf-intersection', 'integral-ratio', 'cluster', 'cnn', 'cluster-kernel'})} = 'integral-ratio'
         %% intergal algorithm parameters
         kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'gamma2', 'beta2', 'beta2l', 'gumbel2'})} = 'gumbel2'
-        kwargs.quantile double = 0.2
+        kwargs.quantile double = 0.9
         kwargs.root (1,:) char {mustBeMember(kwargs.root, {'diff', 'fsolve', 'fminbnd'})} = 'diff'
-        kwargs.fitinit logical = true
+        %% advanced fit distribution parameters
+        kwargs.fitdistinit logical = true
+        kwargs.fitdistcoef double = []
+        kwargs.fitdistfilt (1,:) char {mustBeMember(kwargs.fitdistfilt, {'none', 'average', 'gaussian', 'median', 'median-weighted', 'wiener', 'mode'})} = 'median-weighted'
+        kwargs.fitdistfiltker double = [50, 50]
+        kwargs.weight double = []
+        kwargs.weightname (1,:) char {mustBeMember(kwargs.weightname, {'tukeywin'})} = 'tukeywin'
+        kwargs.weightparam double = [0.05, 0.05]
         %% cluster algorithm parameters
         kwargs.distance (1,:) char {mustBeMember(kwargs.distance, {'sqeuclidean', 'cityblock', 'cosine', 'correlation', 'hamming'})} = 'sqeuclidean'
         kwargs.fillholes logical = false;
@@ -91,19 +104,55 @@ function varargout = procinterm(data, kwargs)
         kwargs.ub double = []
         %% restriction parameters
         kwargs.mean1 double = []
-        kwargs.mode1 double = [1e-4,6e-4]
-        kwargs.var1 double = [1e-8,1e-7]
+        kwargs.mode1 double = []
+        kwargs.var1 double = []
         kwargs.amp1 double = []
         kwargs.mean2 double = []
-        kwargs.mode2 double = [7e-4,5e-3]
-        kwargs.var2 double = [1e-7,1e-5]
+        kwargs.mode2 double = []
+        kwargs.var2 double = []
         kwargs.amp2 double = []
         %% pre-pocessing parameters
-        kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'median'
+        kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'average', 'gaussian', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'mode'})} = 'median'
         kwargs.prefiltker double = [15, 15]
         %% post-processing parameters
-        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'median'
+        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'average', 'gaussian', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'mode'})} = 'median'
         kwargs.postfiltker double = [15, 15]
+    end
+
+    function result = procfitdistfilt(method)
+        if kwargs.fitdistinit
+            if isempty(kwargs.fitdistcoef)
+                fitdistcoef = procfitdistcoef(data, norm = kwargs.norm, binedge = kwargs.binedge, ...
+                    distname = kwargs.distname, x0 = kwargs.x0, lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon, ...
+                    postfilt = kwargs.fitdistfilt, postfiltker = kwargs.fitdistfiltker, ...
+                    weight = kwargs.weight, weightname = kwargs.weightname, weightparam = kwargs.weightparam);
+            else
+                fitdistcoef = kwargs.fitdistcoef;
+            end
+
+            nlkernel = @(x, y) fitdistfilter(x, method = method, norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
+                quantile = kwargs.quantile, distname = kwargs.distname, x0 = squeeze(median(y, [1, 2], 'omitmissing')), ...
+                lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
+            result = nlpfilter(data, kwargs.kernel, @(x, y) nlkernel(x, y), strides = kwargs.strides, type = 'deep-cross', y = fitdistcoef, resize = true);
+            if method ~= "integral-ratio"
+                varargout{4} = fitdistcoef;
+            else
+                varargout{2} = fitdistcoef;
+            end
+        else
+            nlkernel = @(x) fitdistfilter(x, method = method, norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
+                quantile = kwargs.quantile, distname = kwargs.distname, x0 = kwargs.x0, ...
+                lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
+            result = nlpfilter(data, kwargs.kernel, @(x) nlkernel(x), strides = kwargs.strides, type = 'deep', resize = true);
+        end
+        if method ~= "integral-ratio"
+            result = imagfilter(result, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
+        end
+    end
+
+    function [intermittency, binarized] = procfitdistbinar(threshold)
+        binarized = data ./ threshold; binarized(binarized >= 1) = 1; binarized(binarized < 1) = 0;
+        intermittency = mean(binarized, 3, 'omitmissing');
     end
 
     intermittency = []; binarized = [];
@@ -117,69 +166,15 @@ function varargout = procinterm(data, kwargs)
 
     switch kwargs.method
         case 'quantile-threshold'
-            if kwargs.fitinit
-                nlkernel = @(x) fitdistfilter(x, method = 'get-fit-parameters', norm = kwargs.norm, binedge = kwargs.binedge, ...
-                    distname = kwargs.distname, x0 = kwargs.x0, lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
-                fitcoef = nlpfilter(data, kwargs.kernel, @(x) nlkernel(x), strides = kwargs.strides, type = 'deep-A', resize = true);
-                fitcoef = imagfilter(fitcoef, filt = 'median', filtker = kwargs.kernel);
-
-                nlkernel = @(x, c) fitdistfilter(x, method = 'quantile-threshold', norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
-                    quantile = kwargs.quantile, distname = kwargs.distname, x0 = squeeze(mean(c, [1, 2], 'omitmissing')), ...
-                    lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
-                threshold = nlpfilter(data, kwargs.kernel, @(x, c) nlkernel(x, c), strides = kwargs.strides, type = 'deep-AB', B = fitcoef, resize = true);
-                varargout{4} = fitcoef;
-            else
-                nlkernel = @(x) fitdistfilter(x, method = 'quantile-threshold', norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
-                    quantile = kwargs.quantile, distname = kwargs.distname, x0 = kwargs.x0, ...
-                    lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
-                threshold = nlpfilter(data, kwargs.kernel, @(x) nlkernel(x), strides = kwargs.strides, type = 'deep', resize = true);
-            end
-            threshold = imagfilter(threshold, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
-            binarized = data ./ threshold;
-            binarized(binarized >= 1) = 1;
-            binarized(binarized < 1) = 0;
-            intermittency = mean(binarized, 3, 'omitmissing');
-            varargout{2} = binarized;
-            varargout{3} = threshold;
+            threshold = procfitdistfilt('quantile-threshold');
+            [intermittency, binarized] = procfitdistbinar(threshold);
+            varargout{2} = binarized; varargout{3} = threshold;
         case 'cdf-intersection'
-            if kwargs.fitinit
-                nlkernel = @(x) fitdistfilter(x, method = 'get-fit-parameters', norm = kwargs.norm, binedge = kwargs.binedge, ...
-                    distname = kwargs.distname, x0 = kwargs.x0, lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
-                fitcoef = nlpfilter(data, kwargs.kernel, @(x) nlkernel(x), strides = kwargs.strides, type = 'deep-A', resize = true);
-                fitcoef = imagfilter(fitcoef, filt = 'median', filtker = kwargs.kernel);
-
-                nlkernel = @(x, c) fitdistfilter(x, method = 'cdf-intersection', norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
-                    distname = kwargs.distname, x0 = squeeze(mean(c, [1, 2], 'omitmissing')), lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
-                threshold = nlpfilter(data, kwargs.kernel, @(x, c) nlkernel(x, c), strides = kwargs.strides, type = 'deep-AB', B = fitcoef, resize = true);
-                varargout{4} = fitcoef;
-            else
-                nlkernel = @(x) fitdistfilter(x, method = 'cdf-intersection', norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
-                    distname = kwargs.distname, x0 = kwargs.x0, lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
-                threshold = nlpfilter(data, kwargs.kernel, @(x) nlkernel(x), strides = kwargs.strides, type = 'deep', resize = true);
-            end
-            threshold = imagfilter(threshold, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
-            binarized = data ./ threshold;
-            binarized(binarized >= 1) = 1;
-            binarized(binarized < 1) = 0;
-            intermittency = mean(binarized, 3, 'omitmissing');
-            varargout{2} = binarized;
-            varargout{3} = threshold;
+            threshold = procfitdistfilt('cdf-intersection');
+            [intermittency, binarized] = procfitdistbinar(threshold);
+            varargout{2} = binarized; varargout{3} = threshold;
         case 'integral-ratio'
-            if kwargs.fitinit
-                nlkernel = @(x) fitdistfilter(x, method = 'get-fit-parameters', norm = kwargs.norm, binedge = kwargs.binedge, ...
-                    distname = kwargs.distname, x0 = kwargs.x0, lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
-                fitcoef = nlpfilter(data, kwargs.kernel, @(x) nlkernel(x), strides = kwargs.strides, type = 'deep-A', resize = true);
-                fitcoef = imagfilter(fitcoef, filt = 'median', filtker = kwargs.kernel);
-
-                nlkernel = @(x, c) fitdistfilter(x, method = 'integral-ratio', norm = kwargs.norm, binedge = kwargs.binedge, ...
-                    distname = kwargs.distname, x0 = squeeze(mean(c, [1, 2], 'omitmissing')), lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
-                intermittency = nlpfilter(data, kwargs.kernel, @(x, c) nlkernel(x, c), strides = kwargs.strides, type = 'deep-AB', B = fitcoef, resize = true);
-                varargout{2} = fitcoef;
-            else
-                nlkernel = @(x) fitdistfilter(x, method = 'integral-ratio', norm = kwargs.norm, binedge = kwargs.binedge, ...
-                    distname = kwargs.distname, x0 = kwargs.x0, lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
-                intermittency = nlpfilter(data, kwargs.kernel, @(x) nlkernel(x), strides = kwargs.strides, type = 'deep', resize = true);
-            end
+            intermittency = procfitdistfilt('integral-ratio');
         case 'cluster'
             if kwargs.batch
                 [binarized, center] = kmeans(data(:), 2, 'Distance', kwargs.distance);

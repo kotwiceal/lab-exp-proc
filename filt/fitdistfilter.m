@@ -1,4 +1,4 @@
-function y = fitdistfilter(x, named)
+function y = fitdistfilter(x, kwargs)
 %% Window filtering of statistical data: perform two mode histogram approximation 
 % by given distribution, process criteria of statistical mode separation - ratio of distribution integrals
 %% The function takes following arguments:
@@ -19,19 +19,19 @@ function y = fitdistfilter(x, named)
 
     arguments
         x double
-        named.norm (1,:) char {mustBeMember(named.norm, {'count', 'pdf', 'probability', 'percentage', 'countdensity'})} = 'pdf'
-        named.binedge double = []
-        named.distname (1,:) char {mustBeMember(named.distname, {'gauss2', 'beta2', 'beta2l', 'gamma2', 'gumbel2'})} = 'gumbel2'
+        kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'count', 'pdf', 'probability', 'percentage', 'countdensity'})} = 'pdf'
+        kwargs.binedge double = []
+        kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'gauss2', 'beta2', 'beta2l', 'gamma2', 'gumbel2'})} = 'gumbel2'
         %% algorithm parameters
-        named.method (1,:) char {mustBeMember(named.method, {'quantile-threshold', 'cdf-intersection', 'integral-ratio', 'get-fit-parameters'})} = 'integral-ratio'
-        named.quantile double = 0.2
-        named.root (1,:) char {mustBeMember(named.root, {'diff', 'fsolve', 'fminbnd'})} = 'diff'
+        kwargs.method (1,:) char {mustBeMember(kwargs.method, {'quantile-threshold', 'cdf-intersection', 'integral-ratio', 'fitdistcoef'})} = 'integral-ratio'
+        kwargs.quantile double = 0.2
+        kwargs.root (1,:) char {mustBeMember(kwargs.root, {'diff', 'fsolve', 'fminbnd'})} = 'diff'
         %% optimization parameters
-        named.objnorm double = 2
-        named.x0 double = []
-        named.lb double = []
-        named.ub double = []
-        named.nonlcon = []
+        kwargs.objnorm double = 2
+        kwargs.x0 double = []
+        kwargs.lb double = []
+        kwargs.ub double = []
+        kwargs.nonlcon = []
     end
 
     function y = quantilethreshold(edges, modes, root, quantile)
@@ -84,16 +84,16 @@ function y = fitdistfilter(x, named)
     end
 
     try
-        [~, modes, edges, coef, ~, ~] = fithist(data = x(:), norm = named.norm, binedge = named.binedge, distname = named.distname, ...
-            objnorm = named.objnorm, x0 = named.x0, lb = named.lb, ub = named.ub, nonlcon = named.nonlcon);
-        switch named.method
+        [~, modes, edges, coef, ~, ~] = fithist(data = x(:), norm = kwargs.norm, binedge = kwargs.binedge, distname = kwargs.distname, ...
+            objnorm = kwargs.objnorm, x0 = kwargs.x0, lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
+        switch kwargs.method
             case 'quantile-threshold'
-                y = quantilethreshold(edges, modes, named.root, named.quantile);
+                y = quantilethreshold(edges, modes, kwargs.root, kwargs.quantile);
             case 'cdf-intersection'
-                y = cdfintersection(edges, modes, named.root);
+                y = cdfintersection(edges, modes, kwargs.root);
             case 'integral-ratio'
                 y = integralratio(modes);
-            case 'get-fit-parameters'
+            case 'fitdistcoef'
                 y = coef;
         end
     catch

@@ -6,6 +6,7 @@ function result = vortind(u, w, kwargs)
 %   type:           [char array]        - type of vortex identification criteria
 %   threshold:      [char array]        - apply threshold 
 %   pow:            [1×1 double]        - raise to the power of processing value
+%   abs:            [1×1 logical]       - absolute value
 %   eigord:         [1×1 double]        - eigen-value order
 %   diffilter:      [char array]        - difference schema
 %   prefilter:      [char array]        - smooth filter
@@ -21,6 +22,7 @@ function result = vortind(u, w, kwargs)
         kwargs.diffilter (1,:) char {mustBeMember(kwargs.diffilter, {'sobel', '4ord', '4ordgauss', '2ord'})} = 'sobel'
         kwargs.threshold (1,:) char {mustBeMember(kwargs.threshold, {'none', 'neg', 'pos'})} = 'none'
         kwargs.pow double = []
+        kwargs.abs logical = false
         kwargs.eigord double = 1
         kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'gaussian'
         kwargs.prefiltker double = [3, 3]
@@ -94,6 +96,10 @@ function result = vortind(u, w, kwargs)
 
     if ~isempty(kwargs.pow)
         result = result.^kwargs.pow;
+    end
+
+    if kwargs.abs
+        result = abs(result);
     end
 
 end

@@ -15,7 +15,7 @@ function varargout = loadcta(folder, kwargs)
 % [scan, data, raw] = loadcta('\turb_jet_noise\test')
 %% get scan, data, raw from specified folder with subfolders
 % [scan, data, raw] = loadcta('\turb_jet_noise\test2', subfolders = true)
-%% get stucture conteined scan, data, raw from specified folder with subfolders
+%% get structure contained scan, data, raw from specified folder with subfolders
 % data = loadcta('\turb_jet_noise\test2', subfolders = true, output = 'struct')
 
     arguments
@@ -72,4 +72,4 @@ function varargout = loadcta(folder, kwargs)
             varargout{3} = raw;
     end
 
-    end
+end

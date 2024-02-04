@@ -1,4 +1,4 @@
-function pathes = get_pathes(folder, named)
+function pathes = get_pathes(folder, kwargs)
 %% Get all filenames in specified folder with subfolders.
 %% The function takes following arguments:
 %   folder:             [char array]
@@ -16,14 +16,14 @@ function pathes = get_pathes(folder, named)
 
     arguments
         folder char
-        named.subfolders logical = false
-        named.extension char = '.vc7'
+        kwargs.subfolders logical = false
+        kwargs.extension char = '.vc7'
     end
 
-    if named.subfolders
-        dir_obj = dir(fullfile(folder, '**', strcat('*', named.extension)));
+    if kwargs.subfolders
+        dir_obj = dir(fullfile(folder, '**', strcat('*', kwargs.extension)));
     else
-        dir_obj = dir(fullfile(folder, strcat('*', named.extension)));
+        dir_obj = dir(fullfile(folder, strcat('*', kwargs.extension)));
     end
 
     pathes = ""; temporary = {};

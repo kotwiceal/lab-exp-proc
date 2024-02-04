@@ -11,6 +11,7 @@ function result = prepinterm(data, kwargs)
 %   component:          [char array]        - derivative component
 %   threshold:          [1×1 logical]       - apply threshold 
 %   pow:                [1×1 double]        - raise to the power of processing value
+%   abs:                [1×1 logical]       - absolute value
 %   eigord:             [1×1 double]        - eigen-value order
 %   postfilt:           [char array]        - portfiltering of processed field
 %   postfiltker:        [1×2 double]        - kernel of postfilter
@@ -25,10 +26,10 @@ function result = prepinterm(data, kwargs)
 
     arguments
         data struct
-        kwargs.type (1,:) char {mustBeMember(kwargs.type, {'dirgrad', 'l2', 'vm'})} = 'drigrad'
+        kwargs.type (1,:) char {mustBeMember(kwargs.type, {'dirgrad', 'l2', 'q', 'd', 'vm'})} = 'drigrad'
         % preprosessing parameters
         kwargs.diffilter (1,:) char {mustBeMember(kwargs.diffilter, {'sobel', '4ord', '4ordgauss', '2ord'})} = '4ord'
-        kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'gaussian'
+        kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'gaussian', 'average', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'median-wiener', 'mode'})} = 'gaussian'
         kwargs.prefiltker double = [3, 3]
         kwargs.fillmissmeth (1,:) char {mustBeMember(kwargs.fillmissmeth, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'none'
         % dirgrad parameters
@@ -37,10 +38,11 @@ function result = prepinterm(data, kwargs)
         % l2 parameters
         kwargs.threshold (1,:) char {mustBeMember(kwargs.threshold, {'none', 'neg', 'pos'})} = 'none'
         kwargs.pow double = 2
+        kwargs.abs logical = false
         kwargs.eigord double = 1
         % postprocessing parameters
-        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'gaussian', 'average', 'median', 'wiener', 'median-wiener', 'mode'})} = 'median-wiener'
-        kwargs.postfiltker double = [10, 10]
+        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'gaussian', 'average', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'median-wiener', 'mode'})} = 'median'
+        kwargs.postfiltker double = [15, 15]
     end
 
     result = [];
@@ -75,8 +77,14 @@ function result = prepinterm(data, kwargs)
                 result = result.^kwargs.pow;
             end
         case 'l2'
-            result = vortind(u, w, type = 'l2', diffilter = kwargs.diffilter, prefilt = kwargs.prefilt, ...
+            result = vortind(u, w, type = 'l2', diffilter = kwargs.diffilter, prefilt = kwargs.prefilt, abs = kwargs.abs, ...
                 prefiltker = kwargs.prefiltker, threshold = kwargs.threshold, pow = kwargs.pow, eigord = kwargs.eigord);
+        case 'q'
+            result = vortind(u, w, type = 'q', diffilter = kwargs.diffilter, prefilt = kwargs.prefilt, abs = kwargs.abs, ...
+                prefiltker = kwargs.prefiltker, threshold = kwargs.threshold, pow = kwargs.pow);
+        case 'd'
+            result = vortind(u, w, type = 'd', diffilter = kwargs.diffilter, prefilt = kwargs.prefilt, abs = kwargs.abs, ...
+                prefiltker = kwargs.prefiltker, threshold = kwargs.threshold, pow = kwargs.pow);
         case 'vm'
             result = hypot(u, w);
     end

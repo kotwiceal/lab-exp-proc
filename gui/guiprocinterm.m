@@ -1,4 +1,4 @@
-function guiprocinterm(data, named)
+function guiprocinterm(data, kwargs)
 %% Interactive intermittency processing.
 %% The function takes following arguments:
 %   data:           [n×m... double]     - multidimensional data
@@ -49,31 +49,31 @@ function guiprocinterm(data, named)
 
     arguments
         data double
-        named.x double = []
-        named.z double = []
-        named.range double = []
-        named.norm (1,:) char {mustBeMember(named.norm, {'count', 'pdf', 'cdf', 'cumcount', 'probability', 'percentage', 'countdensity'})} = 'count'
+        kwargs.x double = []
+        kwargs.z double = []
+        kwargs.range double = []
+        kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'count', 'pdf', 'cdf', 'cumcount', 'probability', 'percentage', 'countdensity'})} = 'count'
         %% optimization parameters
-        named.fit (1,:) char {mustBeMember(named.fit, {'none', 'gauss1', 'beta1', 'gamma1', 'gumbel1', 'gauss2', 'beta2', 'gamma2', 'gumbel2'})} = 'none'
-        named.solver (1,:) char {mustBeMember(named.solver, {'fit', 'opt'})} = 'fit'
-        named.objnorm double = 2
-        named.Aineq double = []
-        named.bineq double = []
-        named.Aeq double = []
-        named.beq double = []
-        named.nonlcon = []
-        named.x0 double = []
-        named.lb double = []
-        named.ub double = []
-        named.show_param logical = true
+        kwargs.fit (1,:) char {mustBeMember(kwargs.fit, {'none', 'gauss1', 'beta1', 'gamma1', 'gumbel1', 'gauss2', 'beta2', 'gamma2', 'gumbel2'})} = 'none'
+        kwargs.solver (1,:) char {mustBeMember(kwargs.solver, {'fit', 'opt'})} = 'fit'
+        kwargs.objnorm double = 2
+        kwargs.Aineq double = []
+        kwargs.bineq double = []
+        kwargs.Aeq double = []
+        kwargs.beq double = []
+        kwargs.nonlcon = []
+        kwargs.x0 double = []
+        kwargs.lb double = []
+        kwargs.ub double = []
+        kwargs.show_param logical = true
         %% roi and axis parameters
-        named.shape (1,:) char {mustBeMember(named.shape, {'rect', 'poly'})} = 'rect'
-        named.mask double = []
-        named.interaction (1,:) char {mustBeMember(named.interaction, {'all', 'none', 'translate'})} = 'all'
-        named.legend logical = false
-        named.clim = [0, 0.3]
-        named.xlim double = []
-        named.ylim double = []
+        kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'rect', 'poly'})} = 'rect'
+        kwargs.mask double = []
+        kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
+        kwargs.legend logical = false
+        kwargs.clim = [0, 0.3]
+        kwargs.xlim double = []
+        kwargs.ylim double = []
     end
     
     warning off
@@ -95,7 +95,7 @@ function guiprocinterm(data, named)
     line_position = cell(1, size(data, 4)); % to store user line positions;
 
     % define dispalying type
-    if isempty(named.x) && isempty(named.z)
+    if isempty(kwargs.x) && isempty(kwargs.z)
         disp_type = 'node';
     else
         disp_type = 'spatial';
@@ -110,7 +110,7 @@ function guiprocinterm(data, named)
         case 'spatial'
             for i = 1:length(selects)
             selects{i} = @(roiobj) guigetdata(roiobj, data(:,:,:,i), shape = 'flatten', ...
-                type = 'spatial', x = named.x(:,:,i), z = named.z(:,:,i));
+                type = 'spatial', x = kwargs.x(:,:,i), z = kwargs.z(:,:,i));
             end
     end
 
@@ -121,23 +121,23 @@ function guiprocinterm(data, named)
             temporary = vertcat(temporary, selects{j}(rois{j}));
         end
 
-        [x_hist, y_hist, ~, modes, edges, ~] = fithist(data = temporary, type = named.fit, ...
-            solver = named.solver, objnorm = named.objnorm, nonlcon = named.nonlcon, x0 = named.x0, ...
-            lb = named.lb, ub = named.ub, show_param = named.show_param);
+        [x_hist, y_hist, ~, modes, edges, ~] = fithist(data = temporary, type = kwargs.fit, ...
+            solver = kwargs.solver, objnorm = kwargs.objnorm, nonlcon = kwargs.nonlcon, x0 = kwargs.x0, ...
+            lb = kwargs.lb, ub = kwargs.ub, show_param = kwargs.show_param);
     end
 
     function show_hist()
         %% show raw and fitted statistics
         cla(ax_hist);hold(ax_hist, 'on'); grid(ax_hist, 'on'); box(ax_hist, 'on'); 
-        xlabel(ax_hist, 'edges'); ylabel(ax_hist, named.norm)
+        xlabel(ax_hist, 'edges'); ylabel(ax_hist, kwargs.norm)
         plot(ax_hist, x_hist, y_hist, 'DisplayName', 'full')
         plot(ax_hist, edges, modes(:, 1), 'DisplayName', 'mode 1')
         plot(ax_hist, edges, modes(:, 2), 'DisplayName', 'mode 2')
         plot(ax_hist, edges, sum(modes, 2), 'DisplayName', 'sum modes')
 
-        if named.legend; legend(ax_hist, 'Location', 'Best'); end
-        if ~isempty(named.xlim); xlim(ax_hist, named.xlim); end
-        if ~isempty(named.ylim); ylim(ax_hist, named.ylim); end
+        if kwargs.legend; legend(ax_hist, 'Location', 'Best'); end
+        if ~isempty(kwargs.xlim); xlim(ax_hist, kwargs.xlim); end
+        if ~isempty(kwargs.ylim); ylim(ax_hist, kwargs.ylim); end
     end
 
     function init_crosshair()
@@ -180,7 +180,7 @@ function guiprocinterm(data, named)
                 end
             case 'spatial'
                 for j = 1:size(data, 4)
-                    [xo, zo, io] = prepareSurfaceData(named.x(:,:,j), named.z(:,:,j), intermittency(:,:,j)); 
+                    [xo, zo, io] = prepareSurfaceData(kwargs.x(:,:,j), kwargs.z(:,:,j), intermittency(:,:,j)); 
                     iterm_fit{j} = fit([xo, zo], io, 'linearinterp');
                 end
         end
@@ -191,7 +191,7 @@ function guiprocinterm(data, named)
         switch disp_type
             case 'node'     
                 for j = 1:length(ax_iterm2d)
-                    cla(ax_iterm2d{j}); imagesc(ax_iterm2d{j}, intermittency(:,:,j)); clim(ax_iterm2d{j}, named.clim);
+                    cla(ax_iterm2d{j}); imagesc(ax_iterm2d{j}, intermittency(:,:,j)); clim(ax_iterm2d{j}, kwargs.clim);
                     axis(ax_iterm2d{1}, 'equal');
                     init_line(j);
                 end
@@ -199,8 +199,8 @@ function guiprocinterm(data, named)
                 cla(ax_iterm2d{1}); hold(ax_iterm2d{1}, 'on'); box(ax_iterm2d{1}, 'on');
                 grid(ax_iterm2d{1}, 'on'); axis(ax_iterm2d{1}, 'equal');
                 for j = 1:size(data, 4)
-                    contourf(ax_iterm2d{1}, named.x(:,:,j), named.z(:,:,j), intermittency(:,:,j), 50, 'LineStyle', 'None'); 
-                    clim(ax_iterm2d{1}, named.clim);
+                    contourf(ax_iterm2d{1}, kwargs.x(:,:,j), kwargs.z(:,:,j), intermittency(:,:,j), 50, 'LineStyle', 'None'); 
+                    clim(ax_iterm2d{1}, kwargs.clim);
                     init_line(j);
                 end
                 xlabel(ax_iterm2d{1}, 'x, mm'); ylabel(ax_iterm2d{1}, 'z, mm');
@@ -266,22 +266,22 @@ function guiprocinterm(data, named)
         case 'node'
             tiledlayout(floor((size(data, 4)*2+2)/3) + 1, 3);
             for i = 1:length(rois)
-                nexttile; imshow(data(:,:,1,i)); colormap turbo; axis on; clim(named.clim)
-                roitemp = guiselectregion(gca, @event_region, shape = named.shape, ...
-                    mask = named.mask, interaction = named.interaction, number = 1);
+                nexttile; imshow(data(:,:,1,i)); colormap turbo; axis on; clim(kwargs.clim)
+                roitemp = guiselectregion(gca, @event_region, shape = kwargs.shape, ...
+                    mask = kwargs.mask, interaction = kwargs.interaction, number = 1);
                 rois{i} = roitemp{1};
             end
         case 'spatial'
             tiledlayout(2, 2);
             nexttile; hold on; box on; grid on; axis equal;
             for i = 1:size(data, 4)
-                contourf(named.x(:,:,i), named.z(:,:,i), data(:,:,1,i), 50, 'LineStyle', 'None'); 
+                contourf(kwargs.x(:,:,i), kwargs.z(:,:,i), data(:,:,1,i), 50, 'LineStyle', 'None'); 
 
-                roitemp = guiselectregion(gca, @event_region, shape = named.shape, ...
-                    mask = named.mask, interaction = named.interaction, number = 1);
+                roitemp = guiselectregion(gca, @event_region, shape = kwargs.shape, ...
+                    mask = kwargs.mask, interaction = kwargs.interaction, number = 1);
                 rois{i} = roitemp{1};
             end
-            xlabel('x, mm'); ylabel('z, mm'); clim(named.clim);
+            xlabel('x, mm'); ylabel('z, mm'); clim(kwargs.clim);
     end
 
     nexttile; ax_hist = gca;
