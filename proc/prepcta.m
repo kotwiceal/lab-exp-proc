@@ -16,6 +16,14 @@ function varargout = prepcta(input, kwargs)
 %   x:                  [m×1 double]
 %   y:                  [m×1 double]
 %   z:                  [m×1 double]
+%% Examples:
+%% load cta measurements, calculate auto-spectra (struct notation)
+% data = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931', output = 'struct');
+% dataprep = prepcta(p1, output = 'struct');
+
+%% load cta measurements, calculate auto-spectra (array notation)
+% [scan, data, raw] = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931');
+% [spec, f, vel, x, y, z] = prepcta(raw, scan = scan);
 
     arguments
         input {mustBeA(input, {'double', 'struct'})}

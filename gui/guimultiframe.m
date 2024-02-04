@@ -1,4 +1,4 @@
-function guimultiframe(varargin, named)
+function guimultiframe(varargin, kwargs)
 %% Interactive visualization of page-wise 2D data.
 %% The function takes following arguments:
 %   data:       [n×m×k... double]   - 3D array
@@ -10,9 +10,9 @@ function guimultiframe(varargin, named)
     end
 
     arguments
-        named.clim double = [0, 1]
-        named.label char = ''
-        named.cdiv logical = false
+        kwargs.clim double = [0, 1]
+        kwargs.label char = ''
+        kwargs.cdiv logical = false
     end
 
     if iscell(varargin)
@@ -23,12 +23,12 @@ function guimultiframe(varargin, named)
 
     function show(i)
         cla(ax); box(ax, 'on'); imagesc(ax, data(:,:,i)); colormap(ax, 'turbo'); 
-        if named.cdiv
-            clim(ax, [-named.clim(2), named.clim(2)]);
+        if kwargs.cdiv
+            clim(ax, [-kwargs.clim(2), kwargs.clim(2)]);
         else
-            clim(ax, named.clim);
+            clim(ax, kwargs.clim);
         end
-        axis(ax, 'equal'); title(ax, named.label, 'FontWeight', 'Normal')
+        axis(ax, 'equal'); title(ax, kwargs.label, 'FontWeight', 'Normal')
     end
 
     function updateRange(~, event)
@@ -40,12 +40,12 @@ function guimultiframe(varargin, named)
     end
 
     function updateClim(~, event)
-        named.clim(2) = event.Value; 
+        kwargs.clim(2) = event.Value; 
         try
-            if named.cdiv
-                clim(ax, [-named.clim(2), named.clim(2)]);
+            if kwargs.cdiv
+                clim(ax, [-kwargs.clim(2), kwargs.clim(2)]);
             else
-                clim(ax, named.clim);
+                clim(ax, kwargs.clim);
             end
         catch
             warning('guimultiframe: updateClim error');
@@ -63,7 +63,7 @@ function guimultiframe(varargin, named)
     sld_range.Layout.Row = 2;
     sld_range.Layout.Column = 1;
 
-    sld_clim = uislider(g, 'Limits', named.clim, 'Value', named.clim(2), 'Orientation', 'vertical', ...
+    sld_clim = uislider(g, 'Limits', kwargs.clim, 'Value', kwargs.clim(2), 'Orientation', 'vertical', ...
       'ValueChangingFcn', @updateClim);
     sld_clim.Layout.Row = [1, 2];
     sld_clim.Layout.Column = 2;

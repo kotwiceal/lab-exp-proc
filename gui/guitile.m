@@ -1,4 +1,4 @@
-function rois = guitile(data, named)
+function guitile(data, kwargs)
 %% Visualize multiframe data.
 %% The function takes following arguments:
 %   data:               [n×m... double]                 - multidimensional data
@@ -17,36 +17,40 @@ function rois = guitile(data, named)
 
     arguments
         data double
-        named.x double = []
-        named.z double = []
+        kwargs.x double = []
+        kwargs.z double = []
         %% axis parameters
-        named.xlim double = []
-        named.ylim double = []
-        named.clim cell = cell(1, size(data, 3))
-        named.displayname string = []
-        named.legend logical = false
-        named.docked logical = false
-        named.colormap (1,:) char = 'turbo'
-        named.aspect (1,:) char {mustBeMember(named.aspect, {'equal', 'auto'})} = 'equal'
-        named.location (1,:) char {mustBeMember(named.location, {'north','south','east','west','northeast','northwest','southeast','southwest','northoutside','southoutside','eastoutside','westoutside','northeastoutside','northwestoutside','southeastoutside','southwestoutside','best','bestoutside','layout','none'})} = 'best'
+        kwargs.xlim double = []
+        kwargs.ylim double = []
+        kwargs.clim cell = cell(1, size(data, 3))
+        kwargs.displayname string = []
+        kwargs.legend logical = false
+        kwargs.docked logical = false
+        kwargs.colormap (1,:) char = 'turbo'
+        kwargs.colorbar logical = true
+        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal'
+        kwargs.location (1,:) char {mustBeMember(kwargs.location, {'north','south','east','west','northeast','northwest','southeast','southwest','northoutside','southoutside','eastoutside','westoutside','northeastoutside','northwestoutside','southeastoutside','southwestoutside','best','bestoutside','layout','none'})} = 'best'
+        kwargs.title = []
+        kwargs.filename (1, :) char = []
+        kwargs.extension (1, :) char = '.png'
     end
 
     warning off
 
     % define dispalying type
-    if isempty(named.x) && isempty(named.z)
+    if isempty(kwargs.x) && isempty(kwargs.z)
         disp_type = 'node';
     else
         disp_type = 'spatial';
     end
 
-    if isempty(named.displayname)
-        named.legend = false;
+    if isempty(kwargs.displayname)
+        kwargs.legend = false;
     else
-        named.legend = true;
+        kwargs.legend = true;
     end
 
-    if named.docked
+    if kwargs.docked
         figure('WindowStyle', 'Docked')
     else
         clf;
@@ -55,28 +59,41 @@ function rois = guitile(data, named)
     switch disp_type
         case 'node'
             for i = 1:size(data, 3)
-                nexttile; imagesc(data(:,:,i)); xlabel('x_{n}'); ylabel('z_{n}'); colormap(named.colormap);
-                if ~isempty(named.clim{i}); clim(named.clim{i}); end
-                if ~isempty(named.displayname); title(named.displayname(i), 'FontWeight', 'Normal'); end
+                nexttile; imagesc(data(:,:,i)); xlabel('x_{n}'); ylabel('z_{n}'); colormap(kwargs.colormap);
+                if ~isempty(kwargs.clim{i}); clim(kwargs.clim{i}); end
+                if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
+                if kwargs.colorbar; colorbar(); end
             end
         case 'spatial'
-            if ismatrix(named.x) && ismatrix(named.z)
+            if ismatrix(kwargs.x) && ismatrix(kwargs.z)
                 for i = 1:size(data, 3)
-                    nexttile; hold on; box on; grid on; surf(named.x, named.z, data(:,:,i), 'LineStyle', 'None'); 
-                    xlabel('x, mm'); ylabel('z, mm'); colormap(named.colormap);
-                    if ~isempty(named.clim{i}); clim(named.clim{i}); end
-                    axis(named.aspect);
-                    if ~isempty(named.displayname); title(named.displayname(i), 'FontWeight', 'Normal'); end
+                    nexttile; hold on; box on; grid on; surf(kwargs.x, kwargs.z, data(:,:,i), 'LineStyle', 'None'); 
+                    xlabel('x, mm'); ylabel('z, mm'); colormap(kwargs.colormap);
+                    if ~isempty(kwargs.clim{i}); clim(kwargs.clim{i}); end
+                    axis(kwargs.aspect);
+                    if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
+                    if kwargs.colorbar; colorbar(); end
+                    xlim([min(kwargs.x(:)), max(kwargs.x(:))]); ylim([min(kwargs.z(:)), max(kwargs.z(:))]);
                 end
             else
                 for i = 1:size(data, 3)
-                    nexttile; hold on; box on; grid on; surf(named.x(:,:,i), named.z(:,:,i), data(:,:,1), 'LineStyle', 'None'); 
-                    xlabel('x, mm'); ylabel('z, mm'); colormap(named.colormap);
-                    if ~isempty(named.clim{i}); clim(named.clim{i}); end
-                    axis(named.aspect);
-                    if ~isempty(named.displayname); title(named.displayname(i), 'FontWeight', 'Normal'); end
+                    nexttile; hold on; box on; grid on; surf(kwargs.x(:,:,i), kwargs.z(:,:,i), data(:,:,1), 'LineStyle', 'None'); 
+                    xlabel('x, mm'); ylabel('z, mm'); colormap(kwargs.colormap);
+                    if ~isempty(kwargs.clim{i}); clim(kwargs.clim{i}); end
+                    axis(kwargs.aspect);
+                    if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
+                    if kwargs.colorbar; colorbar(); end
                 end
             end
+    end
+
+    if ~isempty(kwargs.title)
+        sgtitle(kwargs.title)
+    end
+
+    if ~isempty(kwargs.filename)
+        savefig(gcf, strcat(kwargs.filename, '.fig'))
+        exportgraphics(gcf, strcat(kwargs.filename, kwargs.extension), Resolution = 600)
     end
 
 end

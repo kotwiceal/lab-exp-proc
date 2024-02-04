@@ -109,6 +109,9 @@ function varargout = guihist(data, kwargs)
         kwargs.cdf logical = false
         kwargs.docked logical = false
         kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal'
+        kwargs.title (1,:) char = []
+        kwargs.filename (1,:) char = []
+        kwargs.extension (1,:) char = '.png'
         %% optimization parameters
         kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'none', 'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'none'
         kwargs.objnorm double = 2
@@ -132,7 +135,7 @@ function varargout = guihist(data, kwargs)
         kwargs.var2 double = []
         kwargs.amp2 double = []
         %% other parameters
-        kwargs.quantile double = 0.1
+        kwargs.quantile double = 0.9
     end
 
     % define variables
@@ -157,7 +160,7 @@ function varargout = guihist(data, kwargs)
     % auto build non-linear constrain function
     temporary = isempty(cat(1, kwargs.mean1, kwargs.mode1, kwargs.var1, kwargs.amp1, kwargs.mean2, ...
         kwargs.mode2, kwargs.var2, kwargs.amp2));
-    if isempty(kwargs.nonlcon) || ~temporary
+    if isempty(kwargs.nonlcon) && ~temporary
         kwargs.nonlcon = @(x) nonlconfitdist(x, distname = kwargs.distname, mean1 = kwargs.mean1, mode1 = kwargs.mode1, ...
             var1 = kwargs.var1, amp1 = kwargs.amp1, mean2 = kwargs.mean2, mode2 = kwargs.mode2, var2 = kwargs.var2, amp2 = kwargs.amp2);
     end
@@ -220,11 +223,11 @@ function varargout = guihist(data, kwargs)
 
     function plot_fit_hist()
         %% show statistic of fitted data
-        cla(ax{1}); hold(ax{1}, 'on'); box(ax{1}, 'on'); grid(ax{1}, 'on');
+        cla(ax{1}); hold(ax{1}, 'on'); box(ax{1}, 'on'); grid(ax{1}, 'on'); axis(ax{1}, 'square');
         xlabel(ax{1}, 'edges'); ylabel(ax{1}, kwargs.norm);
 
         if kwargs.cdf
-            cla(ax{2}); hold(ax{2}, 'on'); box(ax{2}, 'on'); grid(ax{2}, 'on');
+            cla(ax{2}); hold(ax{2}, 'on'); box(ax{2}, 'on'); grid(ax{2}, 'on'); axis(ax{2}, 'square');
             xlabel(ax{2}, 'edges'); ylabel(ax{2}, 'cdf');
             ylim(ax{2}, [-0.1, 1.1])
         end
@@ -242,12 +245,25 @@ function varargout = guihist(data, kwargs)
                 normalize = kwargs.normalize, ...
                 disp = kwargs.disp);
 
-            plot(ax{1}, edges_raw, counts_raw, 'Color', rois{i}.UserData.color, ...
+            if length(rois) == 1
+                plot(ax{1}, edges_raw, counts_raw, 'Color', rois{i}.UserData.color, ...
+                    'DisplayName', 'raw')
+            else
+                plot(ax{1}, edges_raw, counts_raw, 'Color', rois{i}.UserData.color, ...
                     'DisplayName', strcat("raw ", num2str(i)))
+            end
+
             for j = 1:size(modes, 2)
                 if kwargs.number == 1
-                    plot(ax{1}, edges_fit, modes(:, j), ...
-                        'DisplayName', strcat("mode", num2str(j), " ", num2str(i)))
+                    switch j
+                        case 1
+                            label = 'lam.';
+                        case 2
+                            label = 'turb.';
+                    end
+                    % plot(ax{1}, edges_fit, modes(:, j), ...
+                    %     'DisplayName', strcat("mode", num2str(j), " ", num2str(i)))
+                    plot(ax{1}, edges_fit, modes(:, j), 'DisplayName', label)
                 else
                     plot(ax{1}, edges_fit, modes(:, j), mode_markers{j}, 'Color', rois{i}.UserData.color, ...
                         'MarkerSize', kwargs.markersize, ...
@@ -256,8 +272,13 @@ function varargout = guihist(data, kwargs)
             end
 
             if kwargs.number == 1
-                plot(ax{1}, edges_fit, sum(modes, 2), ...
-                    'DisplayName', strcat("sum mode", num2str(i)))
+                if length(rois) == 1
+                    plot(ax{1}, edges_fit, sum(modes, 2), ...
+                        'DisplayName', 'sum modes')
+                else
+                    plot(ax{1}, edges_fit, sum(modes, 2), ...
+                        'DisplayName', strcat("sum mode", num2str(i)))
+                end
             else
                 plot(ax{1}, edges_fit, sum(modes, 2), '.-', 'Color', rois{i}.UserData.color, ...
                     'DisplayName', strcat("sum mode", num2str(i)))
@@ -278,8 +299,15 @@ function varargout = guihist(data, kwargs)
                 end
                 for j = 1:size(cdf, 2)
                     if kwargs.number == 1
-                        plot(ax{2}, edges_fit, cdf(:, j), ...
-                            'DisplayName', strcat("mode", num2str(j), " ", num2str(i)))
+                        switch j
+                            case 1
+                                label = 'lam.';
+                            case 2
+                                label = 'turb.';
+                        end
+                        % plot(ax{2}, edges_fit, cdf(:, j), ...
+                        %     'DisplayName', strcat("mode", num2str(j), " ", num2str(i)))
+                        plot(ax{2}, edges_fit, cdf(:, j), 'DisplayName', label)
                     else
                         plot(ax{2}, edges_fit, cdf(:, j), mode_markers{j}, 'Color', rois{i}.UserData.color, ...
                             'MarkerSize', kwargs.markersize, ...
@@ -327,14 +355,19 @@ function varargout = guihist(data, kwargs)
     else
         clf;
     end
-    tiledlayout(2, 2);
+    % tiledlayout(2, 2);
+    tiledlayout('flow');
     nexttile; axroi = gca; 
     switch disp_type
         case 'node'
             imagesc(axroi, data(:,:,1)); xlabel('x_{n}'); ylabel('z_{n}');
         case 'spatial'
+            hold(axroi, 'on'); grid(axroi, 'on'); box(axroi, 'on');
             contourf(axroi, kwargs.x, kwargs.z, data(:,:,1), 100, 'LineStyle', 'None'); 
+            % surf(axroi, kwargs.x, kwargs.z, data(:,:,1), 'LineStyle', 'None'); 
             xlabel('x, mm'); ylabel('z, mm');
+            xlim([min(kwargs.x(:)), max(kwargs.x(:))]);
+            ylim([min(kwargs.z(:)), max(kwargs.z(:))]);
     end
     colorbar(axroi); colormap(axroi, kwargs.colormap);
     if ~isempty(kwargs.clim)
@@ -349,8 +382,17 @@ function varargout = guihist(data, kwargs)
     rois = guiselectregion(axroi, @event, shape = kwargs.shape, ...
         mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);
 
+    if ~isempty(kwargs.title)
+        sgtitle(kwargs.title)
+    end
+
     event();
 
     varargout{1} = @() roisgetdata();
+
+    if ~isempty(kwargs.filename)
+        savefig(gcf, strcat(kwargs.filename, '.fig'))
+        exportgraphics(gcf, strcat(kwargs.filename, kwargs.extension), Resolution = 600)
+    end
 
 end

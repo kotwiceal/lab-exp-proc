@@ -1,4 +1,4 @@
-function varargout = guicfi(kwargs)
+function guicfi(kwargs)
 %% Interactive cross-flow instability amplitude analysis.
 %% The function takes following arguments:
 %   data:               [struct]            - stucture of PIV data reterned by import_vc7 function

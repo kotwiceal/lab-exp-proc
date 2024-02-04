@@ -26,7 +26,7 @@ function varargout = fithist(kwargs)
 %   f:              [1×1 cfit]          - fit object
 %   modes:          [n×k double]        - approximate distribution modes assembled to column vector mapped by specific edges grid
 %   edges:          [n×1 double]        - mesh of modes
-%   fval:           [1×l double]        - value of object function
+%   coef:           [1×l double]        - solution of optimization problem
 %   x:              [n×1 double]        - statistical edges
 %   y:              [n×1 double]        - statistical counts
 %% Examples:
@@ -191,7 +191,7 @@ function varargout = fithist(kwargs)
         if isempty(kwargs.ub); problem.ub = kwargs.mb(2)*coefi; end
     
         % solve problem
-        [coef, fval] = fmincon(problem);
+        [coef, ~] = fmincon(problem);
         f = @(x) fa(coef, x);
     
         % separate statistical modes
@@ -208,14 +208,14 @@ function varargout = fithist(kwargs)
             distparam(coef, distname = kwargs.distname, disp = true);
         end
     catch
-        f = []; modes = []; edges = []; fval = [];
+        f = []; modes = []; edges = []; coef = [];
     end
 
     % select outputs
     varargout{1} = f;
     varargout{2} = modes;
     varargout{3} = edges;
-    varargout{4} = fval;
+    varargout{4} = coef;
 
     if isempty(kwargs.x) && isempty(kwargs.y)
         varargout{5} = x;

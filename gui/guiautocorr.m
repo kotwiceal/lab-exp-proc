@@ -1,4 +1,4 @@
-function rois = guiautocorr(data, named)
+function rois = guiautocorr(data, kwargs)
 %% Visualize auto-correlation function of selected by rectangle ROI data.
 %% The function takes following arguments:
 %   data:           [n×m double]                    - matrix data
@@ -20,20 +20,20 @@ function rois = guiautocorr(data, named)
     
     arguments
         data double
-        named.x double = []
-        named.y double = []
+        kwargs.x double = []
+        kwargs.y double = []
         %% roi and axis parameters
-        named.mask (:,:) double = []
-        named.interaction (1,:) char {mustBeMember(named.interaction, {'all', 'none', 'translate'})} = 'all'
-        named.aspect (1,:) char {mustBeMember(named.aspect, {'equal', 'auto'})} = 'equal'
-        named.clim double = []
-        named.cscale (1,:) char {mustBeMember(named.cscale, {'linear', 'log'})} = 'linear'
-        named.display (1,:) char {mustBeMember(named.display, {'imagesc', 'surf'})} = 'imagesc'
-        named.docked logical = false
-        named.colormap (1,:) char = 'turbo'
+        kwargs.mask (:,:) double = []
+        kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
+        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal'
+        kwargs.clim double = []
+        kwargs.cscale (1,:) char {mustBeMember(kwargs.cscale, {'linear', 'log'})} = 'linear'
+        kwargs.display (1,:) char {mustBeMember(kwargs.display, {'imagesc', 'surf'})} = 'imagesc'
+        kwargs.docked logical = false
+        kwargs.colormap (1,:) char = 'turbo'
     end
 
-    if isempty(named.x) && isempty(named.y)
+    if isempty(kwargs.x) && isempty(kwargs.y)
         disp_type = 'node';
     else
         disp_type = 'spatial';
@@ -45,7 +45,7 @@ function rois = guiautocorr(data, named)
             select = @(roiobj) guigetdata(roiobj, data, shape = 'cut');
         case 'spatial'
             select = @(roiobj) guigetdata(roiobj, data, shape = 'cut', ...
-                type = 'spatial', x = named.x, z = named.y);
+                type = 'spatial', x = kwargs.x, z = kwargs.y);
     end
 
     function event(~, ~)
@@ -56,7 +56,7 @@ function rois = guiautocorr(data, named)
         cla(ax); 
         switch disp_type
             case 'node'
-                switch named.display
+                switch kwargs.display
                     case 'imagesc'
                         imagesc(ax, frame); 
                     case 'surf'
@@ -64,7 +64,7 @@ function rois = guiautocorr(data, named)
                 end
             case 'spatial'
                 % x = selectx(rois{1}); y = selecty(rois{1});
-                switch named.display
+                switch kwargs.display
                     case 'imagesc'
                         % contourf(ax, x, y, frame, 'LineStyle', 'None'); 
                         contourf(ax, frame, 'LineStyle', 'None'); 
@@ -74,15 +74,15 @@ function rois = guiautocorr(data, named)
                 end
         end
 
-        colorbar(ax); colormap(ax, named.colormap);
-        set(ax, 'ColorScale', named.cscale); 
-        if ~isempty(named.clim)
-            clim(ax, named.clim);
+        colorbar(ax); colormap(ax, kwargs.colormap);
+        set(ax, 'ColorScale', kwargs.cscale); 
+        if ~isempty(kwargs.clim)
+            clim(ax, kwargs.clim);
         end
-        axis(ax, named.aspect)
+        axis(ax, kwargs.aspect)
     end
 
-    if named.docked
+    if kwargs.docked
         figure('WindowStyle', 'Docked')
     else
         clf;
@@ -93,13 +93,13 @@ function rois = guiautocorr(data, named)
         case 'node'
             imagesc(axroi, data);
         case 'spatial'
-            contourf(axroi, named.x, named.y, data, 'LineStyle', 'None'); 
+            contourf(axroi, kwargs.x, kwargs.y, data, 'LineStyle', 'None'); 
     end
-    colormap(axroi, named.colormap);
+    colormap(axroi, kwargs.colormap);
 
     nexttile; ax = gca;
     rois = guiselectregion(axroi, @event, shape = 'rect', ...
-        mask = named.mask, interaction = named.interaction, number = 1);
+        mask = kwargs.mask, interaction = kwargs.interaction, number = 1);
 
     event();
 

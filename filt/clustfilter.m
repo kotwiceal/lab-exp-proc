@@ -1,4 +1,4 @@
-function y = clustfilter(x, named)
+function y = clustfilter(x, kwargs)
 %% Window filtering of statistical data: perform two mode histogram approximation 
 % by given distribution, process criteria of statistical mode separation - quantile threshold of cumulative distribution
 %% The function takes following arguments:
@@ -10,12 +10,12 @@ function y = clustfilter(x, named)
 
     arguments
         x double
-        named.k double = 2
-        named.distance (1,:) char {mustBeMember(named.distance, {'sqeuclidean', 'cityblock', 'cosine', 'correlation', 'hamming'})} = 'sqeuclidean'
+        kwargs.k double = 2
+        kwargs.distance (1,:) char {mustBeMember(kwargs.distance, {'sqeuclidean', 'cityblock', 'cosine', 'correlation', 'hamming'})} = 'sqeuclidean'
     end
 
     try
-        [binarized, center] = kmeans(x(:), named.k, 'Distance', named.distance);
+        [binarized, center] = kmeans(x(:), kwargs.k, 'Distance', kwargs.distance);
         [~, index] = max(center);
         switch index
             case 1

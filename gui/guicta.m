@@ -15,6 +15,17 @@ function guicta(kwargs)
 %   yscale:         [char array]        - scale of y-axis of spectra plot
 %   docked:         [1×1 logical]       - docked figure
 
+%% Examples:
+%% load cta measurements, calculate auto-spectra and visualize (struct notation)
+% data = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931', output = 'struct');
+% dataprep = prepcta(p1, output = 'struct');
+% guicta(struct = dataprep);
+
+%% load cta measurements, calculate auto-spectra and visualize (array notation)
+% [scan, data, raw] = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931');
+% [spec, f, vel, x, y, z] = prepcta(raw, scan = scan);
+% guicta(spec = spec, f = f, vel = vel);
+
     arguments
         kwargs.struct {mustBeA(kwargs.struct, {'struct'})} = struct([])
         kwargs.freq double = []
@@ -22,9 +33,12 @@ function guicta(kwargs)
         kwargs.scan double = []
         kwargs.vel double = []
         kwargs.limit double = []
-        kwargs.display (1,:) char {mustBeMember(kwargs.display, {'x-y', 'y-z', 'y'})} = 'x-y'
+        kwargs.display (1,:) char {mustBeMember(kwargs.display, {'x-y', 'y-z', 'y', 'z'})} = 'x-y'
         kwargs.u0 double = 27.3
         kwargs.growth logical = false
+        kwargs.x double = []
+        kwargs.y double = []
+        kwargs.z double = []
         %% roi and axis parameters
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
         kwargs.xscale (1,:) char {mustBeMember(kwargs.xscale, {'linear', 'log'})} = 'log'
@@ -36,6 +50,9 @@ function guicta(kwargs)
         kwargs.freq = kwargs.struct.f;
         kwargs.spec = kwargs.struct.spec;
         kwargs.vel = kwargs.struct.vel;
+        kwargs.x = kwargs.struct.x;
+        kwargs.y = kwargs.struct.y;
+        kwargs.z = kwargs.struct.z;
     end
 
     sz = size(kwargs.spec); amp = [];
@@ -67,7 +84,7 @@ function guicta(kwargs)
 
         switch kwargs.display
             case 'x-y'
-                plot(ax, amp, '.-')
+                plot(ax, kwargs.y, amp, '.-')
                 if isempty(kwargs.u0)
                     ylabel(ax, 'u`');
                 else
@@ -77,7 +94,15 @@ function guicta(kwargs)
                 imagesc(ax, amp)
                 colorbar(ax)
             case 'y'
-                plot(ax, amp, '.-');
+                if isempty(kwargs.y)
+                    kwargs.y = 1:numel(amp);
+                end
+                plot(ax, kwargs.y, amp, '.-');
+            case 'z'
+                if isempty(kwargs.z)
+                    kwargs.z = 1:numel(amp);
+                end
+                plot(ax, kwargs.z, amp, '.-');
         end
 
         if kwargs.growth
@@ -130,12 +155,21 @@ function guicta(kwargs)
         nexttile; hold on; grid on; box on; pbaspect([1, 1, 1]); 
         switch kwargs.display
             case 'x-y'
-                plot(kwargs.vel, '.-');
+                plot(kwargs.y, kwargs.vel, '.-');
                 ylabel('u');
             case 'y-z'
                 imagesc(kwargs.vel)
             case 'y'
-                plot(kwargs.vel, '.-');
+                if isempty(kwargs.y)
+                    kwargs.y = 1:numel(kwargs.vel);
+                end
+                plot(kwargs.y, kwargs.vel, '.-');
+                ylabel('u');
+            case 'z'
+                if isempty(kwargs.z)
+                    kwargs.z = 1:numel(kwargs.vel);
+                end
+                plot(kwargs.z, kwargs.vel, '.-');
                 ylabel('u');
         end
     end

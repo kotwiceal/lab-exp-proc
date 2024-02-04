@@ -1,4 +1,4 @@
-function rois = guilinedist(data, named)
+function rois = guilinedist(data, kwargs)
 %% Visualize data distribution along specified lines.
 %% The function takes following arguments:
 %   data:               [n×m... double]                 - multidimensional data
@@ -31,22 +31,26 @@ function rois = guilinedist(data, named)
 
     arguments
         data double
-        named.x double = []
-        named.z double = []
-        named.proj (1,:) char {mustBeMember(named.proj, {'horz', 'vert', 'line'})} = 'horz'
+        kwargs.x double = []
+        kwargs.z double = []
+        kwargs.proj (1,:) char {mustBeMember(kwargs.proj, {'horz', 'vert', 'line'})} = 'horz'
         %% roi and axis parameters
-        named.mask double = []
-        named.interaction (1,:) char {mustBeMember(named.interaction, {'all', 'none', 'translate'})} = 'all'
-        named.number int8 = 1
-        named.xlim double = []
-        named.ylim double = []
-        named.clim double = []
-        named.displayname string = []
-        named.legend logical = false
-        named.docked logical = false
-        named.colormap (1,:) char = 'turbo'
-        named.aspect (1,:) char {mustBeMember(named.aspect, {'equal', 'auto'})} = 'equal'
-        named.location (1,:) char {mustBeMember(named.location, {'north','south','east','west','northeast','northwest','southeast','southwest','northoutside','southoutside','eastoutside','westoutside','northeastoutside','northwestoutside','southeastoutside','southwestoutside','best','bestoutside','layout','none'})} = 'best'
+        kwargs.mask double = []
+        kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
+        kwargs.number int8 = 1
+        kwargs.xlim double = []
+        kwargs.ylim double = []
+        kwargs.clim double = []
+        kwargs.ylabel (1,:) char = 'intermittency'
+        kwargs.displayname string = []
+        kwargs.legend logical = false
+        kwargs.docked logical = false
+        kwargs.colormap (1,:) char = 'turbo'
+        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal'
+        kwargs.location (1,:) char {mustBeMember(kwargs.location, {'north','south','east','west','northeast','northwest','southeast','southwest','northoutside','southoutside','eastoutside','westoutside','northeastoutside','northwestoutside','southeastoutside','southwestoutside','best','bestoutside','layout','none'})} = 'best'
+        kwargs.title = []
+        kwargs.filename (1, :) char = []
+        kwargs.extension (1, :) char = '.png'
     end
 
     warning off
@@ -55,7 +59,7 @@ function rois = guilinedist(data, named)
     data_fit = cell(1, size(data, 3));
 
     % define dispalying type
-    if isempty(named.x) && isempty(named.z)
+    if isempty(kwargs.x) && isempty(kwargs.z)
         disp_type = 'node';
     else
         disp_type = 'spatial';
@@ -71,30 +75,30 @@ function rois = guilinedist(data, named)
                 data_fit{j} = fit([zo, xo], io, 'linearinterp');
             end
         case 'spatial'
-            if ismatrix(named.x) && ismatrix(named.z)
+            if ismatrix(kwargs.x) && ismatrix(kwargs.z)
                 for j = 1:size(data, 3)
-                    [xo, zo, io] = prepareSurfaceData(named.x, named.z, data(:,:,j)); 
+                    [xo, zo, io] = prepareSurfaceData(kwargs.x, kwargs.z, data(:,:,j)); 
                     data_fit{j} = fit([xo, zo], io, 'linearinterp');
                 end
             else
                 for j = 1:size(data, 3)
-                    [xo, zo, io] = prepareSurfaceData(named.x(:,:,j), named.z(:,:,j), data(:,:,j)); 
+                    [xo, zo, io] = prepareSurfaceData(kwargs.x(:,:,j), kwargs.z(:,:,j), data(:,:,j)); 
                     data_fit{j} = fit([xo, zo], io, 'linearinterp');
                 end
             end
     end
 
-    if isempty(named.displayname)
-        named.legend = false;
+    if isempty(kwargs.displayname)
+        kwargs.legend = false;
     else
-        named.legend = true;
+        kwargs.legend = true;
     end
 
     function customize_appearance()
         %% change figure appearance
         switch disp_type
             case 'node'  
-                switch named.proj
+                switch kwargs.proj
                     case 'horz'
                         xlabel(ax, 'x_{n}'); ylabel(ax, 'value');
                     case 'vert'
@@ -103,7 +107,7 @@ function rois = guilinedist(data, named)
                         xlabel(ax, 'l_{n}'); ylabel(ax, 'value');
                 end
             case 'spatial'
-                switch named.proj
+                switch kwargs.proj
                     case 'horz'
                         xlabel(ax, 'x, mm'); ylabel(ax, 'value');
                     case 'vert'
@@ -112,10 +116,11 @@ function rois = guilinedist(data, named)
                         xlabel(ax, 'l, mm'); ylabel(ax, 'value');
                 end
         end
-
-        if ~isempty(named.xlim); xlim(ax, named.xlim); end
-        if ~isempty(named.ylim); ylim(ax, named.ylim); end
-        if named.legend; legend(ax, 'Location', named.location); end
+        if ~isempty(kwargs.ylabel); ylabel(ax, kwargs.ylabel); end
+        if ~isempty(kwargs.xlim); xlim(ax, kwargs.xlim); end
+        if ~isempty(kwargs.ylim); ylim(ax, kwargs.ylim); end
+        if kwargs.legend; legend(ax, 'Location', kwargs.location); end
+        axis(ax, 'square')
     end
 
     function event(~, ~)
@@ -127,7 +132,7 @@ function rois = guilinedist(data, named)
             for j = 1:size(data, 3)
                 Y{j} = data_fit{j}(xi, zi);
             end
-            switch named.proj
+            switch kwargs.proj
                 case 'horz'
                     X = xi;
                 case 'vert'
@@ -137,13 +142,13 @@ function rois = guilinedist(data, named)
             end
 
             if length(rois) == 1
-                if isempty(named.displayname)
+                if isempty(kwargs.displayname)
                     for j = 1:size(data, 3)
                         plot(ax, X, Y{j})
                     end
                 else
                     for j = 1:size(data, 3)
-                        plot(ax, X, Y{j}, 'DisplayName', named.displayname(j))
+                        plot(ax, X, Y{j}, 'DisplayName', kwargs.displayname(j))
                     end
                 end
             else
@@ -155,7 +160,7 @@ function rois = guilinedist(data, named)
         customize_appearance();
     end
 
-    if named.docked
+    if kwargs.docked
         figure('WindowStyle', 'Docked')
     else
         clf;
@@ -164,26 +169,26 @@ function rois = guilinedist(data, named)
     switch disp_type
         case 'node'
             for i = 1:size(data, 3)
-                nexttile; imagesc(data(:,:,i)); xlabel('x_{n}'); ylabel('z_{n}'); colormap(named.colormap); axis(named.aspect);
-                if ~isempty(named.clim); clim(named.clim); end
-                if ~isempty(named.displayname); title(named.displayname(i), 'FontWeight', 'Normal'); end
+                nexttile; imagesc(data(:,:,i)); xlabel('x_{n}'); ylabel('z_{n}'); colormap(kwargs.colormap); axis(kwargs.aspect);
+                if ~isempty(kwargs.clim); clim(kwargs.clim); end
+                if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
             end
         case 'spatial'
-            if ismatrix(named.x) && ismatrix(named.z)
+            if ismatrix(kwargs.x) && ismatrix(kwargs.z)
                 for i = 1:size(data, 3)
-                    nexttile; contourf(named.x, named.z, data(:,:,i), 100, 'LineStyle', 'None'); 
-                    xlabel('x, mm'); ylabel('z, mm'); colormap(named.colormap);
-                    if ~isempty(named.clim); clim(named.clim); end
-                    axis(named.aspect);
-                    if ~isempty(named.displayname); title(named.displayname(i), 'FontWeight', 'Normal'); end
+                    nexttile; contourf(kwargs.x, kwargs.z, data(:,:,i), 100, 'LineStyle', 'None'); 
+                    xlabel('x, mm'); ylabel('z, mm'); colormap(kwargs.colormap);
+                    if ~isempty(kwargs.clim); clim(kwargs.clim); end
+                    axis(kwargs.aspect);
+                    if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
                 end
             else
                 for i = 1:size(data, 3)
-                    nexttile; contourf(named.x(:,:,i), named.z(:,:,i), data(:,:,1), 100, 'LineStyle', 'None'); 
-                    xlabel('x, mm'); ylabel('z, mm'); colormap(named.colormap);
-                    if ~isempty(named.clim); clim(named.clim); end
-                    axis(named.aspect);
-                    if ~isempty(named.displayname); title(named.displayname(i), 'FontWeight', 'Normal'); end
+                    nexttile; contourf(kwargs.x(:,:,i), kwargs.z(:,:,i), data(:,:,1), 100, 'LineStyle', 'None'); 
+                    xlabel('x, mm'); ylabel('z, mm'); colormap(kwargs.colormap);
+                    if ~isempty(kwargs.clim); clim(kwargs.clim); end
+                    axis(kwargs.aspect);
+                    if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
                 end
             end
     end
@@ -192,8 +197,17 @@ function rois = guilinedist(data, named)
 
     nexttile; ax = gca;
     rois = guiselectregion(axroi, @event, shape = 'line', ...
-        mask = named.mask, interaction = named.interaction, number = named.number);
+        mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);
 
     event();
+
+    if ~isempty(kwargs.title)
+        sgtitle(kwargs.title)
+    end
+
+    if ~isempty(kwargs.filename)
+        savefig(gcf, strcat(kwargs.filename, '.fig'))
+        exportgraphics(gcf, strcat(kwargs.filename, kwargs.extension), Resolution = 600)
+    end
 
 end

@@ -4,13 +4,20 @@ function data = imagfilter(data, kwargs)
 %   data:           [n×m... double]         - multidimensional data
 %   filt:           [char array]            - filter name
 %   filtker:        [1×2 double]            - kernel size
+%   weight:         [n×m... double]         - gridded window function by shape initial data to perform weighted filtering
+%   weightname:     [char array]            - name of window function 
+%   weightparam:    [1×k double]            - parameters of window function 
 %% The function returns following results:
-%   data:              [n×m... double]         - filtered data
+%   data:           [n×m... double]         - filtered data
 
     arguments
         data double
-        kwargs.filt (1,:) char {mustBeMember(kwargs.filt, {'none', 'gaussian', 'average', 'median', 'wiener', 'median-wiener', 'mode'})} = 'gaussian'
+        kwargs.filt (1,:) char {mustBeMember(kwargs.filt, {'none', 'gaussian', 'average', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'median-wiener', 'mode'})} = 'gaussian'
         kwargs.filtker double = [3, 3]
+        kwargs.weight double = []
+        kwargs.weightname (1,:) char {mustBeMember(kwargs.weightname, {'tukeywin'})} = 'tukeywin'
+        kwargs.weightparam double = [0.05, 0.05]
+        kwargs.omitmissing logical = true
     end
 
     switch kwargs.filt
@@ -19,11 +26,21 @@ function data = imagfilter(data, kwargs)
         case 'gaussian'
             data = imfilter(data, fspecial(kwargs.filt, kwargs.filtker));
         case 'median'
-            sz = size(data);
-            for i = 1:prod(sz(3:end))
-                data(:, :, i) = medfilt2(data(:, :, i), kwargs.filtker);
+            data = nlpfilter(data, kwargs.filtker, @(x) median(x(:)));
+        case 'median-omitmissing'
+            data = nlpfilter(data, kwargs.filtker, @(x) median(x(:), 'omitmissing'));
+        case 'median-weighted'
+            if isempty(kwargs.weight)
+                sz = size(data);
+                switch kwargs.weightname
+                    case 'tukeywin'
+                        weight = tukeywin(sz(1), kwargs.weightparam(1)).*tukeywin(sz(2), kwargs.weightparam(2))';
+                end
+            else
+                weight = kwargs.weight;
             end
-            data = reshape(data, sz);
+            nlkernel = @(x, y) median(x(:).*y(:), 'omitmissing');
+            data = nlpfilter(data, kwargs.filtker, @(x, y) nlkernel(x, y), y = weight, type = 'slice-cross');
         case 'wiener'
             sz = size(data);
             for i = 1:prod(sz(3:end))
@@ -40,10 +57,6 @@ function data = imagfilter(data, kwargs)
             end
             data = reshape(data, sz);
         case 'mode'
-            sz = size(data);
-            for i = 1:prod(sz(3:end))
-                data(:, :, i) = modefilt(data(:, :, i), kwargs.filtker);
-            end
-            data = reshape(data, sz);
+                data = nlpfilter(data, kwargs.filtker, @(x) mode(x(:)));
     end
 end
