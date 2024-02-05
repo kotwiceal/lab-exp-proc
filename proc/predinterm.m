@@ -6,6 +6,8 @@ function varargout = predinterm(data, kwargs)
 %   version:                    [char array]        - version of convolutional neural network
 %   map:                        [1×2 double]        - mapping data range to specified
 %   crop:                       [1×4 double]        - crop data: [x0, y0, width, height]
+%   padval:                     [1×1 double]        - padding value
+%   fillmissmeth:               [char array]        - method of filling missing data
 %% The function returns following results:
 %   intermittency:              [n×m double]
 %   binarized:                  [n×m... double]
@@ -15,7 +17,9 @@ function varargout = predinterm(data, kwargs)
         kwargs.version (1,:) char {mustBeMember(kwargs.version, {'0.1', '0.2', '0.3', '0.4', '0.5', '0.6'})} = '0.1'
         kwargs.network = []
         kwargs.map double = [0, 1.5]
-        kwargs.crop double = []
+        kwargs.crop (1,4) double = []
+        kwargs.padval (1,1) double = nan
+        kwargs.fillmissmeth (1,:) char {mustBeMember(kwargs.fillmissmeth, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'none'
     end
 
     sz = size(data);
@@ -38,11 +42,16 @@ function varargout = predinterm(data, kwargs)
     end
 
     if ~isempty(kwargs.crop)
-        binarized = padarray(binarized, [kwargs.crop(1), kwargs.crop(2)], 0, 'pre');
-        binarized = padarray(binarized, [sz(1)-kwargs.crop(1)-kwargs.crop(3), sz(2)-kwargs.crop(2)-kwargs.crop(4)], 0, 'post');
+        binarized = padarray(binarized, [kwargs.crop(1), kwargs.crop(2)], kwargs.padval, 'pre');
+        binarized = padarray(binarized, [sz(1)-kwargs.crop(1)-kwargs.crop(3), sz(2)-kwargs.crop(2)-kwargs.crop(4)], kwargs.padval, 'post');
     end
 
     intermittency = mean(binarized, 3, 'omitmissing');
+
+    % fillmissing
+    if kwargs.fillmissmeth ~= "none"
+        intermittency = fillmissing2(intermittency, kwargs.fillmissmeth);
+    end
 
     varargout{1} = intermittency;
     varargout{2} = binarized;

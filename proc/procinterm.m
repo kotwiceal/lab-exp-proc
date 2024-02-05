@@ -177,8 +177,9 @@ function varargout = procinterm(data, kwargs)
             intermittency = procfitdistfilt('integral-ratio');
         case 'cluster'
             if kwargs.batch
-                [binarized, center] = kmeans(data(:), 2, 'Distance', kwargs.distance);
+                [binarized, center, ~, distance] = kmeans(data(:), 2, 'Distance', kwargs.distance);
                 binarized = reshape(binarized, size(data));
+                distance = reshape(distance, [size(data), 2]);
                 [~, index] = max(center);
                 switch index
                     case 1
@@ -187,11 +188,13 @@ function varargout = procinterm(data, kwargs)
                         binarized = binarized - 1;
                 end
             else
+                distance = []; center = [];
                 for i = 1:size(data, 3)
                     temporary = data(:, :, i); 
-                    [temporary, center] = kmeans(temporary(:), 2, 'Distance', kwargs.distance);
+                    [temporary, center(:, i), ~, distance_temp] = kmeans(temporary(:), 2, 'Distance', kwargs.distance);
                     temporary = reshape(temporary, size(data, 1:2));
-                    [~, index] = max(center);
+                    distance(:,:,:,i) = reshape(distance_temp, [size(data, [1, 2]), 2]);
+                    [~, index] = max(center(:, i));
                     switch index
                         case 1
                             temporary = -(temporary - 2);
@@ -209,6 +212,8 @@ function varargout = procinterm(data, kwargs)
             end
             intermittency = mean(binarized, 3, 'omitmissing');
             varargout{2} = binarized;
+            varargout{3} = distance;
+            varargout{4} = center;
         case 'cnn'
             [intermittency, binarized] = predinterm(data, network = kwargs.network, version = kwargs.cnnversion, crop = kwargs.crop, map = kwargs.map);
             varargout{2} = binarized;

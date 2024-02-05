@@ -66,7 +66,8 @@ function result = vortind(u, w, kwargs)
         
             clear skewmat
             
-            result = abs(skewmatdet) - abs(symmatdet);
+            % result = abs(skewmatdet) - abs(symmatdet);
+            result =skewmatdet.^2 - symmatdet.^2;
         case 'l2'
             symmat = 1/2*(gradvel+pagetranspose(gradvel));
             skewmat = 1/2*(gradvel-pagetranspose(gradvel));
