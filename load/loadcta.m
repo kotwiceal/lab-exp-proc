@@ -27,7 +27,7 @@ function varargout = loadcta(folder, kwargs)
         kwargs.dataseparator char = '.'
         kwargs.scanseparator char = ','
         kwargs.rawseparator char = ','
-        kwargs.output (1,:) char {mustBeMember(kwargs.output, {'struct', 'array'})} = 'array'
+        kwargs.output (1,:) char {mustBeMember(kwargs.output, {'struct', 'array'})} = 'struct'
     end
 
     warning off

@@ -11,6 +11,7 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
 %   ax20:           [1×n double]            - base points of transverse direction
 %   ax30:           [1×m double]            - base points of vertical direction
 %   show:           [1×1 logical]           - show scanning points
+%   fit:            [char array]            - fit type
 %% The function returns following results:
 %   scan:           [knm×3 double]          - scan table
 %   scancor:        [knm×3 double]          - corrected scan table
@@ -70,7 +71,8 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
         kwargs.ax30 double = []
         kwargs.show logical = true
         kwargs.delimiter (1,:) char = 'tab'
-        kwargs.pointwise logical = false
+        kwargs.pointwise logical = false, 
+        kwargs.fit (1,:) char {mustBeMember(kwargs.fit, {'', 'poly01', 'poly10', 'poly11', 'poly02', 'poly20', 'poly22', 'poly21', 'poly12'})} = ''
     end
 
     nax1 = size(ax1, 2);
@@ -90,18 +92,22 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
     if iscorbase
         if (numel(kwargs.ax10) == 1) && (numel(kwargs.ax20) == 1) && (numel(kwargs.ax30) == 1) 
             scancor = scan;
-            scancor(:, 3) = scancor(:, 3) - kwargs.ax30;
+            scancor(:, 3) = scancor(:, 3) + kwargs.ax30;
             kwargs.ax10 = ax1;
             kwargs.ax20 = ax2;
         else
-            if numel(kwargs.ax10) == 1
-                type = 'poly02';
-            end
-            if numel(kwargs.ax20) == 1
-                type = 'poly20';
-            end
-            if (numel(kwargs.ax10) ~= 1) && (numel(kwargs.ax20) ~= 1)
-                type = 'poly22';
+            if isempty(kwargs.fit)
+                if numel(kwargs.ax10) == 1
+                    type = 'poly02';
+                end
+                if numel(kwargs.ax20) == 1
+                    type = 'poly20';
+                end
+                if (numel(kwargs.ax10) ~= 1) && (numel(kwargs.ax20) ~= 1)
+                    type = 'poly22';
+                end
+            else
+                type = kwargs.fit;
             end
             if ~kwargs.pointwise
                 [kwargs.ax10, kwargs.ax20] = meshgrid(kwargs.ax10, kwargs.ax20);
@@ -110,7 +116,7 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
             ft = fit([ax10, ax20], ax30, type);
             scancor = scan;
             ax3s = ft(scancor(:,1), scancor(:,2));
-            scancor(:, 3) = scancor(:, 3) - round(ax3s);
+            scancor(:, 3) = scancor(:, 3) + round(ax3s);
         end
     end
 
@@ -133,7 +139,7 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
 
     scan = scan(:, kwargs.axorder);
     varargout{1} = scan;
-
+    
     if exist('scancor', 'var')
         scancor = scancor(:, kwargs.axorder);
         varargout{2} = scancor;
@@ -145,5 +151,7 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
     if ~isempty(kwargs.filename)
         writematrix(tab, strcat(kwargs.filename, '.txt'), 'Delimiter', kwargs.delimiter);
     end
+
+    varargout{3} = ft;
 
 end

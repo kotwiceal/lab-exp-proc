@@ -33,7 +33,7 @@ function varargout = prepcta(input, kwargs)
         kwargs.fs double = 2e4
         kwargs.corrvibr logical = false;
         kwargs.shape double = []
-        kwargs.output (1,:) char {mustBeMember(kwargs.output, {'struct', 'array'})} = 'array'
+        kwargs.output (1,:) char {mustBeMember(kwargs.output, {'struct', 'array'})} = 'struct'
     end
 
     if isa(input, 'double')
