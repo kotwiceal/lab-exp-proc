@@ -6,8 +6,11 @@ function varargout = prepcta(input, kwargs)
 %   winwidth:           [1×1 double]                - width of window function
 %   overlap:            [1×1 double]                - overlap of windows
 %   fs:                 [1×1 double]                - frequency sampling
-%   corrvibr:           [1×1 logical]               - supress vibration term via cross-correlation correction
+%   norm:               [1×1 logical]               - to norm spectra
+%   corvibr:            [1×1 logical]               - supress vibration term via cross-correlation correction
 %   shape:              [1×q double]                - reshape data
+%   unit:               [char array]                - transform scan unit  
+%   fit:                [function_handle]           - reverse a correction of vectical scanning component
 %   output:             [char array]                - specify function return value
 %% The function returns following results:
 %   spec:               [k×m double] 
@@ -30,12 +33,16 @@ function varargout = prepcta(input, kwargs)
         kwargs.scan double = []
         kwargs.winwidth double = 4096
         kwargs.overlap double = 3072
-        kwargs.fs double = 2e4
-        kwargs.corrvibr logical = false;
+        kwargs.fs double = 25e3
+        kwargs.norm logical = true
+        kwargs.corvibr logical = true;
         kwargs.shape double = []
+        kwargs.unit (1,:) char {mustBeMember(kwargs.unit, {'mm', 'count'})} = 'mm'
+        kwargs.fit = []
         kwargs.output (1,:) char {mustBeMember(kwargs.output, {'struct', 'array'})} = 'struct'
     end
 
+    % choose input type
     if isa(input, 'double')
         raw = input;
     else
@@ -48,8 +55,8 @@ function varargout = prepcta(input, kwargs)
     % calculate spectrogram
     for i = 1:size(raw, 3)
         s0(:,:,i) = spectrogram(raw(:, 1, i), kwargs.winwidth, kwargs.overlap , [], kwargs.fs);
-        s1(:,:,i) = spectrogram(raw(:, 1, i), kwargs.winwidth, kwargs.overlap , [], kwargs.fs);
-        s2(:,:,i) = spectrogram(raw(:, 1, i), kwargs.winwidth, kwargs.overlap , [], kwargs.fs);
+        s1(:,:,i) = spectrogram(raw(:, 2, i), kwargs.winwidth, kwargs.overlap , [], kwargs.fs);
+        s2(:,:,i) = spectrogram(raw(:, 3, i), kwargs.winwidth, kwargs.overlap , [], kwargs.fs);
     end
 
     [~, f, ~] = spectrogram(raw(:, 1, 1), kwargs.winwidth, kwargs.overlap , [], kwargs.fs);
@@ -63,10 +70,16 @@ function varargout = prepcta(input, kwargs)
     s22 = squeeze(mean(s2.*conj(s2), 2));
 
     % to substract correrlated part signal 
-    if kwargs.corrvibr
+    if kwargs.corvibr
         s00 = s00 - abs(s01).^2./s11;
     end
 
+    % norm spectra
+    if kwargs.norm
+        s00 = s00/size(s00,1)^2/2.56;
+    end
+
+    % extract scanning points
     if ~isempty(kwargs.scan)
         x = squeeze(kwargs.scan(:,1,:));
         z = squeeze(kwargs.scan(:,2,:));
@@ -74,6 +87,12 @@ function varargout = prepcta(input, kwargs)
         vel = kwargs.scan(:, 4);
     end
 
+    % return to uncorrected vertical positions
+    if ~isempty(kwargs.fit) && ~isempty(kwargs.scan)
+        y = y - round(kwargs.fit(x, z)); 
+    end
+
+    % reshape spectra, scanning points and velocity
     if ~isempty(kwargs.shape)
         s00 = reshape(s00, [size(s00, 1), kwargs.shape]);
         if ~isempty(kwargs.scan)
@@ -84,6 +103,15 @@ function varargout = prepcta(input, kwargs)
         end
     end
 
+    % transform units
+    switch kwargs.unit
+        case 'mm'
+            x = x/20;
+            y = y/800;
+            z = z/400;
+    end
+
+    % select output type
     switch kwargs.output
         case 'struct'
             result.spec = s00;

@@ -8,13 +8,14 @@ function guicta(kwargs)
 %   vel:            [m×1 double]        - velocity
 %   limit:          [1×2 double]        - integration limit
 %   display:        [char array]        - displaying type
+%   dispstack:      [1×1 logical]       -
 %   u0:             [1×1 double]        - reference velocity
 %   growth:         [1×1 logical]       - to show growth curves
 %   interaction:    [char array]        - region selection behaviour
 %   xscale:         [char array]        - scale of x-axis of spectra plot
 %   yscale:         [char array]        - scale of y-axis of spectra plot
 %   docked:         [1×1 logical]       - docked figure
-
+%   title:          [char array]
 %% Examples:
 %% load cta measurements, calculate auto-spectra and visualize (struct notation)
 % data = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931', output = 'struct');
@@ -34,6 +35,7 @@ function guicta(kwargs)
         kwargs.vel double = []
         kwargs.limit double = []
         kwargs.display (1,:) char {mustBeMember(kwargs.display, {'x-y', 'y-z', 'y', 'z'})} = 'x-y'
+        kwargs.dispstack logical = false
         kwargs.u0 double = 27.3
         kwargs.growth logical = false
         kwargs.x double = []
@@ -44,6 +46,7 @@ function guicta(kwargs)
         kwargs.xscale (1,:) char {mustBeMember(kwargs.xscale, {'linear', 'log'})} = 'log'
         kwargs.yscale (1,:) char {mustBeMember(kwargs.yscale, {'linear', 'log'})} = 'log'
         kwargs.docked logical = false
+        kwargs.title = []
     end
 
     if ~isempty(kwargs.struct)
@@ -69,7 +72,8 @@ function guicta(kwargs)
         temp = get(axroi, 'YLim'); 
         rois{1}.Position = [rois{1}.Position(1), temp(1), rois{1}.Position(3), temp(2)-temp(1)];
         index = kwargs.freq>df(1)&kwargs.freq<=df(2);
-        amp = squeeze(sqrt(sum(kwargs.spec(index, :), 1)))/size(kwargs.spec, 1);
+        % amp = squeeze(sqrt(sum(kwargs.spec(index, :), 1)))/size(kwargs.spec, 1);
+        amp = squeeze(sqrt(sum(kwargs.spec(index, :), 1)));
         if ~ismatrix(kwargs.spec)
             amp = reshape(amp, sz(2:end));
         end
@@ -78,10 +82,8 @@ function guicta(kwargs)
         end
     end
 
-    function event(~, ~)
-        procamp()
+    function plotamp()
         cla(ax); hold(ax, 'on'); box(ax, 'on'); grid(ax, 'on');
-
         switch kwargs.display
             case 'x-y'
                 plot(ax, kwargs.y, amp, '.-')
@@ -91,8 +93,19 @@ function guicta(kwargs)
                     ylabel(ax, 'u`/u_0');
                 end
             case 'y-z'
-                imagesc(ax, amp)
+                if isempty(kwargs.y) && isempty(kwargs.z) && isvector(kwargs.y) && isvector(kwargs.z)
+                    surf(ax, amp)
+                else
+                    surf(ax, kwargs.y, kwargs.z, amp)
+                end
                 colorbar(ax)
+                if isempty(kwargs.u0)
+                    zlabel(ax, 'u`');
+                else
+                    zlabel(ax, 'u`/u_0');
+                end
+                xlabel('y'); ylabel('z');
+                view(ax, [-30, 30])
             case 'y'
                 if isempty(kwargs.y)
                     kwargs.y = 1:numel(amp);
@@ -104,7 +117,9 @@ function guicta(kwargs)
                 end
                 plot(ax, kwargs.z, amp, '.-');
         end
+    end
 
+    function plotgrowth()
         if kwargs.growth
             cla(axgrw); hold(axgrw, 'on'); box(axgrw, 'on'); grid(axgrw, 'on');
         
@@ -117,7 +132,12 @@ function guicta(kwargs)
             plot(axgrw, grw, '.-');
             ylabel(axgrw, 'max(u`)');
         end
+    end
 
+    function event(~, ~)
+        procamp();
+        plotamp();
+        plotgrowth();
     end
 
     if kwargs.docked
@@ -129,9 +149,23 @@ function guicta(kwargs)
 
     if ~isempty(kwargs.spec)
         nexttile; hold on; grid on; box on;
-        axroi = gca; set(axroi, 'YScale', kwargs.yscale, 'XScale', kwargs.xscale);
-        plot(axroi, kwargs.freq, kwargs.spec(:,:));     
-        xlabel(axroi, xlab); ylabel('PSD');
+        axroi = gca;
+        if kwargs.dispstack
+            sz = size(kwargs.spec);
+            for i = 1:sz(2)
+                for j = 1:sz(3)
+                    plot3(axroi, kwargs.freq, kwargs.z(i,j)*ones(1, sz(1)), kwargs.spec(:,i,j));  
+                end
+            end
+            set(axroi, 'ZScale', kwargs.yscale, 'XScale', kwargs.xscale);
+            view(axroi, [-30, 30]);
+            xlabel(axroi, xlab); ylabel('z'); zlabel('PSD');
+            pbaspect([1 5 1]) 
+        else
+            set(axroi, 'YScale', kwargs.yscale, 'XScale', kwargs.xscale);
+            plot(axroi, kwargs.freq, kwargs.spec(:,:));   
+            xlabel(axroi, xlab); ylabel('PSD');
+        end
     
         if ~isempty(kwargs.limit)
             mask = [kwargs.limit(1), 0, kwargs.limit(2)-kwargs.limit(1), 1];
@@ -151,27 +185,43 @@ function guicta(kwargs)
         event();
     end
 
+    % plot velocity
     if ~isempty(kwargs.vel)
         nexttile; hold on; grid on; box on; pbaspect([1, 1, 1]); 
         switch kwargs.display
             case 'x-y'
-                plot(kwargs.y, kwargs.vel, '.-');
-                ylabel('u');
+                if isempty(kwargs.x) && isempty(kwargs.y) && isvector(kwargs.x) && isvector(kwargs.y)
+                    surf(kwargs.vel)
+                else
+                    surf(kwargs.x, kwargs.y, kwargs.vel)
+                end
+                xlabel('x'); ylabel('y'); zlabel('u, m/s');
+                view([-30, 30])
             case 'y-z'
-                imagesc(kwargs.vel)
+                if isempty(kwargs.y) && isempty(kwargs.z) && isvector(kwargs.y) && isvector(kwargs.z)
+                    surf(kwargs.vel)
+                else
+                    surf(kwargs.y, kwargs.z, kwargs.vel)
+                end
+                xlabel('y'); ylabel('z'); zlabel('u, m/s');
+                view([-30, 30])
             case 'y'
                 if isempty(kwargs.y)
                     kwargs.y = 1:numel(kwargs.vel);
                 end
                 plot(kwargs.y, kwargs.vel, '.-');
-                ylabel('u');
+                ylabel('u, m/s');
             case 'z'
                 if isempty(kwargs.z)
                     kwargs.z = 1:numel(kwargs.vel);
                 end
                 plot(kwargs.z, kwargs.vel, '.-');
-                ylabel('u');
+                ylabel('u, m/s');
         end
+    end
+
+    if ~isempty(kwargs.title)
+        sgtitle(kwargs.title)
     end
 
 end

@@ -14,7 +14,7 @@ function rois = guiselectregion(axroi, event, kwargs)
     arguments
         axroi matlab.graphics.axis.Axes
         event function_handle
-        kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'line', 'rect', 'poly'})} = 'rect'
+        kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'line', 'rect', 'poly', 'cube'})} = 'rect'
         kwargs.mask double = []
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
         kwargs.number int8 = 1
@@ -37,6 +37,9 @@ function rois = guiselectregion(axroi, event, kwargs)
             end
         case 'poly'
             roimethod = @drawpolygon;
+            position = kwargs.mask;
+        case 'cube'
+            roimethod = @drawcuboid;
             position = kwargs.mask;
     end
 
