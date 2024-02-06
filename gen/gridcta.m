@@ -109,6 +109,7 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
             else
                 type = kwargs.fit;
             end
+            disp(strcat("fit type: ", type))
             if ~kwargs.pointwise
                 [kwargs.ax10, kwargs.ax20] = meshgrid(kwargs.ax10, kwargs.ax20);
             end
