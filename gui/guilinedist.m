@@ -20,13 +20,13 @@ function rois = guilinedist(data, kwargs)
 %% The function returns following results:
 %   rois:               [object]                        - ROI cell objects
 %% Examples:
-%% show distribution along horizontal projection of drawn line, 2D field is presented in spatial coordinates
+%% 1. Show distribution along horizontal projection of drawn line, 2D field is presented in spatial coordinates:
 % guilinedist(data.vmn(:,:,1), x = data.x, z = data.z);
-%% show distribution along vertical projection of drawn line, 2D field is presented in node coordinates
+%% 2. Show distribution along vertical projection of drawn line, 2D field is presented in node coordinates:
 % guilinedist(data.vmn(:,:,1), proj = 'vert');
-%% show several distributions along drawn line, 2D field is presented in node coordinates
+%% 3. Show several distributions along drawn line, 2D field is presented in node coordinates:
 % guilinedist(data.vmn(:,:,1:5), proj = 'line');
-%% show distribution along several drawn lines, 2D field is presented in node coordinates
+%% 4. show distribution along several drawn lines, 2D field is presented in node coordinates:
 % guilinedist(gca, data.vmn(:,:,1:5), proj = 'line', number = 3);
 
     arguments
@@ -184,7 +184,7 @@ function rois = guilinedist(data, kwargs)
                 end
             else
                 for i = 1:size(data, 3)
-                    nexttile; contourf(kwargs.x(:,:,i), kwargs.z(:,:,i), data(:,:,1), 100, 'LineStyle', 'None'); 
+                    nexttile; contourf(kwargs.x(:,:,i), kwargs.z(:,:,i), data(:,:,i), 100, 'LineStyle', 'None'); 
                     xlabel('x, mm'); ylabel('z, mm'); colormap(kwargs.colormap);
                     if ~isempty(kwargs.clim); clim(kwargs.clim); end
                     axis(kwargs.aspect);

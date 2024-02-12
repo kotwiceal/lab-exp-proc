@@ -37,7 +37,7 @@ function fitdistcoef =  procfitdistcoef(data, kwargs)
 %% The function returns following results:
 %   fitdistcoef:    [n×m... double]      - fit coefficients
 %% Examples:
-%% Fit distribution of directed velocity gradient by bimode gumbel distribution with custom restrictions
+%% 1. Fit distribution of directed velocity gradient by bimode gumbel distribution with custom restrictions:
 % fitdistcoef = procfitdistcoef(data.dwdl, distname = 'gumbel2', mode1 = mode1, var1 = var1, ...
 %     mode2 = mode2, var2 = var2, binedge = binedge, x0 = x0, lb = lb, ub = ub, ...
 %     strides = [5, 5], kernel = [30, 30], postfilt = 'none');

@@ -17,12 +17,12 @@ function guicta(kwargs)
 %   docked:         [1×1 logical]       - docked figure
 %   title:          [char array]
 %% Examples:
-%% load cta measurements, calculate auto-spectra and visualize (struct notation)
+%% 1. Load cta measurements, calculate auto-spectra and visualize (struct notation):
 % data = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931', output = 'struct');
 % dataprep = prepcta(p1, output = 'struct');
 % guicta(struct = dataprep);
 
-%% load cta measurements, calculate auto-spectra and visualize (array notation)
+%% 2. Load cta measurements, calculate auto-spectra and visualize (array notation):
 % [scan, data, raw] = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931');
 % [spec, f, vel, x, y, z] = prepcta(raw, scan = scan);
 % guicta(spec = spec, f = f, vel = vel);
@@ -45,7 +45,7 @@ function guicta(kwargs)
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
         kwargs.xscale (1,:) char {mustBeMember(kwargs.xscale, {'linear', 'log'})} = 'log'
         kwargs.yscale (1,:) char {mustBeMember(kwargs.yscale, {'linear', 'log'})} = 'log'
-        kwargs.docked logical = false
+        kwargs.docked logical = true
         kwargs.title = []
     end
 

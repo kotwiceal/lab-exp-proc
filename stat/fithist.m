@@ -1,5 +1,5 @@
 function varargout = fithist(kwargs)
-%% Analytical approximation of one-dimensional statistical distribution.
+%% Analytical approximation of one-dimensional statistical distribution by single or bi-mode distributions.
 %% The function takes following arguments:
 %   data:           [m×1 double]        - statistical data
 %   x:              [n×1 double]        - statistical edges
@@ -30,7 +30,7 @@ function varargout = fithist(kwargs)
 %   x:              [n×1 double]        - statistical edges
 %   y:              [n×1 double]        - statistical counts
 %% Examples:
-%% fit raw data by two beta distributions with lower, upper and non-linear constrains
+%% 1. Fit raw data by two beta distributions with lower, upper and non-linear constrains:
 % % gui
 % rois = guihist(gca, data.dwdlf);
 % probe = guigetdata(rois{1}, data.dwdlf, shape = 'flatten'); % get raw data
@@ -45,7 +45,7 @@ function varargout = fithist(kwargs)
 % % fit
 % [f, modes, edges, fval, x, y] = fithist(data = probe, distname = 'beta2', ...
 %       objnorm = 2, nonlcon = nonlcon, x0 = x0, lb = lb, ub = ub, disp = true);
-%% fit pdf curve by two skew normal distributions
+%% 2. Fit pdf curve by two skew normal distributions:
 % % gui
 % rois = guihist(gca, data.dwdlf);
 % probe = guigetdata(rois{1}, data.dwdlf, shape = 'flatten'); % get raw data
@@ -99,10 +99,10 @@ function varargout = fithist(kwargs)
 
         if isempty(kwargs.binedge)
             [y, x] = histcounts(kwargs.data, 'Normalization', kwargs.norm);
-            edges = linspace(min(x), max(x), 1e3);
+            edges = linspace(min(x), max(x), 1e3)';
         else
             [y, x] = histcounts(kwargs.data, kwargs.binedge, 'Normalization', kwargs.norm);
-            edges = kwargs.binedge;
+            edges = kwargs.binedge';
         end
         x = x(2:end);
     end
@@ -208,7 +208,7 @@ function varargout = fithist(kwargs)
             distparam(coef, distname = kwargs.distname, disp = true);
         end
     catch
-        f = []; modes = []; edges = []; coef = [];
+        f = []; modes = y; edges = x; coef = [];
     end
 
     % select outputs

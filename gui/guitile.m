@@ -1,10 +1,9 @@
 function guitile(data, kwargs)
 %% Visualize multiframe data.
 %% The function takes following arguments:
-%   data:               [n×m... double]                 - multidimensional data
+%   data:               [n×m×k double]                  - multidimensional data
 %   x:                  [n×m double]                    - spatial coordinate
 %   z:                  [n×m double]                    - spatial coordinate
-%
 %   xlim:               [1×2 double]                    - x axis limit
 %   ylim:               [1×2 double]                    - y axis limit
 %   clim:               [1×2 double]                    - colorbar limit
@@ -13,7 +12,6 @@ function guitile(data, kwargs)
 %   docked:             [1×1 logical]                   - docker figure
 %   colormap:           [char array]                    - colormap
 %   aspect:             [char array]                    - axis ratio
-%% Examples:
 
     arguments
         data double
@@ -55,7 +53,7 @@ function guitile(data, kwargs)
     else
         clf;
     end
-    tiledlayout('flow', 'TileSpacing', 'compact');
+    tiledlayout('flow');
     switch disp_type
         case 'node'
             for i = 1:size(data, 3)
@@ -77,7 +75,7 @@ function guitile(data, kwargs)
                 end
             else
                 for i = 1:size(data, 3)
-                    nexttile; hold on; box on; grid on; surf(kwargs.x(:,:,i), kwargs.z(:,:,i), data(:,:,1), 'LineStyle', 'None'); 
+                    nexttile; hold on; box on; grid on; surf(kwargs.x(:,:,i), kwargs.z(:,:,i), data(:,:,i), 'LineStyle', 'None'); 
                     xlabel('x, mm'); ylabel('z, mm'); colormap(kwargs.colormap);
                     if ~isempty(kwargs.clim{i}); clim(kwargs.clim{i}); end
                     axis(kwargs.aspect);

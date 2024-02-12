@@ -53,18 +53,20 @@ function varargout = procinterm(data, kwargs)
 %   binarized:                  [n×m... double]
 %   threshold:                  [n×m... double]
 %% Examples:
-%% process intermittency by default settings
-% procinterm(data.dwdl)
-%% process intermittency by custom settings
-% % constrain function
-% nonlcon = @(x) nonlconfitdist(x,distname='gumbel2',mode1=[1e-4,6e-4],var1=[1e-8,1e-7],mode2=[7e-4,5e-3],var2=[1e-7,1e-5]);
-% % boundary constrains
-% lb = [0, 0, 0, 0, 0, 0];
-% ub = [2, 5e-3, 5e-3, 2, 5e-3, 5e-3];
-% % initial approximation
-% x0 = [0.80857,0.00027965,0.000113,0.19571,0.00060174,0.00039031];
-% [interm, binar, thresh] = procinterm(data.dwdl,distname='gumbel2',method='cdf-intersection', ...
-%     x0=x0,lb=lb,ub=ub,nonlcon=nonlcon,binedge=linspace(0,5e-3,500),root='fminbnd');
+%% 1. Process intermittency by clustering method k-means: 
+% % all sample realizations, euclidean metric, median intermittency field postfitlering by kernel size [3,3]
+% [interm, binar, dist, cent] = procinterm(data.dwdl, method = 'cluster', distance = 'sqeuclidean', ...
+%   batch = true, postfilt = 'median', postfiltker = [5, 5]);
+%% 2. Process intermittency by clustering method k-means: 
+% % instantaneous sample realizations, euclidean metric, without postfiltering
+% [interm, binar, dist, cent] = procinterm(data.dwdl, method = 'cluster', distance = 'sqeuclidean', ...
+%   batch = false, postfilt = 'none');
+%% 3. Process intermittency by PDF integral ratio method:
+% % gubmel distribution, coeffificent constrains, mesh of histogram bins, statistical constrains
+% [interm, binar, thresh] = procinterm(data.dwdl, distname = 'gumbel2', method = 'integral-ratio', ...
+%       x0 = [0.7351, 0.0004, 0.0002, 0.2305, 0.0008, 0.0004], lb = [1e-2, 0, 0, 0, 0, 0], ...
+%       ub = [2, 5e-3, 5e-3, 2, 5e-3, 5e-3], binedge = linspace(0, 5e-3, 500), ...
+%       mode1 = [3e-4, 7e-4], mode2 = [8e-4, 7e-3]);
 
     arguments
         data double
@@ -189,7 +191,7 @@ function varargout = procinterm(data, kwargs)
                 end
             else
                 distance = []; center = [];
-                for i = 1:size(data, 3)
+                for i = 1:prod(sz(3:end))
                     temporary = data(:, :, i); 
                     [temporary, center(:, i), ~, distance_temp] = kmeans(temporary(:), 2, 'Distance', kwargs.distance);
                     temporary = reshape(temporary, size(data, 1:2));
@@ -205,12 +207,14 @@ function varargout = procinterm(data, kwargs)
                 end
             end
             if kwargs.fillholes
+                temporary = [];
                 binarized(isnan(binarized)) = 0;
-                for i = 1:size(data, 3)
-                    binarized(:, :, i) = imfill(binarized(:, :, i), 'holes');
+                for i = 1:prod(sz(3:end))
+                    temporary(:, :, i) = imfill(binarized(:, :, i), 'holes');
                 end
+                binarized = reshape(temporary, sz);
             end
-            intermittency = mean(binarized, 3, 'omitmissing');
+            intermittency = squeeze(mean(binarized, 3, 'omitmissing'));
             varargout{2} = binarized;
             varargout{3} = distance;
             varargout{4} = center;

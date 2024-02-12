@@ -1,18 +1,18 @@
-function pathes = get_pathes(folder, kwargs)
+function pathes = getfilenames(folder, kwargs)
 %% Get all filenames in specified folder with subfolders.
 %% The function takes following arguments:
-%   folder:             [char array]
-%   subfolders:         [logical]
-%   extension:          [char array]
+%   folder:             [char array]        - folder path
+%   subfolders:         [logical]           - search files in subfolders
+%   extension:          [char array]        - extension of searched files
 %% The function returns following results:
 %   pathes:             [k×... string array]
 %% Examples:
-%% get .vc7 filenames from specified folder
-% filenames = get_pather('\LVExport\u25mps\y_00');
-%% get .vc7 filenames from specified folder with subfolders
-% filenames = get_pather('\LVExport\u25mps\', subfolders = true);
-%% get .dat filenames from specified folder with subfolders
-% filenames = get_pather('\LVExport\u25mps\', extension = 'dat', subfolders = true);
+%% 1. Get .vc7 filenames from specified folder:
+% filenames = getfilenames('\LVExport\u25mps\y_00');
+%% 2. Get .vc7 filenames from specified folder with subfolders:
+% filenames = getfilenames('\LVExport\u25mps\', subfolders = true);
+%% 3. Get .dat filenames from specified folder with subfolders:
+% filenames = getfilenames('\LVExport\u25mps\', extension = 'dat', subfolders = true);
 
     arguments
         folder char
@@ -35,6 +35,6 @@ function pathes = get_pathes(folder, kwargs)
     try
         pathes = reshape(pathes, [], numel(temporary));
     catch
-        disp('reshape error')
+        disp('getfilenames: reshape error, filenames array will be flatten')
     end
 end

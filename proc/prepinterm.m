@@ -18,29 +18,29 @@ function result = prepinterm(data, kwargs)
 %% The function returns following results:
 %   result:             [n×m... double]     - prcessed field
 %% Examples:
-%% process a velocity directed gradient
+%% 1. Process a velocity directed gradient:
 % data.dwdl = prepinterm(data, type = 'dirgrad');
-%% process a lambda-2 criteria with custom settings
+%% 2. Process a lambda-2 criteria with custom settings:
 % data.dwdl = prepinterm(data, type = 'l2', diffilter = 'sobel', prefilt = 'wiener', ...
 %       prefiltker = [15, 15], postfilt = 'median', postfiltker = [15, 15]);
 
     arguments
         data struct
         kwargs.type (1,:) char {mustBeMember(kwargs.type, {'dirgrad', 'l2', 'q', 'd', 'vm'})} = 'drigrad'
-        % preprosessing parameters
+        %% preprosessing parameters
         kwargs.diffilter (1,:) char {mustBeMember(kwargs.diffilter, {'sobel', '4ord', '4ordgauss', '2ord'})} = '4ord'
         kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'gaussian', 'average', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'median-wiener', 'mode'})} = 'gaussian'
         kwargs.prefiltker double = [3, 3]
         kwargs.fillmissmeth (1,:) char {mustBeMember(kwargs.fillmissmeth, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'none'
-        % dirgrad parameters
+        %% dirgrad parameters
         kwargs.angle double = deg2rad(-22)
         kwargs.component (1,:) char {mustBeMember(kwargs.component, {'dudl', 'dudn', 'dwdl', 'dwdn'})} = 'dwdl'
-        % l2 parameters
+        %% l2 parameters
         kwargs.threshold (1,:) char {mustBeMember(kwargs.threshold, {'none', 'neg', 'pos'})} = 'none'
         kwargs.pow double = 2
         kwargs.abs logical = false
         kwargs.eigord double = 1
-        % postprocessing parameters
+        %% postprocessing parameters
         kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'gaussian', 'average', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'median-wiener', 'mode'})} = 'median'
         kwargs.postfiltker double = [15, 15]
     end
@@ -49,7 +49,7 @@ function result = prepinterm(data, kwargs)
 
     u = data.u; w = data.w;
 
-    % normalize velocity
+    % norm velocity
     if isfield(data, 'U') && isfield(data, 'W')
         Vm = hypot(data.U, data.W);
         u = u./Vm;

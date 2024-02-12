@@ -1,11 +1,11 @@
 function data = loadpiv(kwargs)
-%% Load .vc7 dataset by specified filenames.
+%% Load .vc7 dataset by specified forder or filenames.
 %% The function takes following arguments:
-%   folder:             [char array]
-%   filenames:          [k×l string]
-%   subfolders:         [1×1 logical]
-%   parallel:           [1×1 logical]
-%   components:         [char array]
+%   folder:             [char array]        - folder path
+%   filenames:          [k×l string]        - filenames array
+%   subfolders:         [1×1 logical]       - search files in subfolders
+%   parallel:           [1×1 logical]       - parallel loading
+%   components:         [char array]        - return a structure with specified fields
 %% The function returns following results:
 % data = 
 %   struct with fields:
@@ -23,16 +23,16 @@ function data = loadpiv(kwargs)
 %     u: [n×m×k×l double]
 %     w: [n×m×k×l double]
 %% Examples:
-%% load vector fields from specified folder
-% filenames = get_pather('\LVExport\u25mps\y_00');
-% data = import_vc7(filenames);
-%% load vector fields from specified folder with subfolders
-% filenames = get_pather('\LVExport\u25mps\', sub = true);
-% data = loadpiv(filenames);
+%% 1. Load velocity fields from specified folder:
+% data = import_vc7(folder = '\LVExport\u25mps\y_00');
+%% 2. Load velocity fields from specified folder with subfolders:
+% data = import_vc7(folder = '\LVExport\u25mps\', subfolders = true);
+%% 3. Load velocity fields by specified filenames:
+% data = import_vc7(filenames = ["\LVExport\u25mps\y_00\B0001.vc7", "\LVExport\u25mps\y_00\B0002.vc7"]);
 
     arguments
         kwargs.folder (1,:) char = []
-        kwargs.filenames double = []
+        kwargs.filenames = []
         kwargs.subfolders logical = false
         kwargs.parallel logical = false
         kwargs.components (1,:) char {mustBeMember(kwargs.components, {'x-y,u-v', 'x-z,u-w'})} = 'x-z,u-w'
@@ -40,14 +40,16 @@ function data = loadpiv(kwargs)
     end
 
     if ~isempty(kwargs.folder)
-        kwargs.filenames = get_pather(kwargs.folder, extension = 'vc7', subfolders = kwargs.subfolders);
+        kwargs.filenames = getfilenames(kwargs.folder, extension = 'vc7', subfolders = kwargs.subfolders);
     end
 
     sz = size(kwargs.filenames);
 
+    % store loaded field size
     imx = readimx(char(kwargs.filenames(1, 1)));
     nx = imx.Nx; nz = imx.Ny;
     
+    % build spatial grid
     [ax1, ax2] = meshgrid(1:nx, 1:nz); vel1 = zeros([nz, nx, sz]); vel2 = zeros([nz, nx, sz]);
     ax1 = ax1 * imx.ScaleX(1) * imx.Grid + imx.ScaleX(2);
     ax2 = ax2 * imx.ScaleY(1) * imx.Grid + imx.ScaleY(2);

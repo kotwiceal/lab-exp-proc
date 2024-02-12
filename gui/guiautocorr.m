@@ -13,9 +13,9 @@ function rois = guiautocorr(data, kwargs)
 %% The function returns following results:
 %   rois:           [object]                        - ROI cell objects
 %% Examples
-%% show auto-correlation of signal with default parameters
+%% 1. Show auto-correlation of signal with default parameters:
 % guiautocorr(data);
-%% show auto-correlation of signal with custom parameters
+%% 2. Show auto-correlation of signal with custom parameters:
 % guiautocorr(data, mask = [100, 150, 25, 25], display = 'surf', clim = [0, 1], aspect = 'auto');
     
     arguments
@@ -45,7 +45,7 @@ function rois = guiautocorr(data, kwargs)
             select = @(roiobj) guigetdata(roiobj, data, shape = 'cut');
         case 'spatial'
             select = @(roiobj) guigetdata(roiobj, data, shape = 'cut', ...
-                type = 'spatial', x = kwargs.x, z = kwargs.y);
+                x = kwargs.x, z = kwargs.y);
     end
 
     function event(~, ~)
@@ -87,7 +87,7 @@ function rois = guiautocorr(data, kwargs)
     else
         clf;
     end
-    tiledlayout(1, 2);
+    tiledlayout('flow');
     nexttile; axroi = gca; 
     switch disp_type
         case 'node'

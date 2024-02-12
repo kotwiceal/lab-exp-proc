@@ -3,7 +3,8 @@ function varargout = prepcta(input, kwargs)
 %% The function takes following arguments:
 %   input:              [double, struct]
 %   scan:               [n×10×m double]
-%   winwidth:           [1×1 double]                - width of window function
+%   wintype:            [char array]                - type of window function
+%   winsize:            [1×1 double]                - width of window function
 %   overlap:            [1×1 double]                - overlap of windows
 %   fs:                 [1×1 double]                - frequency sampling
 %   norm:               [1×1 logical]               - to norm spectra
@@ -12,6 +13,7 @@ function varargout = prepcta(input, kwargs)
 %   unit:               [char array]                - transform scan unit  
 %   fit:                [function_handle]           - reverse a correction of vectical scanning component
 %   output:             [char array]                - specify function return value
+%   steps:              [1×3 double]                - step motors linear shift vector
 %% The function returns following results:
 %   spec:               [k×m double] 
 %   f:                  [k×1 double]
@@ -20,18 +22,19 @@ function varargout = prepcta(input, kwargs)
 %   y:                  [m×1 double]
 %   z:                  [m×1 double]
 %% Examples:
-%% load cta measurements, calculate auto-spectra (struct notation)
+%% 1. Load cta measurements, calculate auto-spectra (struct notation):
 % data = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931', output = 'struct');
 % dataprep = prepcta(p1, output = 'struct');
 
-%% load cta measurements, calculate auto-spectra (array notation)
+%% 2. Load cta measurements, calculate auto-spectra (array notation):
 % [scan, data, raw] = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931');
 % [spec, f, vel, x, y, z] = prepcta(raw, scan = scan);
 
     arguments
         input {mustBeA(input, {'double', 'struct'})}
         kwargs.scan double = []
-        kwargs.winwidth double = 4096
+        kwargs.wintype (1,:) char {mustBeMember(kwargs.wintype, {'uniform', 'hanning', 'hamming'})} = 'hanning'
+        kwargs.winsize double = 4096
         kwargs.overlap double = 3072
         kwargs.fs double = 25e3
         kwargs.norm logical = true
@@ -40,6 +43,7 @@ function varargout = prepcta(input, kwargs)
         kwargs.unit (1,:) char {mustBeMember(kwargs.unit, {'mm', 'count'})} = 'mm'
         kwargs.fit = []
         kwargs.output (1,:) char {mustBeMember(kwargs.output, {'struct', 'array'})} = 'struct'
+        kwargs.steps (1,:) double = [20, 800, 40]
     end
 
     % choose input type
@@ -52,14 +56,28 @@ function varargout = prepcta(input, kwargs)
 
     s0 = []; s1 = []; s2 = [];
 
-    % calculate spectrogram
-    for i = 1:size(raw, 3)
-        s0(:,:,i) = spectrogram(raw(:, 1, i), kwargs.winwidth, kwargs.overlap , [], kwargs.fs);
-        s1(:,:,i) = spectrogram(raw(:, 2, i), kwargs.winwidth, kwargs.overlap , [], kwargs.fs);
-        s2(:,:,i) = spectrogram(raw(:, 3, i), kwargs.winwidth, kwargs.overlap , [], kwargs.fs);
+    % build window function
+    switch kwargs.wintype
+        case 'uniform'
+            win = ones(1, kwargs.winsize);
+        case 'hanning'
+            win = hann(kwargs.winsize);
+        case 'hamming'
+            win = hamming(kwargs.winsize);
     end
 
-    [~, f, ~] = spectrogram(raw(:, 1, 1), kwargs.winwidth, kwargs.overlap , [], kwargs.fs);
+    % calculate spectra correction factors
+    acf = 1/mean(win); % amplitude correction factor;
+    ecf = 1/rms(win); % energy correction factor;
+
+    % calculate spectrogram
+    for i = 1:size(raw, 3)
+        s0(:,:,i) = spectrogram(raw(:, 1, i), win, kwargs.overlap , [], kwargs.fs);
+        s1(:,:,i) = spectrogram(raw(:, 2, i), win, kwargs.overlap , [], kwargs.fs);
+        s2(:,:,i) = spectrogram(raw(:, 3, i), win, kwargs.overlap , [], kwargs.fs);
+    end
+
+    [~, f, ~] = spectrogram(raw(:, 1, 1), win, kwargs.overlap , [], kwargs.fs);
 
     % calculate auto/cross spetra
     s00 = squeeze(mean(s0.*conj(s0), 2));
@@ -69,14 +87,14 @@ function varargout = prepcta(input, kwargs)
     s11 = squeeze(mean(s1.*conj(s1), 2));
     s22 = squeeze(mean(s2.*conj(s2), 2));
 
-    % to substract correrlated part signal 
+    % to substract correrlated signal part 
     if kwargs.corvibr
         s00 = s00 - abs(s01).^2./s11;
     end
 
     % norm spectra
     if kwargs.norm
-        s00 = s00/size(s00,1)^2/2.56;
+        s00 = s00/size(s00,1)^2*2*ecf;
     end
 
     % extract scanning points
@@ -106,9 +124,9 @@ function varargout = prepcta(input, kwargs)
     % transform units
     switch kwargs.unit
         case 'mm'
-            x = x/20;
-            y = y/800;
-            z = z/400;
+            x = x/kwargs.steps(1);
+            y = y/kwargs.steps(2);
+            z = z/kwargs.steps(3);
     end
 
     % select output type
