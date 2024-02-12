@@ -107,6 +107,7 @@ function varargout = guihist(data, kwargs)
         kwargs.colormap (1,:) char = 'turbo'
         kwargs.markersize double = 3
         kwargs.cdf logical = false
+        kwargs.cumsum logical = false
         kwargs.docked logical = false
         kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal'
         kwargs.title (1,:) char = []
@@ -152,9 +153,12 @@ function varargout = guihist(data, kwargs)
     switch disp_type
         case 'node'
             select = @(roiobj) guigetdata(roiobj, data, shape = 'flatten');
+            select2d = @(roiobj) guigetdata(roiobj, data, shape = 'cut');
         case 'spatial'
             select = @(roiobj) guigetdata(roiobj, data, shape = 'flatten', ...
-                type = 'spatial', x = kwargs.x, z = kwargs.z);
+                x = kwargs.x, z = kwargs.z);
+            select2d = @(roiobj) guigetdata(roiobj, data, shape = 'cut', ...
+                x = kwargs.x, z = kwargs.z);
     end
 
     % auto build non-linear constrain function
@@ -195,7 +199,7 @@ function varargout = guihist(data, kwargs)
                         normalize = kwargs.normalize, ...
                         binedge = kwargs.binedge, ...
                         disp = kwargs.disp);
-                    result{i} = [edges_raw', counts_raw];
+                    result{i} = [edges_raw, counts_raw];
                 end
         end
     end
@@ -218,15 +222,8 @@ function varargout = guihist(data, kwargs)
                 edges = edges(index); counts = counts(index); clear index;
             end
 
-            switch kwargs.norm
-                case 'cdf'
-                    plot(ax{1}, edges, 1-counts, 'Color', rois{i}.UserData.color, ...
-                        'DisplayName', strcat("raw ", num2str(i)))
-                otherwise
-                    plot(ax{1}, edges, counts, 'Color', rois{i}.UserData.color, ...
-                        'DisplayName', strcat("raw ", num2str(i)))
-            end
-
+            plot(ax{1}, edges, counts, 'Color', rois{i}.UserData.color, ...
+                'DisplayName', strcat("raw ", num2str(i)))
         end
     end
 
@@ -349,6 +346,15 @@ function varargout = guihist(data, kwargs)
         end
     end
 
+    function plot_cumsum()
+        cla(ax{3}); hold(ax{3}, 'on'); box(ax{3}, 'on'); grid(ax{3}, 'on'); axis(ax{3}, 'square');           
+        for i = 1:length(rois)
+            temporary = select2d(rois{i}); sz = numel(temporary);
+            cnv = cumsum(squeeze(sum(temporary, [1, 2], 'omitmissing')))/sum(temporary(:));
+            plot(ax{3}, cnv);
+        end
+    end
+
     function event(~, ~)
         %% callback at moved event
         switch kwargs.distname
@@ -356,6 +362,9 @@ function varargout = guihist(data, kwargs)
                 plot_raw_hist();
             otherwise
                 plot_fit_hist();
+        end
+        if kwargs.cumsum
+            plot_cumsum();
         end
         customize_appearance();
     end
@@ -388,6 +397,9 @@ function varargout = guihist(data, kwargs)
     nexttile; ax{1} = gca;
     if kwargs.cdf
         nexttile; ax{2} = gca;
+    end
+    if kwargs.cumsum
+        nexttile; ax{3} = gca;
     end
     rois = guiselectregion(axroi, @event, shape = kwargs.shape, ...
         mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);

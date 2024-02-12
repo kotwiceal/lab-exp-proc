@@ -28,13 +28,13 @@ function guiprocinterm(data, kwargs)
 %   xlim:           [1×2 double]        - x axis limit
 %   ylim:           [1×2 double]        - y axis limit
 %% Examples:
-%% show statistics selected by gui, choose threshold and plot distribution along horizontal projection of drawn line, 2D fields is presented in node coordinates 
+%% 1. Show statistics selected by gui, choose threshold and plot distribution along horizontal projection of drawn line, 2D fields is presented in node coordinates:
 % guiprocinterm(data.dwdlf(:,:,:,1), fit = 'none')
-%% -//- 2D fields is presented in spatial coordinates 
+%% 2. -//- 2D fields is presented in spatial coordinates:
 % guiprocinterm(data.dwdlf(:,:,:,1), x = data.x(:,:,1), z = data.z(:,:,1), fit = 'none')
-%% -//- several measurement positions & approximation statisitc by two beta distributions
+%% 3. -//- several measurement positions & approximation statisitc by two beta distributions:
 % guiprocinterm(data.dwdlf(:,:,:,1:3), x = data.x(:,:,1:3), z = data.z(:,:,1:3), fit = 'beta2')
-%% -//- perform constrained optimization at histogram approximation
+%% 4. -//- perform constrained optimization at histogram approximation:
 % % constrain function
 % nonlcon = @(x) nonlcon_beta2(x, rmean1 = [], rmode1 = [8e-4, 1.8e-3], rvar1 = [1e-7, 1e-6], ....
 %         ramp1 = [], rmean2 = [], rmode2 = [3e-3, 4e-3], rvar2 = [1e-6, 1e-2]);
@@ -110,7 +110,7 @@ function guiprocinterm(data, kwargs)
         case 'spatial'
             for i = 1:length(selects)
             selects{i} = @(roiobj) guigetdata(roiobj, data(:,:,:,i), shape = 'flatten', ...
-                type = 'spatial', x = kwargs.x(:,:,i), z = kwargs.z(:,:,i));
+                x = kwargs.x(:,:,i), z = kwargs.z(:,:,i));
             end
     end
 

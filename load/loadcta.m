@@ -1,9 +1,8 @@
 function varargout = loadcta(folder, kwargs)
 %% Import hot-wire data from specified folder with/without subfolders.
 %% The function takes following arguments:
-%   folder:             [char array]
-%   subfolders:         [1×1 logical]
-%   extension:          [char array]
+%   folder:             [char array]        - folder path
+%   subfolders:         [1×1 logical]       - search files in subfolders
 %% The function returns following results:
 %   scan:               [n×10×m×... double] 
 %   data:               [k×11×m×... double]
@@ -11,11 +10,11 @@ function varargout = loadcta(folder, kwargs)
 
 % n - number of samples at spectra processing, k - number of measurements, l - number of measurement samples
 %% Examples:
-%% get scan, data, raw from specified folder
+%% 1. Get scan, data, raw from specified folder:
 % [scan, data, raw] = loadcta('\turb_jet_noise\test')
-%% get scan, data, raw from specified folder with subfolders
+%% 2. Get scan, data, raw from specified folder with subfolders:
 % [scan, data, raw] = loadcta('\turb_jet_noise\test2', subfolders = true)
-%% get structure contained scan, data, raw from specified folder with subfolders
+%% 3. Get structure contained scan, data, raw from specified folder with subfolders:
 % data = loadcta('\turb_jet_noise\test2', subfolders = true, output = 'struct')
 
     arguments
@@ -34,11 +33,11 @@ function varargout = loadcta(folder, kwargs)
 
     scan = []; data = []; raw = [];
 
-    filenames.data = get_pathes(folder, extension = 'dat', subfolders = kwargs.subfolders);
+    filenames.data = getfilenames(folder, extension = 'dat', subfolders = kwargs.subfolders);
     indraw = contains(filenames.data, 'raw');
     filenames.raw = filenames.data(indraw);
     filenames.data = filenames.data(~indraw);
-    filenames.scan = get_pathes(folder, extension = 'txt', subfolders = kwargs.subfolders);
+    filenames.scan = getfilenames(folder, extension = 'txt', subfolders = kwargs.subfolders);
     indscan = contains(filenames.scan, 'scan');
     filenames.scan = filenames.scan(indscan);
 
