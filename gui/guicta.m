@@ -179,7 +179,7 @@ function guicta(kwargs)
             nexttile; axgrw = gca; hold(axgrw, 'on'); box(axgrw, 'on'); grid(axgrw, 'on');
         end
 
-        rois = guiselectregion(axroi, @event, shape = 'rect', ...
+        rois = guiselectregion(axroi, moved = @event, shape = 'rect', ...
             mask = mask, interaction = kwargs.interaction, number = 1);
 
         event();

@@ -1,22 +1,26 @@
 function rois = guilinedist(data, kwargs)
 %% Visualize data distribution along specified lines.
 %% The function takes following arguments:
-%   data:               [n×m... double]                 - multidimensional data
+%   data:               [n×m... double]                 - three dimensional data
 %   x:                  [n×m double]                    - spatial coordinate
 %   z:                  [n×m double]                    - spatial coordinate
-%   proj:               [char array]                    - type projection of distribution
-%
+%   proj:               [1×l1 char]                     - type projection of distribution
 %   mask:               [double]                        - two row vertex to line selection; edge size to rectangle selection
-%   interaction:        [char array]                    - region selection behaviour
-%   number:             [int]                           - count of selection regions
-%   xlim:               [1×2 double]                    - x axis limit
-%   ylim:               [1×2 double]                    - y axis limit
+%   interaction:        [1×l2 char]                     - region selection behaviour
+%   number:             [1×1 int]                       - count of selection regions
+%   xlim:               [1×2 double]                    - x-axis limit
+%   ylim:               [1×2 double]                    - y-axis limit
 %   clim:               [1×2 double]                    - colorbar limit
+%   ylabel:             [1×l3 char]                     - y-axis label
 %   displayname:        [string array]                  - list of labeled curves
-%   legend:             [1×1 logical]                   - show legend
-%   docked:             [1×1 logical]                   - docker figure
-%   colormap:           [char array]                    - colormap
-%   aspect:             [char array]                    - axis ratio
+%   legend:             [1×1 logical]                   - show legend flag
+%   docked:             [1×1 logical]                   - docked figure flag
+%   colormap:           [1×l4 char]                     - colormap name
+%   aspect:             [1×l5 char]                     - axis aspect ratio
+%   location:           [1×l6 char]                     - legend location name
+%   title:              [1×l7 char]                     - figure title
+%   filename:           [1×l8 char]                     - filename of storing figure
+%   extension:          [1×l9 char]                     - file extention of storing figure
 %% The function returns following results:
 %   rois:               [object]                        - ROI cell objects
 %% Examples:
@@ -30,7 +34,7 @@ function rois = guilinedist(data, kwargs)
 % guilinedist(gca, data.vmn(:,:,1:5), proj = 'line', number = 3);
 
     arguments
-        data double
+        data (:,:,:) double
         kwargs.x double = []
         kwargs.z double = []
         kwargs.proj (1,:) char {mustBeMember(kwargs.proj, {'horz', 'vert', 'line'})} = 'horz'
@@ -196,7 +200,7 @@ function rois = guilinedist(data, kwargs)
     axroi = gca;
 
     nexttile; ax = gca;
-    rois = guiselectregion(axroi, @event, shape = 'line', ...
+    rois = guiselectregion(axroi, moved = @event, shape = 'line', ...
         mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);
 
     event();

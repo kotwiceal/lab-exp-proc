@@ -83,7 +83,7 @@ function rois = guicrossspec(axroi, data, kwargs)
     end
 
     nexttile; ax = gca;
-    rois = guiselectregion(axroi, @event, shape = 'rect', ...
+    rois = guiselectregion(axroi,moved = @event, shape = 'rect', ...
         mask = kwargs.mask, interaction = kwargs.interaction, number = 2);
 
     event();

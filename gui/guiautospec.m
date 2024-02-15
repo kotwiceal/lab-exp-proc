@@ -119,7 +119,7 @@ function rois = guiautospec(data, kwargs)
     if ~isempty(kwargs.clim); clim(axroi, kwargs.clim); end
 
     nexttile; ax = gca;
-    rois = guiselectregion(axroi, @event, shape = 'rect', ...
+    rois = guiselectregion(axroi, moved = @event, shape = 'rect', ...
         mask = kwargs.mask, interaction = kwargs.interaction, number = 1);
 
     event();

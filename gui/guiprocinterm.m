@@ -160,9 +160,9 @@ function guiprocinterm(data, kwargs)
                 k = 1;
         end
         if isempty(line_position{j})
-            roitemp = guiselectregion(ax_iterm2d{k}, @event_line, shape = 'line');
+            roitemp = guiselectregion(ax_iterm2d{k}, moved = @event_line, shape = 'line');
         else
-            roitemp = guiselectregion(ax_iterm2d{k}, @event_line, shape = 'line', mask = line_position{j});
+            roitemp = guiselectregion(ax_iterm2d{k}, moved = @event_line, shape = 'line', mask = line_position{j});
         end
         roilines{j} = roitemp{1};
         line_position{j} = roilines{j}.Position;
@@ -267,7 +267,7 @@ function guiprocinterm(data, kwargs)
             tiledlayout(floor((size(data, 4)*2+2)/3) + 1, 3);
             for i = 1:length(rois)
                 nexttile; imshow(data(:,:,1,i)); colormap turbo; axis on; clim(kwargs.clim)
-                roitemp = guiselectregion(gca, @event_region, shape = kwargs.shape, ...
+                roitemp = guiselectregion(gca, moved = @event_region, shape = kwargs.shape, ...
                     mask = kwargs.mask, interaction = kwargs.interaction, number = 1);
                 rois{i} = roitemp{1};
             end
@@ -277,7 +277,7 @@ function guiprocinterm(data, kwargs)
             for i = 1:size(data, 4)
                 contourf(kwargs.x(:,:,i), kwargs.z(:,:,i), data(:,:,1,i), 50, 'LineStyle', 'None'); 
 
-                roitemp = guiselectregion(gca, @event_region, shape = kwargs.shape, ...
+                roitemp = guiselectregion(gca, moved = @event_region, shape = kwargs.shape, ...
                     mask = kwargs.mask, interaction = kwargs.interaction, number = 1);
                 rois{i} = roitemp{1};
             end
