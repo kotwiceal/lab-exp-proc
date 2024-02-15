@@ -9,7 +9,6 @@ function varargout = guihist(data, kwargs)
 %   binedge:        [1×q double]                    - bins count or edge grid
 %   normalize:      [char array]                    - data normalization
 %   getdata:        [char array]                    - data extraction method
-
 %   shape:          [char array]                    - type of region selection
 %   mask:           [1×2 or 1×4 t×2 double]         - edge size to rectangle selection or n-row verxex to polygon selection 
 %   interaction:    [char array]                    - region selection behaviour: 'translate', 'all'   
@@ -19,11 +18,10 @@ function varargout = guihist(data, kwargs)
 %   ylim:           [1×2 double]                    - y axis limit
 %   clim:           [1×2 double]                    - color axis limit
 %   colormap:       [char array]                    - colormap of 2D field
-%   markersize:     [double]                        - masker size
+%   markersize:     [1×1 double]                    - masker size
 %   cdf:            [1×1 logical]                   - plot cdf of statistics
 %   docked:         [1×1 logical]                   - docked figure
 %   aspect:         [char array]                    - axis ratio
-
 %   distname:       [char array]                    - type of statistics fit
 %   objnorm:        [1×1 double]                    - norm order at calculation objective function
 %   Aineq:          [p×l double]                    - linear optimization inequality constrain matrix
@@ -36,40 +34,37 @@ function varargout = guihist(data, kwargs)
 %   ub:             [1×k doule]                     - upper bpund of parameters
 %   mb:             [1×2 doule]                     - scale range of auto constrains
 %   disp:           [1×1 logical]                   - display of optimization result 
-
-%   mean1:          [1×2 double]         - constraints of mean value the first mode
-%   mode1:          [1×2 double]         - constraints of mode value the first mode
-%   var1:           [1×2 double]         - constraints of variance value the first mode
-%   amp1:           [1×2 double]         - constraints of amplitude value the first mode
-%   mean2:          [1×2 double]         - constraints of mean value the second mode
-%   mode2:          [1×2 double]         - constraints of mode value the second mode
-%   var2:           [1×2 double]         - constraints of variance value the second mode
-%   amp2:           [1×2 double]         - constraints of amplitude value the second mode
-
+%   mean1:          [1×2 double]                    - constraints of mean value the first mode
+%   mode1:          [1×2 double]                    - constraints of mode value the first mode
+%   var1:           [1×2 double]                    - constraints of variance value the first mode
+%   amp1:           [1×2 double]                    - constraints of amplitude value the first mode
+%   mean2:          [1×2 double]                    - constraints of mean value the second mode
+%   mode2:          [1×2 double]                    - constraints of mode value the second mode
+%   var2:           [1×2 double]                    - constraints of variance value the second mode
+%   amp2:           [1×2 double]                    - constraints of amplitude value the second mode
 %   quantile:       [1×1 double]                    - quantile threshold
-
 %% The function returns following results:
 %   getdata:        [function_handle]               - return cells stored raw or distribution
 %% Examples:
-%% show histogram by specific realization with default parameters
+%% 1. Show histogram by specific realization with default parameters:
 % guihist(data.dwdlf(:,:,1));
-%% show histogram by all realization with default parameters (ndim(data.dwdlf) = 3)
+%% 2. Show histogram by all realization with default parameters (ndim(data.dwdlf) = 3):
 % guihist(data.dwdlf);
-%% show histograms by all realization by two selection regions
+%% 3. Show histograms by all realization by two selection regions:
 % guihist(gca, data.dwdlf, number = 2);
-%% get raw data selected by gui
+%% 4. Get raw data selected by gui:
 % gd = guihist(data.dwdlf);
 % probe = gd();
-%% get raw data selected by two regions
+%% 5. Get raw data selected by two regions:
 % gd = guihist(gca, data.dwdlf, number = 2);
 % probes = gd();
 % probe{1} = probes{1};
 % probe{2} = probes{2};
-%% show histogram by all realization with custom parameters, pdf is fitted by 'beta1' distribution, by solver fmincon with l2 norm and lower and upper constrains
+%% 6. Show histogram by all realization with custom parameters, pdf is fitted by 'beta1' distribution, by solver fmincon with l2 norm and lower and upper constrains:
 % guihist(data.dwdlf, mask = [25, 220, 25, 25], ...
 %     distname = 'beta1', objnorm = 2, lb = [1, 0, 0, 1, 1], ...
 %     ub = [1, 1e2, 0, 2e1, 1e4], norm = 'pdf', xlim = [0, 0.01], disp = true, cdf = true);
-%% show histogram by all realization with custom parameters, pdf is fitted by 'beta2' distribution, by solver fmincon with l2 norm and lower, upper and non-linear constrains
+%% 7. Show histogram by all realization with custom parameters, pdf is fitted by 'beta2' distribution, by solver fmincon with l2 norm and lower, upper and non-linear constrains:
 % % description of 'beta2':
 % % f1 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f1 = @(a, x) f1(a(1:3), x);
 % % f2 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f2 = @(a, x) f2(a(4:end), x);
@@ -267,9 +262,9 @@ function varargout = guihist(data, kwargs)
                             label = 'lam.';
                         case 2
                             label = 'turb.';
+                        otherwise
+                            label = num2str(j);
                     end
-                    % plot(ax{1}, edges_fit, modes(:, j), ...
-                    %     'DisplayName', strcat("mode", num2str(j), " ", num2str(i)))
                     plot(ax{1}, edges_fit, modes(:, j), 'DisplayName', label)
                 else
                     plot(ax{1}, edges_fit, modes(:, j), mode_markers{j}, 'Color', rois{i}.UserData.color, ...
@@ -311,9 +306,9 @@ function varargout = guihist(data, kwargs)
                                 label = 'lam.';
                             case 2
                                 label = 'turb.';
+                            otherwise
+                                label = num2str(j);
                         end
-                        % plot(ax{2}, edges_fit, cdf(:, j), ...
-                        %     'DisplayName', strcat("mode", num2str(j), " ", num2str(i)))
                         plot(ax{2}, edges_fit, cdf(:, j), 'DisplayName', label)
                     else
                         plot(ax{2}, edges_fit, cdf(:, j), mode_markers{j}, 'Color', rois{i}.UserData.color, ...
@@ -374,7 +369,6 @@ function varargout = guihist(data, kwargs)
     else
         clf;
     end
-    % tiledlayout(2, 2);
     tiledlayout('flow');
     nexttile; axroi = gca; 
     switch disp_type
@@ -383,7 +377,6 @@ function varargout = guihist(data, kwargs)
         case 'spatial'
             hold(axroi, 'on'); grid(axroi, 'on'); box(axroi, 'on');
             contourf(axroi, kwargs.x, kwargs.z, data(:,:,1), 100, 'LineStyle', 'None'); 
-            % surf(axroi, kwargs.x, kwargs.z, data(:,:,1), 'LineStyle', 'None'); 
             xlabel('x, mm'); ylabel('z, mm');
             xlim([min(kwargs.x(:)), max(kwargs.x(:))]);
             ylim([min(kwargs.z(:)), max(kwargs.z(:))]);
@@ -401,7 +394,7 @@ function varargout = guihist(data, kwargs)
     if kwargs.cumsum
         nexttile; ax{3} = gca;
     end
-    rois = guiselectregion(axroi, @event, shape = kwargs.shape, ...
+    rois = guiselectregion(axroi, moved = @event, shape = kwargs.shape, ...
         mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);
 
     if ~isempty(kwargs.title)
