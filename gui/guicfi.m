@@ -28,7 +28,7 @@ function getdata = guicfi(kwargs)
 %   display:            [char array]        - display stady and/or travel modes plots
 %   docked:             [1×1 logical]       - docked figure
 %   colormap:           [char array]        - colormap of 2D field
-%   normvelprof:        [1×1 logical]       - to norm velocity profiles
+%   normvel:            [1×1 logical]       - to norm velocity profiles
 %% Examples
 %% process amplitude profiles of steady and travel modes by custom integration limits in two frames
 % guicfi(data = data, mask = [200, 100, 100, 200], number = 2, intlim = [30, 30, 50, 50]);
@@ -74,18 +74,24 @@ function getdata = guicfi(kwargs)
         %% preprocessing parameters
         kwargs.fillmissmeth (1,:) char {mustBeMember(kwargs.fillmissmeth, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'none'
         kwargs.prefilter (1,:) char {mustBeMember(kwargs.prefilter, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'gaussian'
-        kwargs.prefiltkernel double = [3, 3]
+        kwargs.prefiltker double = [3, 3]
         %% spectra processing parameters
         kwargs.normspec (1,:) char {mustBeMember(kwargs.normspec, {'none', 'psd'})} = 'psd'
         kwargs.shift logical = true
         kwargs.center (1,:) char {mustBeMember( kwargs.center, {'poly11', 'mean'})} = 'poly11'
         kwargs.winfun char {mustBeMember(kwargs.winfun, {'none', 'hann', 'hamming', 'tukey'})} = 'hann'
         kwargs.intlim double = []
+        %% amplitude processing parameters
+        kwargs.ampfilt (1,:) char {mustBeMember(kwargs.ampfilt, {'movmean', 'movmedian', 'gaussian', 'lowess', 'loess', 'rlowess', 'rloess', 'sgolay'})} = 'movmean'
+        kwargs.ampfiltker (1,1) double = 3
         kwargs.normamp (1,:) char {mustBeMember(kwargs.normamp, {'none', 'u0', 'ue'})} = 'ue'
         kwargs.u0 (1,1) double = 25
-        %% postprocessing parameters
-        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'movmean', 'movmedian', 'gaussian', 'lowess', 'loess', 'rlowess', 'rloess', 'sgolay'})} = 'movmean'
-        kwargs.postfiltker double = 3
+        kwargs.y0 double = []
+        kwargs.yt double = []
+        %% average velocity processing parameters
+        kwargs.velfilt (1,:) char {mustBeMember(kwargs.velfilt, {'movmean', 'movmedian', 'gaussian', 'lowess', 'loess', 'rlowess', 'rloess', 'sgolay'})} = 'movmean'
+        kwargs.velfiltker double = 3
+        kwargs.normvel logical = true
         %% roi and axis parameters
         kwargs.disptype (1,:) char {mustBeMember(kwargs.disptype, {'node', 'spatial'})} = 'spatial'
         kwargs.yi double = 1
@@ -100,79 +106,102 @@ function getdata = guicfi(kwargs)
         kwargs.display (1,:) char {mustBeMember(kwargs.display, {'steady', 'travel', 'steady-travel'})} = 'steady-travel'
         kwargs.docked logical = true
         kwargs.colormap (1,:) char = 'turbo'
-        kwargs.normvelprof logical = true
         kwargs.showvelavg logical = false
         kwargs.showvelprof logical = true
+        kwargs.legend logical = true
         kwargs.guitype (1,:) char {mustBeMember(kwargs.guitype, {'figure', 'uifigure'})} = 'figure'
     end
 
     warning off;
 
-    % matrices parsing of spatial coordinates and velocity fields
-    if isempty(kwargs.data)
-        vm = kwargs.vm;
-        x = kwargs.x;
-        z = kwargs.z;
-        y = 1:size(vm, 4);
-    else
-        vm = hypot(kwargs.data.u, kwargs.data.w);   
-        x = kwargs.data.x;
-        z = kwargs.data.z;
-        if isfield(kwargs.data, 'y')
-            y = kwargs.data.y;
-        else
-            y = 1:size(vm, 4);
-        end
-    end
-    
-    vmm = squeeze(mean(vm, 3)); 
-    sz = size(vm);
-    if isempty(x) && isempty(z); kwargs.disptype = 'node'; end
-
+    x = []; z = []; yn = []; vm = []; sz = []; ds = []; vmm = [];
     alpha = [];
     beta = [];
     ue = [];
     positions = [];
-
-    % fillmissing
-    if kwargs.fillmissmeth ~= "none"
-        for i = 1:prod(sz(3:end)); vm(:,:,i) = fillmissing2(vm(:,:,i), kwargs.fillmissmeth); end
-        vm = reshape(vm, sz);
-    end
-
-    % prefiltering
-    switch kwargs.prefilter
-        case 'average'
-            kernel = fspecial(kwargs.prefilter, kwargs.prefiltkernel);
-            vm = imfilter(vm, kernel);
-        case 'gaussian'
-            kernel = fspecial(kwargs.prefilter, kwargs.prefiltkernel);
-            vm = imfilter(vm, kernel);
-        case 'median'
-            kernel = kwargs.prefiltkernel;
-            for i = 1:prod(sz(3:end)); vm(:, :, i) = medfilt2(vm(:, :, i), kernel); end
-        case 'wiener'
-            kernel = kwargs.prefiltkernel;
-            for i = 1:prod(sz(3:end)); vm(:, :, i) = wiener2(vm(:, :, i), kernel); end
-    end
+    xn = 1:kwargs.number;
 
     colors = {[0 0.4470 0.7410], [0.8500 0.3250 0.0980], [0.9290 0.6940 0.1250], [0.4940 0.1840 0.5560], ...
         [0.4660 0.6740 0.1880], [0.3010 0.7450 0.9330], [0.6350 0.0780 0.1840]};
 
+    selectraw = []; selectx = [];
     raw = [];
     specstead = []; spectrav = [];
     velavg = []; velavgs = [];
     amps = []; ampss = []; ampt = []; ampts = [];
     ampsinc = []; amptinc = [];
+    ampss_ft = []; ampts_ft = [];
 
     roispec = {};
 
-    % choose select ROI method
-    switch kwargs.disptype
-        case 'node'
-            selectraw = @(roiobj) guigetdata(roiobj, vm, shape = 'cut');
-        case 'spatial'
-            selectraw = @(roiobj) guigetdata(roiobj, vm, shape = 'cut', x = x, z = z);
+    function prepdata()
+        % matrices parsing of spatial coordinates and velocity fields
+        if isempty(kwargs.data)
+            vm = kwargs.vm;
+            x = kwargs.x;
+            z = kwargs.z;
+            yn = 1:size(vm, 4);
+        else
+            vm = hypot(kwargs.data.u, kwargs.data.w);   
+            sz = size(vm);
+            switch kwargs.disptype
+                case 'node'
+                    [x, z] = meshgrid(1:sz(1), 1:sz(2));
+                case 'spatial'
+                    x = kwargs.data.x;
+                    z = kwargs.data.z;
+                    ds = abs([x(1,1)-x(1,2), z(1,1)-z(2,1)]);
+            end
+            if isfield(kwargs.data, 'y')
+                yn = kwargs.data.y;
+            else
+                yn = 1:size(vm, 4);
+            end
+        end
+    
+        if isempty(kwargs.y0)
+            kwargs.y0 = zeros(1, kwargs.number);
+        end
+        
+        vmm = squeeze(mean(vm, 3)); 
+        sz = size(vm);
+    
+        if isempty(x) && isempty(z)
+            kwargs.disptype = 'node'; 
+            [x, z] = ngrid(1:sz(2), 1:sz(1));
+        end
+    
+        % fillmissing
+        if kwargs.fillmissmeth ~= "none"
+            for i = 1:prod(sz(3:end)); vm(:,:,i) = fillmissing2(vm(:,:,i), kwargs.fillmissmeth); end
+            vm = reshape(vm, sz);
+        end
+    
+        % prefiltering
+        switch kwargs.prefilter
+            case 'average'
+                kernel = fspecial(kwargs.prefilter, kwargs.prefiltker);
+                vm = imfilter(vm, kernel);
+            case 'gaussian'
+                kernel = fspecial(kwargs.prefilter, kwargs.prefiltker);
+                vm = imfilter(vm, kernel);
+            case 'median'
+                kernel = kwargs.prefiltker;
+                for i = 1:prod(sz(3:end)); vm(:, :, i) = medfilt2(vm(:, :, i), kernel); end
+            case 'wiener'
+                kernel = kwargs.prefiltker;
+                for i = 1:prod(sz(3:end)); vm(:, :, i) = wiener2(vm(:, :, i), kernel); end
+        end
+    
+        % choose select ROI method
+        switch kwargs.disptype
+            case 'node'
+                selectraw = @(roiobj) guigetdata(roiobj, vm, shape = 'cut', permute = [2, 1]);
+                selectx = @(roiobj) guigetdata(roiobj, x, shape = 'cut', permute = [2, 1]);
+            case 'spatial'
+                selectraw = @(roiobj, s) guigetdata(roiobj, vm, shape = 'cut', size = s, x = x, z = z, permute = [1, 2]);
+                selectx = @(roiobj, s) guigetdata(roiobj, x, shape = 'cut', size = s, x = x, z = z, permute = [1, 2]);
+        end
     end
 
     %% process spectra of steady and travel modes
@@ -264,7 +293,7 @@ function getdata = guicfi(kwargs)
             imagesc(ax, spec(:,:,kwargs.yi,kwargs.xi));
             axis(ax, 'equal')
         else
-            contourf(ax, alpha, beta, spec(:,:,kwargs.yi,kwargs.xi), 50, 'LineStyle', 'None');
+            contourf(ax, alpha, beta, spec(:,:,kwargs.yi,kwargs.xi), 100, 'LineStyle', 'None');
             axis(ax, 'image');
         end
         clb = colorbar(ax); colormap(ax, kwargs.colormap); 
@@ -281,12 +310,30 @@ function getdata = guicfi(kwargs)
 
     %% event function called when the velocity field selection rectangle is moved
     function eventroisel(~, ~)
-        try
+        % try
             disp("guicfi: event ROI selection is running")
             raw = []; % accumulate data
-            for i = 1:length(rois); raw = cat(5, raw, selectraw(rois{i})); end
+            xn = [];
+            switch kwargs.disptype
+                case 'node'
+                    for i = 1:length(rois)
+                        raw = cat(5, raw, selectraw(rois{i})); 
+                        xn = cat(1, xn, mean(selectx(rois{i}), [1, 2]));
+                    end
+                case 'spatial'
+                    for i = 1:length(rois)
+                        s = round(rois{1}.Position(1,3:end)./ds);
+                        raw = cat(5, raw, selectraw(rois{i}, s)); 
+                        xn = cat(1, xn, mean(selectx(rois{i}, s), [1, 2]));
+                    end
+            end
+
+            if kwargs.showvelavg
+                plot_velavg(axvelavg, raw)
+            end
+
             [specstead, spectrav, ~, velavg, alpha, beta, ue] = specproc(raw);
-            if kwargs.normvelprof; velavg = velavg ./ max(velavg, [], 1); end
+            if kwargs.normvel; velavg = velavg ./ max(velavg, [], 1); end
             switch kwargs.display
                 case 'steady'
                     plot_spec(axspecs, specstead, 'steady', alpha, beta)
@@ -297,21 +344,28 @@ function getdata = guicfi(kwargs)
                     plot_spec(axspect, spectrav, 'travel', alpha, beta)
             end
             initspecsel();
-        catch
-            disp("guicfi: event ROI selection is failed")
-        end
+        % catch
+        %     disp("guicfi: event ROI selection is failed")
+        % end
     end
 
     %% event function called when the spectrum field selection rectangle is moved
     function eventintspec(~, ~)
         kwargs.intlim = roispec{1}.Position;
 
-        specsteadprobe = guigetdata(roispec{1}, specstead, shape = 'cut', x = alpha, z = beta);
-        spectravprobe = guigetdata(roispec{1}, spectrav, shape = 'cut', x = alpha, z = beta);
+        switch kwargs.disptype
+            case 'node'
+                prm = [2, 1];
+            case 'spatial'
+                prm = [1, 2];
+        end
+
+        specsteadprobe = guigetdata(roispec{1}, specstead, shape = 'cut', x = alpha, z = beta, permute = prm);
+        spectravprobe = guigetdata(roispec{1}, spectrav, shape = 'cut', x = alpha, z = beta, permute = prm);
         amps = squeeze(sqrt(sum(specsteadprobe, [1, 2])));
         ampt = squeeze(sqrt(sum(spectravprobe, [1, 2])));
 
-        velavgs = smoothdata(velavg, 1, kwargs.postfilt, kwargs.postfiltker);
+        velavgs = smoothdata(velavg, 1, kwargs.velfilt, kwargs.velfiltker);
 
         switch kwargs.normamp
             case 'u0'
@@ -322,11 +376,25 @@ function getdata = guicfi(kwargs)
                 ampt = ampt./ue;
         end
 
-        ampss = smoothdata(amps, 1, kwargs.postfilt, kwargs.postfiltker);
+        ampss = smoothdata(amps, 1, kwargs.ampfilt, kwargs.ampfiltker);
         ampsinc = max(ampss, [], 1);
 
-        ampts = smoothdata(ampt, 1, kwargs.postfilt, kwargs.postfiltker);
-        amptinc = max(ampts, [], 1);
+        ampts = smoothdata(ampt, 1, kwargs.ampfilt, kwargs.ampfiltker);
+
+        for i = 1:kwargs.number
+            [yf, af] = prepareCurveData(yn+kwargs.y0(i), ampss(:,i));
+            ampss_ft{i} = fit(yf, af, 'linearinterp');
+            [yf, af] = prepareCurveData(yn+kwargs.y0(i), ampts(:,i));
+            ampts_ft{i} = fit(yf, af, 'linearinterp');
+        end
+
+        if isempty(kwargs.yt)
+            amptinc = max(ampts, [], 1);
+        else
+            for i = 1:kwargs.number
+                amptinc(i) = ampts_ft{i}(kwargs.yt);
+            end
+        end
 
         switch kwargs.display
             case 'steady'
@@ -336,10 +404,6 @@ function getdata = guicfi(kwargs)
             case 'steady-travel'
                 plot_amp(axamps, amps, ampss, velavg, velavgs, 'steady')
                 plot_amp(axampt, ampt, ampts, velavg, velavgs, 'travel')
-        end
-
-        if kwargs.showvelavg
-            plot_vel(axvelavg, velavgs)
         end
 
         plot_ampgrowth();
@@ -356,14 +420,18 @@ function getdata = guicfi(kwargs)
 
     function plot_amp(ax, amp_raw, amp_smooth, velavg_raw, velavg_smooth, label)
         cla(ax); hold(ax, 'on'); grid(ax, 'on'); box(ax, 'on');
-        yyaxis(ax, 'left'); set(ax, 'YColor', 'Black'); cla(ax);
+        yyaxis(ax, 'left'); set(ax, 'YColor', 'Black'); cla(ax); plt = [];
         for i = 1:size(amp_raw, 2)
             j = rem(i, numel(colors));
             if j == 0; j = 1; end
-            plot(ax, y, amp_raw(:,j), '.-', 'Color', [colors{j}, 0.4]); 
-            plot(ax, y, amp_smooth(:,j), '.-', 'Color', colors{j});
+            plot(ax, yn+kwargs.y0(i), amp_raw(:,j), '.-', 'Color', [colors{j}, 0.4]); 
+            plt(i) = plot(ax, yn+kwargs.y0(i), amp_smooth(:,j), '.-', 'Color', colors{j}, 'DisplayName', num2str(round(xn(i))));
         end
-        xlabel(ax, 'y_n'); 
+        if isfield(kwargs.data, 'y')
+            xlabel(ax, 'y, mm'); 
+        else
+            xlabel(ax, 'y_n'); 
+        end
         switch kwargs.normamp
             case 'u0'
                 ylabel(ax, 'A_{rms}/u_{0}');
@@ -377,30 +445,48 @@ function getdata = guicfi(kwargs)
             for i = 1:size(velavg_raw, 2)
                 j = rem(i, numel(colors));
                 if j == 0; j = 1; end
-                plot(ax, y, velavg_raw(:,j), '.-', 'Color', [colors{j}, 0.4]); 
-                plot(ax, y, velavg_smooth(:,j), '.-', 'Color', colors{j});
+                plot(ax, yn+kwargs.y0(i), velavg_raw(:,j), '.-', 'Color', [colors{j}, 0.4]); 
+                plot(ax, yn+kwargs.y0(i), velavg_smooth(:,j), '.-', 'Color', colors{j});
             end
         end
-        ylabel(ax, 'u, m/s'); set(ax, 'YColor', 'Black')
+        if kwargs.normvel
+            ylabel(ax, 'u/u_{e}');
+        else
+            ylabel(ax, 'u, m/s');
+        end
+        set(ax, 'YColor', 'Black')
         title(ax, label, 'FontWeight', 'Normal');
+        if kwargs.legend
+            lgd = legend(ax, plt);
+            switch kwargs.disptype
+                case 'node'
+                    title(lgd, 'x_{n}', 'FontWeight', 'Normal')
+                case 'spatial'
+                    title(lgd, 'x, mm', 'FontWeight', 'Normal')
+            end
+        end
     end
 
-    function plot_vel(ax, velavgs)
-        cla(ax); hold(ax, 'on'); grid(ax, 'on'); box(ax, 'on');
-        for i = 1:size(velavgs, 2)
-            j = rem(i, numel(colors));
-            if j == 0; j = 1; end
-            plot(ax, velavgs(:,j), '.-', 'Color', colors{j});
-        end
-        xlabel(ax, 'y_n'); ylabel(ax, 'u, m/s');
+    function plot_velavg(ax, vel)
+        velavg = squeeze(mean(vel, 3));
+        cla(ax);
+        imagesc(ax, velavg(:, :, kwargs.yi, kwargs.xi)); axis(ax, 'equal');
+        box(ax, 'on'); grid(ax, 'on'); 
+        xlabel(ax, 'x_n'); ylabel(ax, 'z_n');
     end
 
     function plot_ampgrowth()
         cla(axampinc); hold(axampinc, 'on'); grid(axampinc, 'on'); box(axampinc, 'on');
         set(axampinc, 'YScale', kwargs.scaleampinc);
-        plot(axampinc, ampsinc, '.-', 'DisplayName', 'steady');
-        plot(axampinc, amptinc, '.-', 'DisplayName', 'travel');
-        xlabel(axampinc, 'x_n'); ylabel(axampinc, 'max(amp)');
+        plot(axampinc, xn, ampsinc, '.-', 'DisplayName', 'steady');
+        plot(axampinc, xn, amptinc, '.-', 'DisplayName', 'travel');
+        switch kwargs.disptype
+            case 'node'
+                xlabel(axampinc, 'x_n'); 
+            case 'spatial'
+                xlabel(axampinc, 'x, mm'); 
+        end
+        ylabel(axampinc, 'max(amp)');
         title(axampinc, 'increment', 'FontWeight', 'Normal');
         legend(axampinc);
     end
@@ -421,60 +507,91 @@ function getdata = guicfi(kwargs)
         end
     end
 
+    function init_tab_param(tab_struct, tab_obj)
+        labels = {};
+        values = {};
+        fn = fieldnames(tab_struct);
+        for i = 1:size(fn, 1)
+            label= char(fn{i});
+            value = tab_struct.(label);
+            if isa(value, 'categorical')
+                value = tab_struct.(label);
+            end
+            if isa(value, 'double')
+                value = char(jsonencode(tab_struct.(label)));
+            end
+            labels{i, 1} = label; 
+            values{i, 1} = value;
+        end
+        dtable = table(labels, values);
+        tab_obj.Data = dtable;
+        tab_obj.ColumnEditable = [false, true];
+    end
+
     function savefigure(~, ~)
         [file, path, ~] = uiputfile('*.png*', 'File Selection', 'figure.png');
-        exportgraphics(t, fullfile(path, file), Resolution = 600)
+        exportgraphics(tile, fullfile(path, file), Resolution = 600)
     end
+
+    function data = getdatafunc()
+        if isempty(positions)
+            mask = kwargs.mask;
+        else
+            mask = num2cell(positions, 2);
+        end
+        data = struct('alpha', alpha, 'beta', beta, 'specstead', specstead, 'spectrav', spectrav, ...
+            'velavg', velavg, 'amps', amps, 'ampt', ampt, 'ampss', ampss, 'ampts', ampts, ...
+            'xn', xn, 'intlim', kwargs.intlim, 'ampsinc', ampsinc, 'amptinc', amptinc, 'y0', kwargs.y0, 'yt', kwargs.yt);
+        data.mask = mask;
+    end
+
+    function plotprepdata()
+        cla(axroi);
+        switch kwargs.disptype
+            case 'node'
+                imagesc(axroi, vmm(:,:,kwargs.yi));
+            case 'spatial'
+                contourf(axroi, x, z, vmm(:,:,kwargs.yi), 100, 'LineStyle', 'None');
+                box(axroi, 'on'); grid(axroi, 'on'); 
+        end
+        axis(axroi, kwargs.aspect);
+        colormap(axroi, kwargs.colormap);
+        if ~isempty(kwargs.climvel); clim(axroi, kwargs.climvel); end
+        switch kwargs.disptype
+            case 'node'
+                xlabel(axroi, 'x_n'); ylabel(axroi, 'z_n');
+            case 'spatial'
+                xlabel(axroi, 'x, mm'); ylabel(axroi, 'z, mm');
+        end
+    end
+
+    function preproccelleditcallback(~, ~)
+        prepdata();
+        plotprepdata();
+    end
+
+    prepdata()
 
     switch kwargs.guitype
         case 'figure'
             if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
-            tiledlayout('flow'); nexttile; axroi = gca;
-            box(axroi, 'on'); grid(axroi, 'on'); 
-            switch kwargs.disptype
-                case 'node'
-                    imagesc(axroi, vmm(:,:,kwargs.yi));
-                case 'spatial'
-                    contourf(axroi, x, z, vmm(:,:,kwargs.yi), 50, 'LineStyle', 'None');
-            end
-            axis(axroi, kwargs.aspect);
-            colormap(axroi, kwargs.colormap);
-            if ~isempty(kwargs.climvel); clim(axroi, kwargs.climvel); end
-            switch kwargs.disptype
-                case 'node'
-                    xlabel(axroi, 'x_n'); ylabel(axroi, 'z_n');
-                case 'spatial'
-                    xlabel(axroi, 'x, mm'); ylabel(axroi, 'z, mm');
-            end
-        
-            switch kwargs.display
-                case 'steady'
-                    nexttile; axspecs = gca;
-                    nexttile; axamps = gca;
-                case 'travel'
-                    nexttile; axspect = gca;
-                    nexttile; axampt = gca;
-                case 'steady-travel'
-                    nexttile; axspecs = gca;
-                    nexttile; axspect = gca;
-                    nexttile; axamps = gca;
-                    nexttile; axampt = gca;
-            end
-        
-            if kwargs.showvelavg
-                nexttile; axvelavg = gca;
-            end
-        
-            nexttile; axampinc = gca;
-
-            rois = guiselectregion(axroi, moved = @eventroisel, moving = @eventroiselmoving, shape = 'rect', ...
-                mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);
-
-            eventroisel();
+            tile = tiledlayout('flow'); 
         case 'uifigure'
             fig = uifigure;
+            fig.WindowState = 'maximized';
             gridApp = uigridlayout(fig);
             gridApp.RowHeight = {'1x', 'fit', 'fit'}; gridApp.ColumnWidth = {'1x', 'fit'};
+
+            tablepreproc = uitable(gridApp);
+            tablepreproc.Layout.Row = 1;
+            tablepreproc.Layout.Column = 2;
+
+            preprocparam = struct('fillmissmeth', categorical({'none'}, {'none'; 'linear'; 'nearest'; 'natural'; 'cubic'; 'v4'}), ...
+                'prefilt',  categorical({'none'}, {'none'; 'average'; 'gaussian'; 'median'; 'wiener'}), 'prefiltker', kwargs.prefiltker);
+
+            init_tab_param(preprocparam, tablepreproc);
+
+            tablepreproc.CellEditCallback = @preproccelleditcallback;
             
             buttonProcess = uibutton(gridApp, Text = 'Process', ButtonPushedFcn = @eventroisel);
             buttonProcess.Layout.Row = 2;
@@ -487,53 +604,58 @@ function getdata = guicfi(kwargs)
             p = uipanel(gridApp);
             p.Layout.Row = [1, 3];
             p.Layout.Column = 1;
-            
-            
-            t = tiledlayout(p, 'flow');
-            
-            axroi = nexttile(t);
-            box(axroi, 'on'); grid(axroi, 'on'); 
-            switch kwargs.disptype
-                case 'node'
-                    imagesc(axroi, vmm(:,:,kwargs.yi));
-                case 'spatial'
-                    contourf(axroi, x, z, vmm(:,:,kwargs.yi), 50, 'LineStyle', 'None');
-            end
-            axis(axroi, kwargs.aspect);
-            colormap(axroi, kwargs.colormap);
-            if ~isempty(kwargs.climvel); clim(axroi, kwargs.climvel); end
-            switch kwargs.disptype
-                case 'node'
-                    xlabel(axroi, 'x_n'); ylabel(axroi, 'z_n');
-                case 'spatial'
-                    xlabel(axroi, 'x, mm'); ylabel(axroi, 'z, mm');
-            end
-        
-            switch kwargs.display
-                case 'steady'
-                    axspecs = nexttile(t);
-                    axamps = nexttile(t);
-                case 'travel'
-                    axspect = nexttile(t);
-                    axampt = nexttile(t);
-                case 'steady-travel'
-                    axspecs = nexttile(t);
-                    axamps = nexttile(t);
-                    axspect = nexttile(t);
-                    axampt = nexttile(t);
-            end
-        
-            if kwargs.showvelavg
-                axvelavg = nexttile(t);
-            end
-        
-            axampinc = nexttile(t);
+                
+            tile = tiledlayout(p, 'flow');
+    end
 
+    axroi = nexttile(tile);
+    switch kwargs.disptype
+        case 'node'
+            imagesc(axroi, vmm(:,:,kwargs.yi));
+        case 'spatial'
+            contourf(axroi, x, z, vmm(:,:,kwargs.yi), 100, 'LineStyle', 'None');
+            box(axroi, 'on'); grid(axroi, 'on'); 
+    end
+    axis(axroi, kwargs.aspect);
+    colormap(axroi, kwargs.colormap);
+    if ~isempty(kwargs.climvel); clim(axroi, kwargs.climvel); end
+    switch kwargs.disptype
+        case 'node'
+            xlabel(axroi, 'x_n'); ylabel(axroi, 'z_n');
+        case 'spatial'
+            xlabel(axroi, 'x, mm'); ylabel(axroi, 'z, mm');
+    end
+
+    switch kwargs.display
+        case 'steady'
+            axspecs = nexttile(tile);
+            axamps = nexttile(tile);
+        case 'travel'
+            axspect = nexttile(tile);
+            axampt = nexttile(tile);
+        case 'steady-travel'
+            axspecs = nexttile(tile);
+            axamps = nexttile(tile);
+            axspect = nexttile(tile);
+            axampt = nexttile(tile);
+    end
+
+    if kwargs.showvelavg
+        axvelavg = nexttile(tile);
+    end
+
+    axampinc = nexttile(tile);
+
+    switch kwargs.guitype
+        case 'figure'
+            rois = guiselectregion(axroi, moved = @eventroisel, moving = @eventroiselmoving, shape = 'rect', ...
+                mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);
+            eventroisel();
+        case 'uifigure'
             rois = guiselectregion(axroi, moving = @eventroiselmoving, shape = 'rect', ...
                 mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);
     end
 
-    getdata = @() struct('alpha', alpha, 'beta', beta, 'specstead', specstead, 'spectrav', spectrav, ...
-        'velavg', velavg, 'amps', amps, 'ampt', ampt, 'ampss', ampss, 'ampts', ampts, 'mask', {num2cell(positions, 2)});
+    getdata = @getdatafunc;
 
 end

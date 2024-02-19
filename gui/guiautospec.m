@@ -1,27 +1,38 @@
-function rois = guiautospec(data, kwargs)
-%% Visualize auto-correlation function of selected by rectangle ROI data.
+function getdata = guiautospec(data, kwargs)
+%% Visualize auto-spectrum function of selected by rectangle ROI data.
 %% The function takes following arguments:
 %   data:           [n×m double]                    - matrix data
-%   mask:           [1×2 double]                    - size of rectangle selection
+%   x:              [n×m double]                    - longitudinal spatial coordinate
+%   y:              [n×m double]                    - transversal spatial coordinate
+%   norm:           [char array]                    - norm spectrum
+%   center:         [char array]                    - center spectrum
+%   mask:           [1×2 double]                    - location and size of rectangle selection
 %   interaction:    [char array]                    - region selection behaviour: 'translate', 'all' (see ROI object) 
-%   aspect:         [char array]                    - axis aspect ratio: 'equal', 'auto' 
+%   aspect:         [char array]                    - axis aspect ratio
 %   clim:           [1×2 double]                    - color axis limit
 %   cscale:         [char array]                    - colormap scale
 %   display:        [char array]                    - display type: 'imagesc', 'surf'
 %   docked:         [1×1 logical]                   - docker figure
-%   colormap:       [char array]                    - colormap
+%   colormap:       [char array]                    - colormap of color axis
+%   title:          [char array]                    - figure title
+%   filename:       [char array]                    - filename to save figure
+%   extension:      [char array]                    - extension of saved figure
+%   unit:           [char array]                    - label axis unit
 %% The function returns following results:
-%   rois:           [object]                        - ROI cell objects
+%   getdata:        [function handle]               - function returning the last spectrum processing
 %% Examples
 %% 1. Show auto-spectra of signal with default parameters:
 % guiautospec(data);
-%% 2. Show auto-correlation of signal with custom parameters:
-% guiautospec(data, mask = [100, 150, 25, 25], display = 'surf', clim = [0, 1], aspect = 'auto');
+%% 2. Show auto-spectra of signal with custom parameters:
+% guiautospec(data, mask = [100, 150, 25, 25], display = '2d', clim = [0, 1], aspect = 'auto', center = 'none');
         
     arguments
         data double
         kwargs.x double = []
         kwargs.y double = []
+        %% spectra processing parameters
+        kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'none', 'psd'})} = 'psd'
+        kwargs.center (1,:) char {mustBeMember( kwargs.center, {'none', 'poly11', 'mean'})} = 'poly11'
         %% roi and axis parameters
         kwargs.mask (:,:) double = []
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
@@ -29,90 +40,120 @@ function rois = guiautospec(data, kwargs)
         kwargs.clim double = []
         kwargs.climspec double = []
         kwargs.cscale (1,:) char {mustBeMember(kwargs.cscale, {'linear', 'log'})} = 'log'
-        kwargs.display (1,:) char {mustBeMember(kwargs.display, {'imagesc', 'surf'})} = 'imagesc'
+        kwargs.display (1,:) char {mustBeMember(kwargs.display, {'2d', '3d'})} = '2d'
         kwargs.docked logical = false
         kwargs.colormap (1,:) char = 'turbo'
-        %% spectra processing parameters
-        kwargs.submean logical = true
+        kwargs.title = []
+        kwargs.filename (1, :) char = []
+        kwargs.extension (1, :) char = '.png'
+        kwargs.unit (1,:) char {mustBeMember(kwargs.unit, {'none', 'mm'})} = 'mm'
     end
 
+    raw = []; spec = []; xraw = []; yraw = []; fx = []; fy = [];
+
     if isempty(kwargs.x) && isempty(kwargs.y)
-        disp_type = 'node';
+        disptype = 'node'; 
+        [x, y] = meshgrid(1:size(data, 2), 1:size(data, 1));
     else
-        disp_type = 'spatial';
+        disptype = 'spatial';
+        x = kwargs.x; y = kwargs.y;
     end
 
     % define funtion handle to probe data
-    switch disp_type
+    switch disptype
         case 'node'
-            select = @(roiobj) guigetdata(roiobj, data, shape = 'cut');
+            select = @(roiobj) guigetdata(roiobj, data, shape = 'cut', permute = [2, 1]);
+            selectx = @(roiobj) guigetdata(roiobj, x, shape = 'cut', permute = [2, 1]);
+            selecty = @(roiobj) guigetdata(roiobj, y, shape = 'cut',permute = [2, 1]);
         case 'spatial'
-            select = @(roiobj) guigetdata(roiobj, data, shape = 'cut', ...
-                x = kwargs.x, z = kwargs.y);
+            select = @(roiobj) guigetdata(roiobj, data, shape = 'cut', x = x, z = y);
+            selectx = @(roiobj) guigetdata(roiobj, x, shape = 'cut', x = x, z = y);
+            selecty = @(roiobj) guigetdata(roiobj, y, shape = 'cut', x = x, z = y);
     end
 
     function event(~, ~)
-
-        frame = select(rois{1});  % extract data by gui
-        if kwargs.submean
-            frame = frame - mean(frame, [1, 2]);
-        end
-        frame = fftshift(abs(fft2(frame))); % process
-
-        switch disp_type
+        % extract data
+        frame = select(rois{1}); raw = frame;
+        xraw = selectx(rois{1}); yraw = selecty(rois{1});
+        % build frequency grid
+        switch disptype
             case 'node'
-                [f1, f2] = ngrid(1:size(frame, 2), 1:size(frame, 1));
+                [fx, fy] = meshgrid(1:size(frame, 2), 1:size(frame, 1));
+                dfdx = 1; dfdy = 1;
             case 'spatial'
                 xu = unique(kwargs.x); yu = unique(kwargs.y);
                 dx = xu(2)-xu(1);  dy = yu(2)-yu(1);
                 fdx = 1/dx; fdy = 1/dy;
-                
                 dfdx = fdx/size(frame, 2);
                 dfdy = fdy/size(frame, 1);
-                
-                f1 = -fdx/2+dfdx/2:dfdx:fdx/2-dfdx/2;
-                f2 = -fdy/2+dfdy/2:dfdy:fdy/2-dfdy/2;
-                
-                [f1, f2] = meshgrid(f1, f2);
+                fx = -fdx/2+dfdx/2:dfdx:fdx/2-dfdx/2;
+                fy = -fdy/2+dfdy/2:dfdy:fdy/2-dfdy/2;
+                [fx, fy] = meshgrid(fx, fy);
         end
-
+        % centering data
+        switch kwargs.center
+            case 'poly11'
+                [fxp, fyp, framep] = prepareSurfaceData(fx, fy, frame);
+                frameft = fit([fxp, fyp], framep, 'poly11');
+                frame = frame - frameft(fx, fy); 
+            case 'mean'
+                frame = frame - mean(frame, [1, 2]);
+        end
+        % process fft
+        frame = fftshift(fftshift(abs(fft2(frame)),1),2);
+        % norm spectrum
+        switch kwargs.norm
+            case 'psd'
+                frame = frame/dfdx/dfdy;
+        end
+        spec = frame;
         % display
         cla(ax); 
-        switch disp_type
+        switch kwargs.display
+            case '2d'
+                contourf(ax, fx, fy, frame, 100, 'LineStyle', 'None'); 
+            case '3d'
+                surf(ax, fx, fy, frame, 'LineStyle', 'None');
+        end
+        switch disptype
             case 'node'
-                switch kwargs.display
-                    case 'imagesc'
-                        imagesc(ax, frame); 
-                    case 'surf'
-                        surf(ax, frame, 'LineStyle', 'None');
-                end
+                xlabel(ax, 'f_{xn}'); ylabel(ax, 'f_{yn}');
             case 'spatial'
-                switch kwargs.display
-                    case 'contourf'
-                        contourf(ax, f1, f2, frame, 100, 'LineStyle', 'None'); 
-                    case 'surf'
-                        surf(ax, f1, f2, frame, 'LineStyle', 'None');
+                switch kwargs.unit
+                    case 'none'
+                        xlabel(ax, 'f_{x}'); ylabel(ax, 'f_{y}');
+                    case 'mm'
+                        xlabel(ax, 'f_{x}, mm^{-1}'); ylabel(ax, 'f_{y}, mm^{-1}');
                 end
         end
-
         colorbar(ax); colormap(ax, kwargs.colormap);
         set(ax, 'ColorScale', kwargs.cscale); 
         if ~isempty(kwargs.climspec); clim(ax, kwargs.climspec); end
-        % axis(ax, kwargs.aspect)
+        axis(ax, kwargs.aspect)
     end
 
-    if kwargs.docked
-        figure('WindowStyle', 'Docked')
-    else
-        clf;
+    function result = getdatafunc()
+        result = struct('raw', raw, 'x', xraw, 'y', yraw, 'spec', spec, 'fx', fx, 'fy', fy);
     end
-    tiledlayout('flow');
-    nexttile; axroi = gca; 
-    switch disp_type
+
+    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
+    tiledlayout('flow'); nexttile; axroi = gca; 
+    switch disptype
         case 'node'
             imagesc(axroi, data);
         case 'spatial'
-            contourf(axroi, kwargs.x, kwargs.y, data, 100, 'LineStyle', 'None'); 
+            contourf(axroi, x, y, data, 100, 'LineStyle', 'None'); 
+    end
+    switch disptype
+        case 'node'
+            xlabel(axroi, 'x_{n}'); ylabel(axroi, 'y_{n}');
+        case 'spatial'
+            switch kwargs.unit
+                case 'none'
+                    xlabel(axroi, 'x'); ylabel(axroi, 'y');
+                case 'mm'
+                    xlabel(axroi, 'x, mm'); ylabel(axroi, 'y, mm');
+            end
     end
     colormap(axroi, kwargs.colormap);
     axis(axroi, kwargs.aspect);
@@ -123,5 +164,16 @@ function rois = guiautospec(data, kwargs)
         mask = kwargs.mask, interaction = kwargs.interaction, number = 1);
 
     event();
+
+    if ~isempty(kwargs.title)
+        sgtitle(kwargs.title)
+    end
+
+    if ~isempty(kwargs.filename)
+        savefig(gcf, strcat(kwargs.filename, '.fig'))
+        exportgraphics(gcf, strcat(kwargs.filename, kwargs.extension), Resolution = 600)
+    end
+
+    getdata = @getdatafunc;
 
 end
