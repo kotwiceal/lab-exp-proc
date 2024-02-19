@@ -1,8 +1,7 @@
-function data = loadpiv(kwargs)
+function data = loadpiv(input, kwargs)
 %% Load .vc7 dataset by specified forder or filenames.
 %% The function takes following arguments:
-%   folder:             [char array]        - folder path
-%   filenames:          [k×l string]        - filenames array
+%   input:              [string array]      - folder path or filenames array
 %   subfolders:         [1×1 logical]       - search files in subfolders
 %   parallel:           [1×1 logical]       - parallel loading
 %   components:         [char array]        - return a structure with specified fields
@@ -24,23 +23,28 @@ function data = loadpiv(kwargs)
 %     w: [n×m×k×l double]
 %% Examples:
 %% 1. Load velocity fields from specified folder:
-% data = import_vc7(folder = '\LVExport\u25mps\y_00');
+% data = loadpiv('\LVExport\u25mps\y_00');
 %% 2. Load velocity fields from specified folder with subfolders:
-% data = import_vc7(folder = '\LVExport\u25mps\', subfolders = true);
+% data = loadpiv('\LVExport\u25mps\', subfolders = true);
 %% 3. Load velocity fields by specified filenames:
-% data = import_vc7(filenames = ["\LVExport\u25mps\y_00\B0001.vc7", "\LVExport\u25mps\y_00\B0002.vc7"]);
+% data = loadpiv(["\LVExport\u25mps\y_00\B0001.vc7", "\LVExport\u25mps\y_00\B0002.vc7"]);
 
     arguments
-        kwargs.folder (1,:) char = []
-        kwargs.filenames = []
+        input (:,:) string
         kwargs.subfolders logical = false
         kwargs.parallel logical = false
         kwargs.components (1,:) char {mustBeMember(kwargs.components, {'x-y,u-v', 'x-z,u-w'})} = 'x-z,u-w'
         
     end
 
-    if ~isempty(kwargs.folder)
-        kwargs.filenames = getfilenames(kwargs.folder, extension = 'vc7', subfolders = kwargs.subfolders);
+    if numel(input) == 1
+        if isfolder(input)
+            kwargs.filenames = getfilenames(input, extension = 'vc7', subfolders = kwargs.subfolders);
+        else
+            kwargs.filenames = input;
+        end
+    else
+        kwargs.filenames = input;
     end
 
     sz = size(kwargs.filenames);

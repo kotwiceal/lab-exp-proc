@@ -16,6 +16,8 @@ function result = guigetdata(roi, data, kwargs)
             kwargs.x double = []
             kwargs.z double = []
             kwargs.position double = []
+            kwargs.size double = []
+            kwargs.permute (1,2) double = [1, 2]
         end
         sz = size(data);
 
@@ -26,8 +28,11 @@ function result = guigetdata(roi, data, kwargs)
             pos = roi.Position;
             mask = [pos(1), pos(2); pos(1)+pos(3), pos(2); pos(1)+pos(3), pos(2)+pos(4); pos(1), pos(2)+pos(4)];
             index = inpolygon(kwargs.x(:), kwargs.z(:), mask(:, 1), mask(:, 2));
-            [r, c] = ind2sub(sz, find(index==1));
+            [r, c] = ind2sub(sz(1:2), find(index==1));
             kwargs.position = [min(r), min(c), max(r)-min(r), max(c)-min(c)];
+            if ~isempty(kwargs.size)
+                kwargs.position(3:end) = flip(kwargs.size);
+            end
         end
 
         if ~ismatrix(data)
@@ -39,13 +44,15 @@ function result = guigetdata(roi, data, kwargs)
                 data(~index) = nan;
                 result = data;
             case 'cut'
-                kwargs.position = floor(kwargs.position);
+                data = data(:,:,:);
+                data = permute(data, [kwargs.permute, 3]);
+                result = data(kwargs.position(1):kwargs.position(1)+kwargs.position(3), ...
+                    kwargs.position(2):kwargs.position(2)+kwargs.position(4), :);
+
                 if isempty(kwargs.x) && isempty(kwargs.z)
-                    result = data(kwargs.position(2):kwargs.position(2)+kwargs.position(4), ...
-                        kwargs.position(1):kwargs.position(1)+kwargs.position(3), :);
-                else
-                    result = data(kwargs.position(1):kwargs.position(1)+kwargs.position(3), ...
-                        kwargs.position(2):kwargs.position(2)+kwargs.position(4), :);
+                    if kwargs.permute == [2, 1]
+                        result = pagetranspose(result);
+                    end
                 end
                 result = reshape(result, [size(result, 1:2), sz(3:end)]);
             case 'flatten'
