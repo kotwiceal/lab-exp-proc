@@ -15,7 +15,8 @@ function varargout = dirgrad(u, w, angle, kwargs)
 %   dudn: [l×n×... double]
 %   dwdn: [l×n×... double]
 %% Example
-% data.dwdl = dirgrad(data.un, data.wn, deg2rad(-22), component = 'dwdl', diffilter = '4ord');
+% 1. Calculate a longitudinal derivative of transverse velocity component in rotated coordinate system
+% data.dwdl = dirgrad(data.u, data.w, deg2rad(-22), component = 'dwdl', diffilter = '4ord');
 
     arguments
         u double

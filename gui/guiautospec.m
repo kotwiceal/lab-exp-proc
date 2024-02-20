@@ -6,6 +6,7 @@ function getdata = guiautospec(data, kwargs)
 %   y:              [n×m double]                    - transversal spatial coordinate
 %   norm:           [char array]                    - norm spectrum
 %   center:         [char array]                    - center spectrum
+%   winfun:         [char array]                    - window funtion at Fourier transform
 %   mask:           [1×2 double]                    - location and size of rectangle selection
 %   interaction:    [char array]                    - region selection behaviour: 'translate', 'all' (see ROI object) 
 %   aspect:         [char array]                    - axis aspect ratio
@@ -33,6 +34,7 @@ function getdata = guiautospec(data, kwargs)
         %% spectra processing parameters
         kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'none', 'psd'})} = 'psd'
         kwargs.center (1,:) char {mustBeMember( kwargs.center, {'none', 'poly11', 'mean'})} = 'poly11'
+        kwargs.winfun char {mustBeMember(kwargs.winfun, {'none', 'hann', 'hamming', 'tukey'})} = 'hann'
         %% roi and axis parameters
         kwargs.mask (:,:) double = []
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
@@ -99,8 +101,24 @@ function getdata = guiautospec(data, kwargs)
             case 'mean'
                 frame = frame - mean(frame, [1, 2]);
         end
+        switch kwargs.winfun
+            case 'hann'
+                win = hann(szr(1)).*hann(szr(2))';
+                frame = frame.*win;
+                acf = 1/mean(win(:));
+            case 'tukey'
+                win = tukeywin(szr(1), 1).*tukeywin(szr(2), 1)';
+                frame = frame.*win;
+                acf = 1/mean(win(:));
+            case 'humming'
+                win = humming(szr(1)).*humming(szr(2))';
+                frame = frame.*win;
+                acf = 1/mean(win(:));
+            otherwise
+                acf = 1;
+        end
         % process fft
-        frame = fftshift(fftshift(abs(fft2(frame)),1),2);
+        frame = fftshift(fftshift(abs(fft2(frame)),1),2)*acf;
         % norm spectrum
         switch kwargs.norm
             case 'psd'

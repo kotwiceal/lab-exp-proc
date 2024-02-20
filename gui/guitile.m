@@ -12,6 +12,10 @@ function guitile(data, kwargs)
 %   docked:             [1×1 logical]                   - docker figure
 %   colormap:           [char array]                    - colormap
 %   aspect:             [char array]                    - axis ratio
+%   location:           [1×l6 char]                     - legend location name
+%   title:              [1×l7 char]                     - figure title
+%   filename:           [1×l8 char]                     - filename of storing figure
+%   extension:          [1×l9 char]                     - file extention of storing figure
 
     arguments
         data double
@@ -36,23 +40,11 @@ function guitile(data, kwargs)
     warning off
 
     % define dispalying type
-    if isempty(kwargs.x) && isempty(kwargs.z)
-        disp_type = 'node';
-    else
-        disp_type = 'spatial';
-    end
+    if isempty(kwargs.x) && isempty(kwargs.z); disp_type = 'node'; else; disp_type = 'spatial'; end
 
-    if isempty(kwargs.displayname)
-        kwargs.legend = false;
-    else
-        kwargs.legend = true;
-    end
+    if isempty(kwargs.displayname); kwargs.legend = false; else; kwargs.legend = true; end
 
-    if kwargs.docked
-        figure('WindowStyle', 'Docked')
-    else
-        clf;
-    end
+    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
     tiledlayout('flow');
     switch disp_type
         case 'node'
@@ -85,9 +77,7 @@ function guitile(data, kwargs)
             end
     end
 
-    if ~isempty(kwargs.title)
-        sgtitle(kwargs.title)
-    end
+    if ~isempty(kwargs.title); sgtitle(kwargs.title); end
 
     if ~isempty(kwargs.filename)
         savefig(gcf, strcat(kwargs.filename, '.fig'))
