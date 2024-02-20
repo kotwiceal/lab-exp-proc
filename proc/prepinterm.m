@@ -7,7 +7,7 @@ function result = prepinterm(data, kwargs)
 %   prefilter:          [char array]        - prefiltering velocity field
 %   prefiltker:         [1×2 double]        - kernel of prefilter
 %   fillmissmeth:       [char array]        - method of filling missing data
-%   angle:              [1×1 double]        - anlge of directed gradient [rad]
+%   angle:              [1×1 double]        - anlge of directed gradient [rad]git pull
 %   component:          [char array]        - derivative component
 %   threshold:          [1×1 logical]       - apply threshold 
 %   pow:                [1×1 double]        - raise to the power of processing value
@@ -21,7 +21,7 @@ function result = prepinterm(data, kwargs)
 %% 1. Process a velocity directed gradient:
 % data.dwdl = prepinterm(data, type = 'dirgrad');
 %% 2. Process a lambda-2 criteria with custom settings:
-% data.dwdl = prepinterm(data, type = 'l2', diffilter = 'sobel', prefilt = 'wiener', ...
+% data.l2 = prepinterm(data, type = 'l2', diffilter = 'sobel', prefilt = 'wiener', ...
 %       prefiltker = [15, 15], postfilt = 'median', postfiltker = [15, 15]);
 
     arguments
@@ -59,8 +59,7 @@ function result = prepinterm(data, kwargs)
     % fillmissing
     if kwargs.fillmissmeth ~= "none"
         sz = size(u);
-        u = reshape(u, [sz(1:2), prod(sz(3:end))]);
-        w = reshape(w, [sz(1:2), prod(sz(3:end))]);
+        u(u == 0) = nan; w(w == 0) = nan;
         parfor i = 1:prod(sz(3:end))
             u(:,:,i) = fillmissing2(u(:,:,i), kwargs.fillmissmeth);
             w(:,:,i) = fillmissing2(w(:,:,i), kwargs.fillmissmeth);
