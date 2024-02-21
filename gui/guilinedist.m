@@ -24,7 +24,7 @@ function getdata = guilinedist(data, kwargs)
 %   extension:          [1×l9 char]                     - file extention of storing figure
 %   showrotframe:       [char array]                    - supporing figure to show rotated frames
 %% The function returns following results:
-%   getdata:            [function_handle]               - function returning the last line distribution processing
+%   getdata:            [function_handle]               - function returning results at last line distribution processing
 %% Examples:
 %% 1. Show distribution along horizontal projection of drawn line, 2D field is presented in spatial coordinates:
 % guilinedist(data.vmn(:,:,1), x = data.x, z = data.z);
@@ -34,14 +34,19 @@ function getdata = guilinedist(data, kwargs)
 % guilinedist(data.vmn(:,:,1:5), proj = 'line');
 %% 4. show distribution along several drawn lines, 2D field is presented in node coordinates:
 % guilinedist(gca, data.vmn(:,:,1:5), proj = 'line', number = 3);
+%% 5. show transversal profiles averaged along CFi vortex direction 
+% res = guilinedist(data.vmn, angle = -22, x = data.x, z = data.z, proj = 'line', clim = [-0.1, 0.1], ylabel = 'u/u_e', ...
+%     mask = [250, 140, 5, 40], docked = true, shape = 'rect');
 
     arguments
-        data (:,:,:) double
+        data double
         kwargs.x double = []
         kwargs.z double = []
         kwargs.proj (1,:) char {mustBeMember(kwargs.proj, {'horz', 'vert', 'line'})} = 'horz'
         kwargs.angle (1,1) double = -22
+        kwargs.center (1,:) char {mustBeMember( kwargs.center, {'none', 'poly1', 'mean'})} = 'none'
         %% roi and axis parameters
+        kwargs.frame int8 = []
         kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'line', 'rect'})} = 'line'
         kwargs.mask double = []
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
@@ -64,7 +69,8 @@ function getdata = guilinedist(data, kwargs)
 
     warning off
 
-    xi = []; zi = []; prof = []; position = [];
+    xi = []; zi = []; raw = []; mask = []; sz = size(data); X = [];
+    if numel(sz) == 2; sz(3) = 1; end
 
     % define variables
     data_fit = cell(1, size(data, 3));
@@ -72,7 +78,7 @@ function getdata = guilinedist(data, kwargs)
     % define display type   
     if isempty(kwargs.x) && isempty(kwargs.z)
         disptype = 'node'; 
-        [x, z] = meshgrid(1:size(data, 2), 1:size(data, 1));
+        [x, z] = meshgrid(1:sz(2), 1:sz(1));
     else
         disptype = 'spatial';
         x = kwargs.x; z = kwargs.z;
@@ -83,19 +89,19 @@ function getdata = guilinedist(data, kwargs)
         case 'line'
             switch disptype
                 case 'node'  
-                    for j = 1:size(data, 3)
-                        [xi, zi] = ndgrid(1:size(data, 1), 1:size(data, 2));
+                    for j = 1:prod(sz(3:end))
+                        [xi, zi] = ndgrid(1:sz(1), 1:sz(2));
                         [xo, zo, io] = prepareSurfaceData(xi, zi, data(:,:,j));
                         data_fit{j} = fit([zo, xo], io, 'linearinterp');
                     end
                 case 'spatial'
                     if ismatrix(kwargs.x) && ismatrix(kwargs.z)
-                        for j = 1:size(data, 3)
+                        for j = 1:prod(sz(3:end))
                             [xo, zo, io] = prepareSurfaceData(kwargs.x, kwargs.z, data(:,:,j)); 
                             data_fit{j} = fit([xo, zo], io, 'linearinterp');
                         end
                     else
-                        for j = 1:size(data, 3)
+                        for j = 1:prod(sz(3:end))
                             [xo, zo, io] = prepareSurfaceData(kwargs.x(:,:,j), kwargs.z(:,:,j), data(:,:,j)); 
                             data_fit{j} = fit([xo, zo], io, 'linearinterp');
                         end
@@ -158,12 +164,12 @@ function getdata = guilinedist(data, kwargs)
     function eventline(~, ~)
         cla(ax); hold(ax, 'on'); box(ax, 'on'); grid(ax, 'on');
         for i = 1:length(rois)
-            position(:,:,i) = rois{i}.Position;
+            mask(:,:,i) = rois{i}.Position;
             xi = linspace(rois{i}.Position(1,1), rois{i}.Position(2,1));
             zi = linspace(rois{i}.Position(1,2), rois{i}.Position(2,2));
-            X = []; prof = [];
-            for j = 1:size(data, 3)
-                prof(:, j) = data_fit{j}(xi, zi);
+            X = []; raw = [];
+            for j = 1:prod(sz(3:end))
+                raw(:, j) = data_fit{j}(xi, zi);
             end
             switch kwargs.proj
                 case 'horz'
@@ -173,20 +179,20 @@ function getdata = guilinedist(data, kwargs)
                 case 'line'
                     X = hypot(xi - xi(1), zi - zi(1));
             end
-
+            centerdata();
             if length(rois) == 1
                 if isempty(kwargs.displayname)
-                    for j = 1:size(data, 3)
-                        plot(ax, X, prof(:, j))
+                    for j = 1:prod(sz(3:end))
+                        plot(ax, X, raw(:, j))
                     end
                 else
-                    for j = 1:size(data, 3)
-                        plot(ax, X, prof(:, j), 'DisplayName', kwargs.displayname(j))
+                    for j = 1:prod(sz(3:end))
+                        plot(ax, X, raw(:, j), 'DisplayName', kwargs.displayname(j))
                     end
                 end
             else
-                for j = 1:size(data, 3)
-                    plot(ax, X, prof(:, j), 'Color', rois{i}.UserData.color)
+                for j = 1:prod(sz(3:end))
+                    plot(ax, X, raw(:, j), 'Color', rois{i}.UserData.color)
                 end
             end
         end
@@ -196,71 +202,93 @@ function getdata = guilinedist(data, kwargs)
     function eventrect(~, ~)
         cla(ax); hold(ax, 'on'); box(ax, 'on'); grid(ax, 'on');
         for i = 1:length(rois)
-            position(:,:,i) = rois{i}.Position;
+            mask(:,:,i) = rois{i}.Position;
             frame = select(rois{i});
             xi = selectx(rois{i});
             zi = selectz(rois{i});
             switch kwargs.proj
                 case 'horz'
-                    X = mean(xi, 1);
-                    prof = squeeze(mean(frame, 1));
+                    xi = mean(xi, 1); zi = mean(zi, 2);
+                    X = xi;
+                    raw = squeeze(mean(frame, 1));
                 case 'vert'
-                    X = mean(zi, 2);
-                    prof = squeeze(mean(frame, 2));
+                    xi = mean(xi, 2); zi = mean(zi, 2);
+                    X = zi;
+                    raw = squeeze(mean(frame, 2));
                 case 'line'
                     framer = imfilter(frame, fspecial('motion', size(frame, 2), kwargs.angle));
-                    X = mean(zi, 2);
-                    prof = squeeze(mean(framer, 2));
+                    xi = mean(xi, 1); zi = mean(zi, 2);
+                    X = zi;
+                    raw = squeeze(mean(framer, 2));
                     if kwargs.showrotframe
-                        cla(axmon); montage(mat2gray(cat(3, frame, framer)), Parent = axmon); colormap(axmon, kwargs.colormap);
+                        cla(axmon); montage(mat2gray(frame, cl(:,:,1)), Parent = axmon); colormap(axmon, kwargs.colormap);
+                        cla(axmonrot); montage(mat2gray(framer, cl(:,:,1)), Parent = axmonrot); colormap(axmonrot, kwargs.colormap);
                     end
             end
+            centerdata();
             if length(rois) == 1
                 if isempty(kwargs.displayname)
-                    for j = 1:size(data, 3)
-                        plot(ax, X, prof(:, j))
+                    for j = 1:prod(sz(3:end))
+                        plot(ax, X, raw(:, j))
                     end
                 else
-                    for j = 1:size(data, 3)
-                        plot(ax, X, prof(:, j), 'DisplayName', kwargs.displayname(j))
+                    for j = 1:prod(sz(3:end))
+                        plot(ax, X, raw(:, j), 'DisplayName', kwargs.displayname(j))
                     end
                 end
             else
-                for j = 1:size(data, 3)
-                    plot(ax, X, prof(:, j), 'Color', rois{i}.UserData.color)
+                for j = 1:prod(sz(3:end))
+                    plot(ax, X, raw(:, j), 'Color', rois{i}.UserData.color)
                 end
             end
         end
         customize_appearance();
     end
 
-    function result = getdatafunc()
-        result = struct(x = xi, z = zi, prof = prof, mask = position);
+    function centerdata()
+        switch kwargs.center
+            case 'poly1'
+                for i = 1:prod(sz(3:end))
+                    [xip, yip] = prepareCurveData(X, raw(:, i));
+                    rawft = fit(xip, yip, 'poly1');
+                    raw(:, i) = raw(:, i) - rawft(X);
+                end
+            case 'mean'
+                raw = raw - mean(raw, 2);
+        end
     end
+
+    function result = getdatafunc()
+        raw = reshape(raw, [size(raw, 1), sz(3:end)]);
+        result = struct(x = xi, z = zi, raw = raw, mask = mask);
+    end
+
+    if isempty(kwargs.frame); kwargs.frame = 1:prod(sz(3:end)); end
+    if ndims(kwargs.clim) == 3;  cl = kwargs.clim; else; cl = repmat(kwargs.clim, 1, 1, prod(sz(3:end))); end
 
     if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
     tiledlayout('flow');
     switch disptype
         case 'node'
-            for i = 1:size(data, 3)
+            for i = kwargs.frame
                 nexttile; imagesc(data(:,:,i)); xlabel('x_{n}'); ylabel('z_{n}'); colormap(kwargs.colormap); axis(kwargs.aspect);
-                if ~isempty(kwargs.clim); clim(kwargs.clim); end
+                if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                 if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
             end
         case 'spatial'
             if ismatrix(kwargs.x) && ismatrix(kwargs.z)
-                for i = 1:size(data, 3)
+                for i = kwargs.frame
                     nexttile; contourf(kwargs.x, kwargs.z, data(:,:,i), 100, 'LineStyle', 'None'); 
                     xlabel('x, mm'); ylabel('z, mm'); colormap(kwargs.colormap);
-                    if ~isempty(kwargs.clim); clim(kwargs.clim); end
+                    if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                     axis(kwargs.aspect);
                     if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
                 end
             else
-                for i = 1:size(data, 3)
+                for i = kwargs.frame
                     nexttile; contourf(kwargs.x(:,:,i), kwargs.z(:,:,i), data(:,:,i), 100, 'LineStyle', 'None'); 
                     xlabel('x, mm'); ylabel('z, mm'); colormap(kwargs.colormap);
-                    if ~isempty(kwargs.clim); clim(kwargs.clim); end
+                    if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                     axis(kwargs.aspect);
                     if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
                 end
@@ -268,7 +296,7 @@ function getdata = guilinedist(data, kwargs)
     end
     xlim([min(x(:)), max(x(:))]); ylim([min(z(:)), max(z(:))]);
 
-    axroi = gca; nexttile; ax = gca;
+    axroi = gca; nexttile; ax = gca; hold(ax, 'on'); box(ax, 'on'); grid(ax, 'on');
 
     switch kwargs.shape
         case 'line'
@@ -277,7 +305,8 @@ function getdata = guilinedist(data, kwargs)
             eventline();
         case 'rect'
             if kwargs.showrotframe && kwargs.proj == "line"
-                nexttile; axmon = gca;
+                nexttile; axmon = gca; hold(axmon, 'on'); box(axmon, 'on'); grid(axmon, 'on');
+                nexttile; axmonrot = gca; hold(axmonrot, 'on'); box(axmonrot, 'on'); grid(axmonrot, 'on');
             end
             rois = guiselectregion(axroi, moved = @eventrect, shape = 'rect', ...
                 mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);

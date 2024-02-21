@@ -1,5 +1,5 @@
 function guitile(data, kwargs)
-%% Visualize multiframe data.
+%% Visualize multiframe 2D data.
 %% The function takes following arguments:
 %   data:               [n×m×k double]                  - multidimensional data
 %   x:                  [n×m double]                    - spatial coordinate
@@ -24,7 +24,7 @@ function guitile(data, kwargs)
         %% axis parameters
         kwargs.xlim double = []
         kwargs.ylim double = []
-        kwargs.clim cell = cell(1, size(data, 3))
+        kwargs.clim double = []
         kwargs.displayname string = []
         kwargs.legend logical = false
         kwargs.docked logical = false
@@ -38,19 +38,17 @@ function guitile(data, kwargs)
     end
 
     warning off
-
-    % define dispalying type
+    sz = size(data); if numel(sz) == 2; sz(3) = 1; end 
     if isempty(kwargs.x) && isempty(kwargs.z); disp_type = 'node'; else; disp_type = 'spatial'; end
-
     if isempty(kwargs.displayname); kwargs.legend = false; else; kwargs.legend = true; end
-
+    if ndims(kwargs.clim) == 3;  cl = kwargs.clim; else; cl = repmat(kwargs.clim, 1, 1, sz(3)); end
     if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
     tiledlayout('flow');
     switch disp_type
         case 'node'
             for i = 1:size(data, 3)
                 nexttile; imagesc(data(:,:,i)); xlabel('x_{n}'); ylabel('z_{n}'); colormap(kwargs.colormap);
-                if ~isempty(kwargs.clim{i}); clim(kwargs.clim{i}); end
+                if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                 if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
                 if kwargs.colorbar; colorbar(); end
             end
@@ -59,7 +57,7 @@ function guitile(data, kwargs)
                 for i = 1:size(data, 3)
                     nexttile; hold on; box on; grid on; surf(kwargs.x, kwargs.z, data(:,:,i), 'LineStyle', 'None'); 
                     xlabel('x, mm'); ylabel('z, mm'); colormap(kwargs.colormap);
-                    if ~isempty(kwargs.clim{i}); clim(kwargs.clim{i}); end
+                    if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                     axis(kwargs.aspect);
                     if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
                     if kwargs.colorbar; colorbar(); end
@@ -69,7 +67,7 @@ function guitile(data, kwargs)
                 for i = 1:size(data, 3)
                     nexttile; hold on; box on; grid on; surf(kwargs.x(:,:,i), kwargs.z(:,:,i), data(:,:,i), 'LineStyle', 'None'); 
                     xlabel('x, mm'); ylabel('z, mm'); colormap(kwargs.colormap);
-                    if ~isempty(kwargs.clim{i}); clim(kwargs.clim{i}); end
+                    if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                     axis(kwargs.aspect);
                     if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
                     if kwargs.colorbar; colorbar(); end
