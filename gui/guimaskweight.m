@@ -61,8 +61,7 @@ function getdata = guimaskweight(data, kwargs)
         end
     end
 
-    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
-    tiledlayout('flow');
+    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout('flow');
 
     if ndims(kwargs.mask) == 3;  mask = kwargs.mask; else; mask = repmat(kwargs.mask, 1, 1, sz(3)); end
     if ndims(kwargs.clim) == 3;  cl = kwargs.clim; else; cl = repmat(kwargs.clim, 1, 1, sz(3)); end

@@ -75,19 +75,19 @@ function getdata = guiautospec(data, kwargs)
 
     function event(~, ~)
         % extract data
-        frame = select(rois{1}); raw = frame;
+        frame = select(rois{1}); raw = frame; sz = size(frame);
         xraw = selectx(rois{1}); yraw = selecty(rois{1});
         % build frequency grid
         switch disptype
             case 'node'
-                [fx, fy] = meshgrid(1:size(frame, 2), 1:size(frame, 1));
+                [fx, fy] = meshgrid(1:sz(2), 1:sz(1));
                 dfdx = 1; dfdy = 1;
             case 'spatial'
                 xu = unique(kwargs.x); yu = unique(kwargs.y);
                 dx = xu(2)-xu(1);  dy = yu(2)-yu(1);
                 fdx = 1/dx; fdy = 1/dy;
-                dfdx = fdx/size(frame, 2);
-                dfdy = fdy/size(frame, 1);
+                dfdx = fdx/sz(2);
+                dfdy = fdy/sz(1);
                 fx = -fdx/2+dfdx/2:dfdx:fdx/2-dfdx/2;
                 fy = -fdy/2+dfdy/2:dfdy:fdy/2-dfdy/2;
                 [fx, fy] = meshgrid(fx, fy);
@@ -103,20 +103,16 @@ function getdata = guiautospec(data, kwargs)
         end
         switch kwargs.winfun
             case 'hann'
-                win = hann(szr(1)).*hann(szr(2))';
-                frame = frame.*win;
-                acf = 1/mean(win(:));
+                win = hann(sz(1)).*hann(sz(2))';
             case 'tukey'
-                win = tukeywin(szr(1), 1).*tukeywin(szr(2), 1)';
-                frame = frame.*win;
-                acf = 1/mean(win(:));
+                win = tukeywin(sz(1), 1).*tukeywin(sz(2), 1)';
             case 'humming'
-                win = humming(szr(1)).*humming(szr(2))';
-                frame = frame.*win;
-                acf = 1/mean(win(:));
+                win = humming(sz(1)).*humming(sz(2))';
             otherwise
-                acf = 1;
+                win = ones(sz);
         end
+        acf = 1/mean(win(:));
+        frame = frame.*win;
         % process fft
         frame = fftshift(fftshift(abs(fft2(frame)),1),2)*acf;
         % norm spectrum
@@ -155,7 +151,7 @@ function getdata = guiautospec(data, kwargs)
     end
 
     if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
-    tiledlayout('flow'); nexttile; axroi = gca; 
+    tiledlayout('flow'); axroi = nexttile;
     switch disptype
         case 'node'
             imagesc(axroi, data);
@@ -183,9 +179,7 @@ function getdata = guiautospec(data, kwargs)
 
     event();
 
-    if ~isempty(kwargs.title)
-        sgtitle(kwargs.title)
-    end
+    if ~isempty(kwargs.title); sgtitle(kwargs.title); end
 
     if ~isempty(kwargs.filename)
         savefig(gcf, strcat(kwargs.filename, '.fig'))

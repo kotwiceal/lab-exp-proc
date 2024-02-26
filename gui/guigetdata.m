@@ -44,8 +44,8 @@ function result = guigetdata(roi, data, kwargs)
                 data(~index) = nan;
                 result = data;
             case 'cut'
-                data = data(:,:,:);
-                data = permute(data, [kwargs.permute, 3]);
+                kwargs.position = round(kwargs.position);
+                data = permute(data(:,:,:), [kwargs.permute, 3]);
                 result = data(kwargs.position(1):kwargs.position(1)+kwargs.position(3), ...
                     kwargs.position(2):kwargs.position(2)+kwargs.position(4), :);
 

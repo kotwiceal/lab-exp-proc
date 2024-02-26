@@ -1,5 +1,5 @@
 function guitile(data, kwargs)
-%% Visualize multiframe 2D data.
+%% Visualize multiframe data.
 %% The function takes following arguments:
 %   data:               [n×m×k double]                  - multidimensional data
 %   x:                  [n×m double]                    - spatial coordinate
@@ -38,19 +38,22 @@ function guitile(data, kwargs)
     end
 
     warning off
+
     sz = size(data); if numel(sz) == 2; sz(3) = 1; end 
-    if isempty(kwargs.x) && isempty(kwargs.z); disp_type = 'node'; else; disp_type = 'spatial'; end
+
+    % define dispalying type
+    if isempty(kwargs.x) && isempty(kwargs.z); disptype = 'node'; else; disptype = 'spatial'; end
     if isempty(kwargs.displayname); kwargs.legend = false; else; kwargs.legend = true; end
     if ndims(kwargs.clim) == 3;  cl = kwargs.clim; else; cl = repmat(kwargs.clim, 1, 1, sz(3)); end
-    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
-    tiledlayout('flow');
-    switch disp_type
+    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout('flow');
+    switch disptype
         case 'node'
             for i = 1:size(data, 3)
                 nexttile; imagesc(data(:,:,i)); xlabel('x_{n}'); ylabel('z_{n}'); colormap(kwargs.colormap);
                 if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                 if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
                 if kwargs.colorbar; colorbar(); end
+                axis('image');
             end
         case 'spatial'
             if ismatrix(kwargs.x) && ismatrix(kwargs.z)
