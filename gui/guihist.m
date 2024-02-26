@@ -364,13 +364,8 @@ function varargout = guihist(data, kwargs)
         customize_appearance();
     end
 
-    if kwargs.docked
-        figure('WindowStyle', 'Docked')
-    else
-        clf;
-    end
-    tiledlayout('flow');
-    nexttile; axroi = gca; 
+    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout('flow');
+    axroi = nexttile;
     switch disp_type
         case 'node'
             imagesc(axroi, data(:,:,1)); xlabel('x_{n}'); ylabel('z_{n}');
@@ -388,18 +383,12 @@ function varargout = guihist(data, kwargs)
     axis(axroi, kwargs.aspect)
 
     nexttile; ax{1} = gca;
-    if kwargs.cdf
-        nexttile; ax{2} = gca;
-    end
-    if kwargs.cumsum
-        nexttile; ax{3} = gca;
-    end
+    if kwargs.cdf; nexttile; ax{2} = gca; end
+    if kwargs.cumsum; nexttile; ax{3} = gca; end
     rois = guiselectregion(axroi, moved = @event, shape = kwargs.shape, ...
         mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);
 
-    if ~isempty(kwargs.title)
-        sgtitle(kwargs.title)
-    end
+    if ~isempty(kwargs.title); sgtitle(kwargs.title); end
 
     event();
 

@@ -34,7 +34,7 @@ function data = loadpiv(input, kwargs)
         kwargs.subfolders logical = false
         kwargs.parallel logical = false
         kwargs.components (1,:) char {mustBeMember(kwargs.components, {'x-y,u-v', 'x-z,u-w'})} = 'x-z,u-w'
-        
+        kwargs.storefilenames logical = false
     end
 
     if numel(input) == 1
@@ -82,4 +82,7 @@ function data = loadpiv(input, kwargs)
             data.x = ax1; data.z = ax2; data.u = vel1; data.w = vel2;
     end
 
+    if kwargs.storefilenames
+        data.filenames = kwargs.filenames;
+    end
 end

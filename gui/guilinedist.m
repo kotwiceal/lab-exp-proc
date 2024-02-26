@@ -24,7 +24,7 @@ function getdata = guilinedist(data, kwargs)
 %   extension:          [1×l9 char]                     - file extention of storing figure
 %   showrotframe:       [char array]                    - supporing figure to show rotated frames
 %% The function returns following results:
-%   getdata:            [function_handle]               - function returning results at last line distribution processing
+%   getdata:            [function_handle]               - function returning the last line distribution processing
 %% Examples:
 %% 1. Show distribution along horizontal projection of drawn line, 2D field is presented in spatial coordinates:
 % guilinedist(data.vmn(:,:,1), x = data.x, z = data.z);
@@ -65,6 +65,7 @@ function getdata = guilinedist(data, kwargs)
         kwargs.filename (1, :) char = []
         kwargs.extension (1, :) char = '.png'
         kwargs.showrotframe logical = true
+        kwargs.aspectdist (1,:) char {mustBeMember(kwargs.aspectdist , {'equal', 'square', 'auto'})} = 'auto'
     end
 
     warning off
@@ -158,7 +159,7 @@ function getdata = guilinedist(data, kwargs)
         if ~isempty(kwargs.xlim); xlim(ax, kwargs.xlim); end
         if ~isempty(kwargs.ylim); ylim(ax, kwargs.ylim); end
         if kwargs.legend; legend(ax, 'Location', kwargs.location); end
-        axis(ax, 'square')
+        axis(ax, kwargs.aspectdist)
     end
 
     function eventline(~, ~)
