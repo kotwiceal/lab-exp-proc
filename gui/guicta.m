@@ -15,7 +15,7 @@ function guicta(kwargs)
 %   xscale:         [char array]        - scale of x-axis of spectra plot
 %   yscale:         [char array]        - scale of y-axis of spectra plot
 %   docked:         [1×1 logical]       - docked figure
-%   title:          [char array]
+%   title:          [char array]        - figure title
 %% Examples:
 %% 1. Load cta measurements, calculate auto-spectra and visualize (struct notation):
 % data = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931', output = 'struct');

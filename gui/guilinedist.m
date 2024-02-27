@@ -5,6 +5,10 @@ function getdata = guilinedist(data, kwargs)
 %   x:                  [n×m double]                    - spatial coordinate
 %   z:                  [n×m double]                    - spatial coordinate
 %   proj:               [1×l1 char]                     - type projection of distribution
+%   angle:              [1×1 double]                    - rotation angle of selected frame
+%   center:             [char array]                    - type of data centering
+%   winfun:             [char array]                    - window funtion to weight data
+%   tukey:              [1×1 double]                    - tukey window function parameter
 %   shape:              [char array]                    - shape of selection tool
 %   mask:               [double]                        - two row vertex to line selection; edge size to rectangle selection
 %   interaction:        [1×l2 char]                     - region selection behaviour
@@ -45,6 +49,8 @@ function getdata = guilinedist(data, kwargs)
         kwargs.proj (1,:) char {mustBeMember(kwargs.proj, {'horz', 'vert', 'line'})} = 'horz'
         kwargs.angle (1,1) double = -22
         kwargs.center (1,:) char {mustBeMember( kwargs.center, {'none', 'poly1', 'mean'})} = 'none'
+        kwargs.winfun char {mustBeMember(kwargs.winfun, {'none', 'hann', 'hamming', 'tukey'})} = 'hann'
+        kwargs.tukey (1,1) double = 1;
         %% roi and axis parameters
         kwargs.frame int8 = []
         kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'line', 'rect'})} = 'line'
@@ -181,6 +187,7 @@ function getdata = guilinedist(data, kwargs)
                     X = hypot(xi - xi(1), zi - zi(1));
             end
             centerdata();
+            weightdata();
             if length(rois) == 1
                 if isempty(kwargs.displayname)
                     for j = 1:prod(sz(3:end))
@@ -227,6 +234,7 @@ function getdata = guilinedist(data, kwargs)
                     end
             end
             centerdata();
+            weightdata();
             if length(rois) == 1
                 if isempty(kwargs.displayname)
                     for j = 1:prod(sz(3:end))
@@ -257,6 +265,21 @@ function getdata = guilinedist(data, kwargs)
             case 'mean'
                 raw = raw - mean(raw, 2);
         end
+    end
+
+    function weightdata()
+        szr = size(raw);
+        switch kwargs.winfun
+            case 'hann'
+                win = hann(szr(1));
+            case 'tukey'
+                win = tukeywin(szr(1), kwargs.tukey);
+            case 'humming'
+                win = humming(szr(1));
+            otherwise
+                win = ones(szr(1));
+        end
+        raw = raw.*win;
     end
 
     function result = getdatafunc()
