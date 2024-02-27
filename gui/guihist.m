@@ -1,7 +1,7 @@
 function varargout = guihist(data, kwargs)
 %% Visualize data statistics by means manually region selection.
 %% The function takes following arguments:
-%   data:           [n×m... double]                 - multidimensional data
+%   data:           [n×m... double]                 - vector or multidimensional data
 %   x:              [n×m double]                    - spatial coordinate
 %   z:              [n×m double]                    - spatial coordinate
 %   range:          [1×2 double]                    - range to exclude data
@@ -137,15 +137,17 @@ function varargout = guihist(data, kwargs)
     % define variables
     mode_markers = {'-o', '-s', '-x', '-<', '->', '-^'};
 
+    isvect = isvector(data);
+
     % define dispalying type
     if isempty(kwargs.x) && isempty(kwargs.z)
-        disp_type = 'node';
+        disptype = 'node';
     else
-        disp_type = 'spatial';
+        disptype = 'spatial';
     end
 
     % define funtion handle to probe data
-    switch disp_type
+    switch disptype
         case 'node'
             select = @(roiobj) guigetdata(roiobj, data, shape = 'flatten');
             select2d = @(roiobj) guigetdata(roiobj, data, shape = 'cut');
@@ -341,6 +343,15 @@ function varargout = guihist(data, kwargs)
         end
     end
 
+    function adjustrectroi(~, ~)
+        if isvect
+            yl = get(axroi, 'YLim');
+            for i = 1:length(rois)
+                rois{i}.Position = [rois{i}.Position(1), yl(1), rois{i}.Position(3), yl(2)-yl(1)];
+            end
+        end
+    end
+
     function plot_cumsum()
         cla(ax{3}); hold(ax{3}, 'on'); box(ax{3}, 'on'); grid(ax{3}, 'on'); axis(ax{3}, 'square');           
         for i = 1:length(rois)
@@ -366,26 +377,41 @@ function varargout = guihist(data, kwargs)
 
     if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout('flow');
     axroi = nexttile;
-    switch disp_type
-        case 'node'
-            imagesc(axroi, data(:,:,1)); xlabel('x_{n}'); ylabel('z_{n}');
-        case 'spatial'
-            hold(axroi, 'on'); grid(axroi, 'on'); box(axroi, 'on');
-            contourf(axroi, kwargs.x, kwargs.z, data(:,:,1), 100, 'LineStyle', 'None'); 
-            xlabel('x, mm'); ylabel('z, mm');
-            xlim([min(kwargs.x(:)), max(kwargs.x(:))]);
-            ylim([min(kwargs.z(:)), max(kwargs.z(:))]);
+    if isvect
+        hold(axroi, 'on'); grid(axroi, 'on'); box(axroi, 'on');
+        switch disptype
+            case 'node'
+                plot(axroi, data);
+            case 'spatial'
+                plot(axroi, kwargs.x, data);
+        end
+    else
+        switch disptype
+            case 'node'
+                imagesc(axroi, data(:,:,1)); xlabel('x_{n}'); ylabel('z_{n}'); axis(axroi, 'image');
+            case 'spatial'
+                hold(axroi, 'on'); grid(axroi, 'on'); box(axroi, 'on');
+                contourf(axroi, kwargs.x, kwargs.z, data(:,:,1), 100, 'LineStyle', 'None'); 
+                xlabel('x, mm'); ylabel('z, mm');
+                xlim([min(kwargs.x(:)), max(kwargs.x(:))]);
+                ylim([min(kwargs.z(:)), max(kwargs.z(:))]);
+                axis(axroi, kwargs.aspect);
+        end
+        colorbar(axroi); colormap(axroi, kwargs.colormap);
+        if ~isempty(kwargs.clim)
+            clim(axroi, kwargs.clim);
+        end
     end
-    colorbar(axroi); colormap(axroi, kwargs.colormap);
-    if ~isempty(kwargs.clim)
-        clim(axroi, kwargs.clim);
-    end
-    axis(axroi, kwargs.aspect)
 
-    nexttile; ax{1} = gca;
-    if kwargs.cdf; nexttile; ax{2} = gca; end
-    if kwargs.cumsum; nexttile; ax{3} = gca; end
-    rois = guiselectregion(axroi, moved = @event, shape = kwargs.shape, ...
+    if isvect && ~isempty(kwargs.mask)
+        yl = get(axroi, 'YLim');
+        kwargs.mask = [kwargs.mask(1), yl(1), kwargs.mask(2)-kwargs.mask(1), yl(2)-yl(1)];
+    end
+
+    nexttile; ax{1} = gca; hold(ax{1}, 'on'); grid(ax{1}, 'on'); box(ax{1}, 'on');
+    if kwargs.cdf; nexttile; ax{2} = gca; hold(ax{2}, 'on'); grid(ax{2}, 'on'); box(ax{2}, 'on'); end
+    if kwargs.cumsum; nexttile; ax{3} = gca; hold(ax{3}, 'on'); grid(ax{3}, 'on'); box(ax{3}, 'on'); end
+    rois = guiselectregion(axroi, moving = @adjustrectroi,moved = @event, shape = kwargs.shape, ...
         mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);
 
     if ~isempty(kwargs.title); sgtitle(kwargs.title); end

@@ -39,7 +39,7 @@ function data = loadpiv(input, kwargs)
 
     if numel(input) == 1
         if isfolder(input)
-            kwargs.filenames = getfilenames(input, extension = 'vc7', subfolders = kwargs.subfolders);
+            kwargs.filenames = getfilenames(input, extension = '.vc7', subfolders = kwargs.subfolders);
         else
             kwargs.filenames = input;
         end

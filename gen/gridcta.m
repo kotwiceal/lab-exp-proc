@@ -4,6 +4,7 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
 %   ax1:            [1×k double]            - longitudinal direction
 %   ax2:            [1×n double]            - transverse direction
 %   ax3:            [1×m double]            - vertical direction
+%   ax4:            [1×p double]            - optional axis
 %   filename:       [char array]            - to save scan table
 %   scanorder:      [1×3 double]            - scanning axis order
 %   axorder:        [1×3 double]            - axis coloumn order
@@ -12,57 +13,65 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
 %   ax30:           [1×m double]            - base points of vertical direction
 %   show:           [1×1 logical]           - show scanning points
 %   fit:            [char array]            - fit type
+%   repelem:        [1×1 double]            - repeat element
 %% The function returns following results:
 %   scan:           [knm×3 double]          - scan table
 %   scancor:        [knm×3 double]          - corrected scan table
 %% Examples:
 
-%% build 1D scannig table (vertical profile) and save in scan_1d.txt
+%% 1. Build 1D scanning table (vertical profile) and save in scan_1d.txt
 % gridcta(0, 0, 0:50:1000, filename = 'scan_1d')
 
-%% build 2D scannig table (cross-section) and save in scan_2d.txt
+%% 2. Build 2D scanning table (cross-section) and save in scan_2d.txt
 % gridcta(0, -3000:500:3000, 0:50:1000, filename = 'scan_2d')
 
-%% build 2D scannig table (volume) and save in scan_3d.txt
+%% 3. Build 2D scanning table (volume) and save in scan_3d.txt
 % gridcta(0:200:1000, -3000:500:3000, 0:50:1000, filename = 'scan_3d')
 
-%% build 1D scannig table (vertical profile), correct base and save in scan_1dc.txt
+%% 4. Build 1D scanning table (vertical profile), correct base and save in scan_1dc.txt
 % gridcta(0, 0, 200:100:1000, ax10 = 0, ax20 = 0, ax30 = -35, filename = 'scan_1dc')
 
-%% build 2D scannig table (cross-section-transverse), correct base and save in scan_2dc.txt
+%% 5. Build 2D scanning table (cross-section-transverse), correct base and save in scan_2dc.txt
 % gridcta(0, -1000:500:1000, 200:100:1000, ax10 = 0, ax20 = [-1200, -800, -400, 0, 400, 800, 1000], ...
 %   ax30 = [-10, 20, -30, 40, -50, 60, -70], filename = 'scan_2dc')
 
-%% build 2D scannig table (cross-section-longitudinal), correct base and save in scan_2dc.txt
+%% 6. Build 2D scanning table (cross-section-longitudinal), correct base and save in scan_2dc.txt
 % gridcta(0:100:600, 800, 200:100:1000, ax10 = 0:200:1200, ...
 %    ax20 = 800, ax30 = [-10, 20, -30, 40, -50, 60, -70], filename = 'scan_2dc')
 
-%% build 3D scannig table (horizon-plane-section), correct base (grid-wise notation {ax10, ax20, ax30}) and save in scan_2dc.txt
+%% 7. Build 3D scanning table (horizon-plane-section), correct base (grid-wise notation {ax10, ax20, ax30}) and save in scan_2dc.txt
 % gridcta(0:100:1000, -800:200:800, 200, ax10 = 0:400:2000, ax20 = -1000:500:1000, ...
 %   ax30 = 100*rand(6, 5), filename = 'scan_2dc')
 
-%% build 3D scannig table (horizon-plane-section), correct base (point-wise notation {ax10, ax20, ax30}) and save in scan_2dc.txt
+%% 8. Build 3D scanning table (horizon-plane-section), correct base (point-wise notation {ax10, ax20, ax30}) and save in scan_2dc.txt
 % ax10 = [0, 0, 0, 0, 500, 500, 500, 1000, 1000, 1000, 1000, 1000];
 % ax20 = [-1000, -800, 800, 1000, -1200, 600, 1200, -2000, -1000, -500, 0, 1000];
 % ax30 = 100*rand(1, numel(ax10));
 % gridcta(0:100:1000, -800:200:800, 500, ax10 = ax10, ax20 = ax20, ax30 = ax30, ...
 %   filename = 'scan_3dc', pointwise = true)
 
-%% build 3D scannig table (volume), correct base (grid-wise notation {ax10, ax20, ax30})  and save in scan_3dc.txt
+%% 9. Build 3D scanning table (volume), correct base (grid-wise notation {ax10, ax20, ax30})  and save in scan_3dc.txt
 % gridcta(0:100:1000, -800:200:800, 200:100:1000, ax10 = 0:400:2000, ax20 = -1000:500:1000, ...
 %   ax30 = 100*rand(6, 5), filename = 'scan_3dc')
 
-%% build 3D scannig table (volume), correct base (point-wise notation {ax10, ax20, ax30}) and save in scan_3dc.txt
+%% 10. Build 3D scanning table (volume), correct base (point-wise notation {ax10, ax20, ax30}) and save in scan_3dc.txt
 % ax10 = [0, 0, 0, 0, 500, 500, 500, 1000, 1000, 1000, 1000, 1000];
 % ax20 = [-1000, -800, 800, 1000, -1200, 600, 1200, -2000, -1000, -500, 0, 1000];
 % ax30 = 100*rand(1, numel(ax10));
 % gridcta(0:100:1000, -800:200:800, 200:100:1000, ax10 = ax10, ax20 = ax20, ax30 = ax30, ...
 %   filename = 'scan_3dc', pointwise = true)
 
+%% 10. Build 2D scanning table (cross-section-transverse) with repeated elements
+% gridcta(3000, -1000:100:1000, 0:50:500, repelem = 2)
+
+%% 11. Build 2D scanning table (cross-section-transverse) with optinal axis
+% gridcta(3000, -1000:100:1000, 0:50:500, ax4 = [0, 1]);
+
     arguments
         ax1 double
         ax2 double
         ax3 double
+        kwargs.ax4 double = []
         kwargs.filename (1,:) char = ''
         kwargs.scanorder double = [3, 2, 1]
         kwargs.axorder double = [1, 2, 3]
@@ -73,6 +82,7 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
         kwargs.delimiter (1,:) char = 'tab'
         kwargs.pointwise logical = false, 
         kwargs.fit (1,:) char {mustBeMember(kwargs.fit, {'', 'poly01', 'poly10', 'poly11', 'poly02', 'poly20', 'poly22', 'poly21', 'poly12'})} = ''
+        kwargs.repelem (1,1) double = 1
     end
 
     nax1 = size(ax1, 2);
@@ -138,11 +148,29 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
         legend(); view([-150, 10])
     end
 
+    if ~isempty(kwargs.ax4)
+        kwargs.repelem = numel(kwargs.ax4);
+    end
+
+    scan = reshape(repelem(scan(:), kwargs.repelem), [size(scan, 1)*kwargs.repelem, size(scan, 2)]);
     scan = scan(:, kwargs.axorder);
+    
+    if ~isempty(kwargs.ax4)
+        if size(scan, 1) == numel(kwargs.ax4)
+            scan(:, 4) = kwargs.ax4;
+        else
+            scan(:, 4) = repmat(kwargs.ax4(:), floor(size(scan, 1)/numel(kwargs.ax4)), 1);
+        end
+    end
+    
     varargout{1} = scan;
     
     if exist('scancor', 'var')
+        scancor = reshape(repelem(scancor(:), kwargs.repelem), [size(scancor, 1)*kwargs.repelem, size(scancor, 2)]);
         scancor = scancor(:, kwargs.axorder);
+        if ~isempty(kwargs.ax4)
+            scancor(:, 4) = scan(:, 4);
+        end
         varargout{2} = scancor;
         tab = scancor;
     else
@@ -153,6 +181,8 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
         writematrix(tab, strcat(kwargs.filename, '.txt'), 'Delimiter', kwargs.delimiter);
     end
 
-    varargout{3} = ft;
+    if exist('ft', 'var')
+        varargout{3} = ft;
+    end
 
 end

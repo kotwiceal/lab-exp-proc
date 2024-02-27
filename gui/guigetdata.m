@@ -1,5 +1,5 @@
 function result = guigetdata(roi, data, kwargs)
-%% Select data by specified 2d mask.
+%% Select data by specified rectangle/polygonal mask.
 %% The function takes following arguments:
 %   roi:        [ROI object]        - ROI object to select data
 %   data:       [n1×m1... double]   - multidimensional data
@@ -8,19 +8,58 @@ function result = guigetdata(roi, data, kwargs)
 %   z:          [n1×m1 double]      - spatial coordinate
 %% The function returns following results:
 %   result: [n1×m1... double] or [k1×1 double] - selected data
-        
-        arguments
-            roi 
-            data double
-            kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'raw', 'cut', 'flatten'})} = 'raw'
-            kwargs.x double = []
-            kwargs.z double = []
-            kwargs.position double = []
-            kwargs.size double = []
-            kwargs.permute (1,2) double = [1, 2]
-        end
-        sz = size(data);
+%% Examples:
+%% 1. Select region of image data by rectangle/polygonal ROI and outer values are assigned nan
+% [x, z] = meshgrid(0:100, 0:50);
+% data = sin(x+z); % roi.Position = [10, 10, 5, 5];
+% result = guigetdata(roi, data, shape = 'raw', x = x, z = z); % size(result) = [101, 51]
+%% 2. Extract region of image data by rectangle ROI
+% [x, z] = meshgrid(0:100, 0:50);
+% data = sin(x+z); % roi.Position = [10, 10, 5, 5];
+% result = guigetdata(roi, data, shape = 'cut', x = x, z = z); % size(result) = [5, 5]
+%% 3. Extract region of image data by rectangle/polygonal ROI and flat to vector
+% [x, z] = meshgrid(0:100, 0:50);
+% data = sin(x+z); % roi.Position = [10, 10, 5, 5]; roi is rectangle;
+% result = guigetdata(roi, data, shape = 'flatte', x = x, z = z); % size(result) = [5, 5]
+%% 4. Extract region of page-wise data by rectangle ROI
+% [x, z] = meshgrid(0:100, 0:50);
+% data = (0.1*rand([size(x), 10])+1).*sin(x+z); % roi.Position = [10, 10, 5, 5];
+% result = guigetdata(roi, data, shape = 'cut', x = x, z = z); % size(result) = [5, 5, 10]
+%% 5. Extract region of vector data by rectangle ROI
+% x = 0:100;
+% data = (0.1*rand(size(x))+1).*sin(x); % roi.Position = [10, 15, 5, 6];
+% result = guigetdata(roi, data, shape = 'cut', x = x); % size(result) = [1, 5]
 
+    arguments
+        roi 
+        data double
+        kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'raw', 'cut', 'flatten'})} = 'raw'
+        kwargs.x double = []
+        kwargs.z double = []
+        kwargs.position double = []
+        kwargs.size double = []
+        kwargs.permute (1,2) double = [1, 2]
+    end
+    sz = size(data);
+
+    if isvector(data)
+        % vector data
+        if isempty(kwargs.x)
+            kwargs.x = 1:numel(data);
+        end
+        dx = [roi.Position(1), roi.Position(1)+roi.Position(3)];
+        index = kwargs.x>dx(1)&kwargs.x<=dx(2);
+        switch kwargs.shape
+            case 'raw'
+                data(~index) = nan;
+                result = data;
+            case 'cut'
+                result = data(index);
+            case 'flatten'
+                result = data(index);
+        end
+    else
+        % image data
         if isempty(kwargs.x) && isempty(kwargs.z)
             index = createMask(roi);
             kwargs.position = roi.Position;
@@ -58,5 +97,5 @@ function result = guigetdata(roi, data, kwargs)
             case 'flatten'
                 result = data(index);
         end
-
+    end
 end
