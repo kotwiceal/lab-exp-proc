@@ -81,7 +81,10 @@ function fitdistcoef =  procfitdistcoef(data, kwargs)
 
     nlkernel = @(x) fitdistfilter(x, method = 'fitdistcoef', norm = kwargs.norm, binedge = kwargs.binedge, ...
         distname = kwargs.distname, x0 = kwargs.x0, lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
-    fitdistcoef = nlpfilter(data, kwargs.kernel, @(x) nlkernel(x), strides = kwargs.strides, type = 'deep', resize = true);
+
+    if isvector(data); type = 'slice'; resize = false; else; type = 'deep'; resize = true; end
+    fitdistcoef = nlpfilter(data, kwargs.kernel, @(x) nlkernel(x), strides = kwargs.strides, type = type, resize = resize);
+    
     fitdistcoef = imagfilter(fitdistcoef, filt = kwargs.postfilt, filtker = kwargs.postfiltker, ...
         weight = kwargs.weight, weightname = kwargs.weightname, weightparam = kwargs.weightparam);
 end
