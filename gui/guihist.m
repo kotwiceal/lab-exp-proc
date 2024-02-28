@@ -8,11 +8,13 @@ function varargout = guihist(data, kwargs)
 %   norm:           [char array]                    - type of statistics normalization
 %   binedge:        [1×q double]                    - bins count or edge grid
 %   normalize:      [char array]                    - data normalization
-%   getdata:        [char array]                    - data extraction method
 %   shape:          [char array]                    - type of region selection
 %   mask:           [1×2 or 1×4 t×2 double]         - edge size to rectangle selection or n-row verxex to polygon selection 
 %   interaction:    [char array]                    - region selection behaviour: 'translate', 'all'   
 %   number:         [1×1 int]                       - count of selection regions
+%   xlabel:         [char array]                    - x-axis label of data subplot
+%   ylabel:         [char array]                    - y-axis label of data subplot
+%   zlabel:         [char array]                    - z-axis label of data subplot
 %   legend:         [1×1 logical]                   - show legend
 %   xlim:           [1×2 double]                    - x axis limit
 %   ylim:           [1×2 double]                    - y axis limit
@@ -89,12 +91,15 @@ function varargout = guihist(data, kwargs)
         kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'count', 'pdf', 'cdf', 'cumcount', 'probability', 'percentage', 'countdensity'})} = 'pdf'
         kwargs.binedge double = []
         kwargs.normalize (1,:) char {mustBeMember(kwargs.normalize, {'none', 'zscore', 'norm', 'center'})} = 'none'
-        kwargs.getdata (1,:) char {mustBeMember(kwargs.getdata, {'raw', 'dist'})} = 'raw'
         %% roi and axis parameters
         kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'rect', 'poly'})} = 'rect'
         kwargs.mask double = []
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
         kwargs.number int8 = 1
+        kwargs.xlabel (1,:) char = []
+        kwargs.ylabel (1,:) char = []
+        kwargs.zlabel (1,:) char = []
+        kwargs.showlabel logical = true
         kwargs.legend logical = false
         kwargs.xlim double = []
         kwargs.ylim double = []
@@ -166,38 +171,35 @@ function varargout = guihist(data, kwargs)
             var1 = kwargs.var1, amp1 = kwargs.amp1, mean2 = kwargs.mean2, mode2 = kwargs.mode2, var2 = kwargs.var2, amp2 = kwargs.amp2);
     end
 
-    function result = roisgetdata()
-        %% extract data from selectors
-        result = cell(1, numel(rois));
-        switch kwargs.getdata
-            case 'raw'
-                % normalization
-                switch kwargs.normalize
-                    case 'none'
-                        for i = 1:length(rois)       
-                            result{i} = select(rois{i});
-                        end
-                    otherwise
-                        for i = 1:length(rois)     
-                            result{i} = normalize(select(rois{i}), kwargs.normalize);
-                        end
-                end
-            case 'dist'
+    function result = getdatafunc()
+        result = struct();
+        % normalization
+        switch kwargs.normalize
+            case 'none'
                 for i = 1:length(rois)       
-                    [~, counts_raw, edges_raw, ~, ~, ~] = fithist(data = select(rois{i}), ...
-                        distname = kwargs.distname, ...
-                        objnorm = kwargs.objnorm, ...
-                        nonlcon = kwargs.nonlcon, ...
-                        lb = kwargs.lb, ...
-                        x0 = kwargs.x0, ...
-                        ub = kwargs.ub, ...
-                        mb = kwargs.mb, ...
-                        range = kwargs.range, ...
-                        normalize = kwargs.normalize, ...
-                        binedge = kwargs.binedge, ...
-                        disp = kwargs.disp);
-                    result{i} = [edges_raw, counts_raw];
+                    result.raw{i} = select(rois{i});
                 end
+            otherwise
+                for i = 1:length(rois)     
+                    result.raw{i} = normalize(select(rois{i}), kwargs.normalize);
+                end
+        end
+        if kwargs.distname ~= "none"
+            for i = 1:length(rois)       
+                [~, counts_raw, edges_raw, ~, ~, ~] = fithist(data = select(rois{i}), ...
+                    distname = kwargs.distname, ...
+                    objnorm = kwargs.objnorm, ...
+                    nonlcon = kwargs.nonlcon, ...
+                    lb = kwargs.lb, ...
+                    x0 = kwargs.x0, ...
+                    ub = kwargs.ub, ...
+                    mb = kwargs.mb, ...
+                    range = kwargs.range, ...
+                    normalize = kwargs.normalize, ...
+                    binedge = kwargs.binedge, ...
+                    disp = kwargs.disp);
+                result.dist{i} = [edges_raw, counts_raw];
+            end
         end
     end
 
@@ -226,11 +228,11 @@ function varargout = guihist(data, kwargs)
 
     function plot_fit_hist()
         %% show statistic of fitted data
-        cla(ax{1}); hold(ax{1}, 'on'); box(ax{1}, 'on'); grid(ax{1}, 'on'); axis(ax{1}, 'square');
+        cla(ax{1}); hold(ax{1}, 'on'); box(ax{1}, 'on'); grid(ax{1}, 'on');
         xlabel(ax{1}, 'edges'); ylabel(ax{1}, kwargs.norm);
 
         if kwargs.cdf
-            cla(ax{2}); hold(ax{2}, 'on'); box(ax{2}, 'on'); grid(ax{2}, 'on'); axis(ax{2}, 'square');
+            cla(ax{2}); hold(ax{2}, 'on'); box(ax{2}, 'on'); grid(ax{2}, 'on');
             xlabel(ax{2}, 'edges'); ylabel(ax{2}, 'cdf');
             ylim(ax{2}, [-0.1, 1.1])
         end
@@ -385,6 +387,11 @@ function varargout = guihist(data, kwargs)
             case 'spatial'
                 plot(axroi, kwargs.x, data);
         end
+            if isempty(kwargs.xlabel); kwargs.xlabel = 'n'; end
+            if isempty(kwargs.ylabel); kwargs.ylabel = 'value'; end
+            if kwargs.showlabel
+                xlabel(axroi, kwargs.xlabel); ylabel(axroi, kwargs.ylabel);
+            end
     else
         switch disptype
             case 'node'
@@ -418,7 +425,7 @@ function varargout = guihist(data, kwargs)
 
     event();
 
-    varargout{1} = @() roisgetdata();
+    varargout{1} = @() getdatafunc();
 
     if ~isempty(kwargs.filename)
         savefig(gcf, strcat(kwargs.filename, '.fig'))

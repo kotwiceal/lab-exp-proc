@@ -1,53 +1,55 @@
 function varargout = procinterm(data, kwargs)
 %% Intermittency processing.
 %% The function takes following arguments:
-%   data:           [n×m... double]     - multidimensional data
-%   range:          [1×2 double]        - range to exculde statistical edges
-%   norm:           [char]              - type of statistics normalization
-%   binedge:        [1×l double]        - bins count or edge grid 
+%   data:                   [n×m... double]     - multidimensional data
+%   range:                  [1×2 double]        - range to exculde statistical edges
+%   norm:                   [chararray ]        - type of statistics normalization
+%   binedge:                [1×l double]        - bins count or edge grid 
 %
-%   method:         [char array]        - method of intermittency processing
-%   distname:       [char array]        - type of statistics fit
-%   quantile:       [1×1 double]        - quantile threshold
-%   root:           [char array]        - method to find root of two cdf intersection
-%   fitdistinit:    [1×1 logical]       - advanced initializing approximation of optimization problem
-%   fitdistcoef:    [n×m×k double]      - fit approximation coefficients
-%   fitdistfilt:    [char array]        - filter name to filter initial fit coefficients
-%   fitdistfiltker: [1×2 double]        - filter size to filter initial fit coefficients
-%   weight:         [n×m... double]     - gridded window function by shape initial data to perform weighted filtering
-%   weightname:     [char array]        - name of window function 
-%   weightparam:    [1×k double]        - parameters of window function 
-%   distance:       [char array]        - cluster method metric
-%   fillholes:      [1×1 logical]       - fill closed domain of processed fields
-%   batch:          [1×1 logical]       - clustering of data by all realization
-%   cnnversion:     [char array]        - version of convolutional neural network
-%   network:        [object]            - instance of sequence network
-%   map:            [1×2 double]        - mapping data range to specified
-%   crop:           [1×4 double]        - crop data: [x0, y0, width, height]
+%   method:                 [char array]        - method of intermittency processing
+%   distname:               [char array]        - type of statistics fit
+%   quantile:               [1×1 double]        - quantile threshold
+%   root:                   [char array]        - method to find root of two cdf intersection
+%   fitdistinit:            [1×1 logical]       - advanced initializing approximation of optimization problem
+%   fitdistcoef:            [n×m×k double]      - fit approximation coefficients
+%   fitdistfiltker:         [1×1 or 1×2 double] - filter size to filt initial fit coefficients at processing
+%   fitdistfiltstrd:        [1×1 or 1×2 double] - filter strides to filt initial fit coefficients at processing
+%   fitdistpostfilt:        [char array]        - filter name to filter initial fit coefficients
+%   fitdistpostfiltker:     [1×2 double]        - filter size to filt initial fit coefficients at postporcessing
+%   weight:                 [n×m... double]     - gridded window function by shape initial data to perform weighted filtering
+%   weightname:             [char array]        - name of window function 
+%   weightparam:            [1×k double]        - parameters of window function 
+%   distance:               [char array]        - cluster method metric
+%   fillholes:              [1×1 logical]       - fill closed domain of processed fields
+%   batch:                  [1×1 logical]       - clustering of data by all realization
+%   cnnversion:             [char array]        - version of convolutional neural network
+%   network:                [object]            - instance of sequence network
+%   map:                    [1×2 double]        - mapping data range to specified
+%   crop:                   [1×4 double]        - crop data: [x0, y0, width, height]
 %
-%   kernel:         [1×2 double]        - size of processing window
-%   strides:        [1×2 double]        - strides of processing window
+%   kernel:                 [1×2 double]        - size of processing window
+%   strides:                [1×2 double]        - strides of processing window
 %
-%   objnorm:        [1×l double]        - norm order at calculation objective function
-%   nonlcon:        [funtion_handle]    - non-linear optimization constrain function
-%   x0:             [1×k doule]         - inital parameters
-%   lb:             [1×k doule]         - lower bound of parameters
-%   ub:             [1×k doule]         - upper bpund of parameters
+%   objnorm:                [1×l double]        - norm order at calculation objective function
+%   nonlcon:                [funtion_handle]    - non-linear optimization constrain function
+%   x0:                     [1×k doule]         - inital parameters
+%   lb:                     [1×k doule]         - lower bound of parameters
+%   ub:                     [1×k doule]         - upper bpund of parameters
 
-%   mean1:          [1×2 double]         - constraints of mean value the first mode
-%   mode1:          [1×2 double]         - constraints of mode value the first mode
-%   var1:           [1×2 double]         - constraints of variance value the first mode
-%   amp1:           [1×2 double]         - constraints of amplitude value the first mode
-%   mean2:          [1×2 double]         - constraints of mean value the second mode
-%   mode2:          [1×2 double]         - constraints of mode value the second mode
-%   var2:           [1×2 double]         - constraints of variance value the second mode
-%   amp2:           [1×2 double]         - constraints of amplitude value the second mode
+%   mean1:                  [1×2 double]         - constraints of mean value the first mode
+%   mode1:                  [1×2 double]         - constraints of mode value the first mode
+%   var1:                   [1×2 double]         - constraints of variance value the first mode
+%   amp1:                   [1×2 double]         - constraints of amplitude value the first mode
+%   mean2:                  [1×2 double]         - constraints of mean value the second mode
+%   mode2:                  [1×2 double]         - constraints of mode value the second mode
+%   var2:                   [1×2 double]         - constraints of variance value the second mode
+%   amp2:                   [1×2 double]         - constraints of amplitude value the second mode
 
-%   prefilt:        [char array]         - method to filter threshold field
-%   prefiltker:     [1×2 double]         - kernel of filtering threshold field
+%   prefilt:                [char array]         - method to filter threshold field
+%   prefiltker:             [1×2 double]         - kernel of filtering threshold field
 
-%   postfilt:       [char array]         - method to filter intermittency field
-%   postfiltker:    [1×2 double]         - kernel of filtering intermittency field
+%   postfilt:               [char array]         - method to filter intermittency field
+%   postfiltker:            [1×2 double]         - kernel of filtering intermittency field
 %% The function returns following results:
 %   intermittency:              [n×m double]
 %   binarized:                  [n×m... double]
@@ -87,8 +89,10 @@ function varargout = procinterm(data, kwargs)
         %% advanced fit distribution parameters
         kwargs.fitdistinit logical = true
         kwargs.fitdistcoef double = []
-        kwargs.fitdistfilt (1,:) char {mustBeMember(kwargs.fitdistfilt, {'none', 'average', 'gaussian', 'median', 'median-weighted', 'wiener', 'mode'})} = 'median-weighted'
-        kwargs.fitdistfiltker double = [50, 50]
+        kwargs.fitdistfiltker (1,:) double = [50, 50]
+        kwargs.fitdistfiltstrd (1,:) double = [30, 30]
+        kwargs.fitdistpostfilt (1,:) char {mustBeMember(kwargs.fitdistpostfilt, {'none', 'average', 'gaussian', 'median', 'median-weighted', 'wiener', 'mode'})} = 'median-weighted'
+        kwargs.fitdistpostfiltker (1,:) double = [50, 50]
         kwargs.weight double = []
         kwargs.weightname (1,:) char {mustBeMember(kwargs.weightname, {'tukeywin'})} = 'tukeywin'
         kwargs.weightparam double = [0.05, 0.05]
@@ -132,16 +136,24 @@ function varargout = procinterm(data, kwargs)
             if isempty(kwargs.fitdistcoef)
                 fitdistcoef = procfitdistcoef(data, norm = kwargs.norm, binedge = kwargs.binedge, ...
                     distname = kwargs.distname, x0 = kwargs.x0, lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon, ...
-                    postfilt = kwargs.fitdistfilt, postfiltker = kwargs.fitdistfiltker, ...
+                    kernel = kwargs.fitdistfiltker, strides = kwargs.fitdistfiltstrd, ...
+                    postfilt = kwargs.fitdistpostfilt, postfiltker = kwargs.fitdistpostfiltker, ...
                     weight = kwargs.weight, weightname = kwargs.weightname, weightparam = kwargs.weightparam);
             else
                 fitdistcoef = kwargs.fitdistcoef;
             end
 
+            if isvector(data)
+                type = 'slice-cross'; resize = false; x0 = @(y) median(y, 1, 'omitmissing');
+            else
+                type = 'deep-cross'; resize = true; x0 = @(y) squeeze(median(y, [1, 2], 'omitmissing'));
+            end
+
             nlkernel = @(x, y) fitdistfilter(x, method = method, norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
-                quantile = kwargs.quantile, distname = kwargs.distname, x0 = squeeze(median(y, [1, 2], 'omitmissing')), ...
+                quantile = kwargs.quantile, distname = kwargs.distname, x0 = x0(y), ...
                 lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
-            result = nlpfilter(data, kwargs.kernel, @(x, y) nlkernel(x, y), strides = kwargs.strides, type = 'deep-cross', y = fitdistcoef, resize = true);
+
+            result = nlpfilter(data, kwargs.kernel, @(x, y) nlkernel(x, y), strides = kwargs.strides, type = type, y = fitdistcoef, resize = resize);
             if method ~= "integral-ratio"
                 varargout{4} = fitdistcoef;
             else
@@ -151,7 +163,8 @@ function varargout = procinterm(data, kwargs)
             nlkernel = @(x) fitdistfilter(x, method = method, norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
                 quantile = kwargs.quantile, distname = kwargs.distname, x0 = kwargs.x0, ...
                 lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
-            result = nlpfilter(data, kwargs.kernel, @(x) nlkernel(x), strides = kwargs.strides, type = 'deep', resize = true);
+            if isvector(data); type = 'slice'; resize = false; else; type = 'deep'; resize = true; end
+            result = nlpfilter(data, kwargs.kernel, @(x) nlkernel(x), strides = kwargs.strides, type = type, resize = resize);
         end
         if method ~= "integral-ratio"
             result = imagfilter(result, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
@@ -160,7 +173,24 @@ function varargout = procinterm(data, kwargs)
 
     function [intermittency, binarized] = procfitdistbinar(threshold)
         binarized = data ./ threshold; binarized(binarized >= 1) = 1; binarized(binarized < 1) = 0;
-        intermittency = mean(binarized, 3, 'omitmissing');
+        if isvector(binarized)
+                intermittency = mean(binarized, 'omitmissing');
+        else
+            intermittency = mean(binarized, 3, 'omitmissing');
+        end
+    end
+
+    function binarized = procbinarclust()
+        [binarized, center, ~, distance] = kmeans(data(:), 2, 'Distance', kwargs.distance);
+        binarized = reshape(binarized, size(data));
+        distance = squeeze(reshape(distance, [size(data), 2]));
+        [~, index] = max(center);
+        switch index
+            case 1
+                binarized = -(binarized - 2);
+            case 2
+                binarized = binarized - 1;
+        end
     end
 
     intermittency = []; binarized = [];
@@ -184,43 +214,39 @@ function varargout = procinterm(data, kwargs)
         case 'integral-ratio'
             intermittency = procfitdistfilt('integral-ratio');
         case 'cluster'
-            if kwargs.batch
-                [binarized, center, ~, distance] = kmeans(data(:), 2, 'Distance', kwargs.distance);
-                binarized = reshape(binarized, size(data));
-                distance = reshape(distance, [size(data), 2]);
-                [~, index] = max(center);
-                switch index
-                    case 1
-                        binarized = -(binarized - 2);
-                    case 2
-                        binarized = binarized - 1;
-                end
+            if isvector(data)
+                binarized = procbinarclust();
+                intermittency = mean(binarized, 'omitmissing');
             else
-                distance = []; center = [];
-                for i = 1:prod(sz(3:end))
-                    temporary = data(:, :, i); 
-                    [temporary, center(:, i), ~, distance_temp] = kmeans(temporary(:), 2, 'Distance', kwargs.distance);
-                    temporary = reshape(temporary, size(data, 1:2));
-                    distance(:,:,:,i) = reshape(distance_temp, [size(data, [1, 2]), 2]);
-                    [~, index] = max(center(:, i));
-                    switch index
-                        case 1
-                            temporary = -(temporary - 2);
-                        case 2
-                            temporary = temporary - 1;
+                if kwargs.batch
+                    binarized = procbinarclust()
+                else
+                    distance = []; center = [];
+                    for i = 1:prod(sz(3:end))
+                        temporary = data(:, :, i); 
+                        [temporary, center(:, i), ~, distance_temp] = kmeans(temporary(:), 2, 'Distance', kwargs.distance);
+                        temporary = reshape(temporary, size(data, 1:2));
+                        distance(:,:,:,i) = reshape(distance_temp, [size(data, [1, 2]), 2]);
+                        [~, index] = max(center(:, i));
+                        switch index
+                            case 1
+                                temporary = -(temporary - 2);
+                            case 2
+                                temporary = temporary - 1;
+                        end
+                        binarized(:, :, i) = temporary;
                     end
-                    binarized(:, :, i) = temporary;
                 end
-            end
-            if kwargs.fillholes
-                temporary = [];
-                binarized(isnan(binarized)) = 0;
-                for i = 1:prod(sz(3:end))
-                    temporary(:, :, i) = imfill(binarized(:, :, i), 'holes');
+                if kwargs.fillholes
+                    temporary = [];
+                    binarized(isnan(binarized)) = 0;
+                    for i = 1:prod(sz(3:end))
+                        temporary(:, :, i) = imfill(binarized(:, :, i), 'holes');
+                    end
+                    binarized = reshape(temporary, sz);
                 end
-                binarized = reshape(temporary, sz);
+                intermittency = squeeze(mean(binarized, 3, 'omitmissing'));
             end
-            intermittency = squeeze(mean(binarized, 3, 'omitmissing'));
             varargout{2} = binarized;
             varargout{3} = distance;
             varargout{4} = center;
