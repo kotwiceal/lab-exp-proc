@@ -12,7 +12,7 @@ function data = imagfilter(data, kwargs)
 
     arguments
         data double
-        kwargs.filt (1,:) char {mustBeMember(kwargs.filt, {'none', 'gaussian', 'average', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'median-wiener', 'mode'})} = 'gaussian'
+        kwargs.filt (1,:) char {mustBeMember(kwargs.filt, {'none', 'gaussian', 'average', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'wiener-median', 'mode'})} = 'gaussian'
         kwargs.filtker double = [3, 3]
         kwargs.weight double = []
         kwargs.weightname (1,:) char {mustBeMember(kwargs.weightname, {'tukeywin'})} = 'tukeywin'
@@ -47,13 +47,13 @@ function data = imagfilter(data, kwargs)
                 data(:, :, i) = wiener2(data(:, :, i), kwargs.filtker);
             end
             data = reshape(data, sz);
-        case 'median-wiener'
+        case 'wiener-median'
             sz = size(data);
             for i = 1:prod(sz(3:end))
-                data(:, :, i) = medfilt2(data(:, :, i), kwargs.filtker);
+                data(:, :, i) = wiener2(data(:, :, i), kwargs.filtker);
             end
             for i = 1:prod(sz(3:end))
-                data(:, :, i) = wiener2(data(:, :, i), kwargs.filtker);
+                data(:, :, i) = medfilt2(data(:, :, i), kwargs.filtker);
             end
             data = reshape(data, sz);
         case 'mode'

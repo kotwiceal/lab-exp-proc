@@ -21,7 +21,7 @@ function animrec(data, kwargs)
         kwargs.filename = ''
         kwargs.xlabel (1,:) char = []
         kwargs.ylabel (1,:) char = []
-        kwargs.axis (1,:) char = 'equal'
+        kwargs.axis (1,:) char = 'image'
         kwargs.clim (1,2) double = [1e-4, 5e-3]
         kwargs.colormap (1,:) char = 'turbo'
     end
@@ -30,7 +30,6 @@ function animrec(data, kwargs)
     display_label = isempty(kwargs.xlabel) & isempty(kwargs.ylabel); 
 
     clf; tiledlayout('flow'); nexttile; ax = gca;
-    hold(ax, 'on'); grid(ax, 'on'); box(ax, 'on'); axis(ax, kwargs.axis);
     if display
         imagesc(ax, data(:,:,1));
         if display_label
@@ -39,6 +38,7 @@ function animrec(data, kwargs)
             xlabel(ax, kwargs.xlabel); ylabel(ax, kwargs.ylabel); 
         end
     else
+        hold(ax, 'on'); grid(ax, 'on'); box(ax, 'on');
         surf(ax, kwargs.x, kwargs.z, data(:,:,1), 'LineStyle', 'None');
         xlim(ax, [min(kwargs.x(:)), max(kwargs.x(:))]);
         ylim(ax, [min(kwargs.z(:)), max(kwargs.z(:))]);
@@ -48,13 +48,13 @@ function animrec(data, kwargs)
             xlabel(ax, kwargs.xlabel); ylabel(ax, kwargs.ylabel); 
         end
     end
+    axis(ax, kwargs.axis);
     clim(ax, kwargs.clim);
     colormap(ax, kwargs.colormap);
     exportgraphics(ax, kwargs.filename);
 
     for i = 1:size(data, 3)
         cla(ax);
-        hold(ax, 'on'); grid(ax, 'on'); box(ax, 'on'); axis(ax, kwargs.axis);
         if display
             imagesc(ax, data(:,:,i));
             if display_label
@@ -63,6 +63,7 @@ function animrec(data, kwargs)
                 xlabel(ax, kwargs.xlabel); ylabel(ax, kwargs.ylabel); 
             end
         else
+            hold(ax, 'on'); grid(ax, 'on'); box(ax, 'on');
             surf(ax, kwargs.x, kwargs.z, data(:,:,i), 'LineStyle', 'None');
             xlim(ax, [min(kwargs.x(:)), max(kwargs.x(:))]);
             ylim(ax, [min(kwargs.z(:)), max(kwargs.z(:))]);
@@ -72,6 +73,7 @@ function animrec(data, kwargs)
                 xlabel(ax, kwargs.xlabel); ylabel(ax, kwargs.ylabel); 
             end
         end
+        axis(ax, kwargs.axis);
         xlabel(ax, kwargs.xlabel); ylabel(ax, kwargs.ylabel); clim(ax, kwargs.clim);
         colormap(ax, kwargs.colormap);
         exportgraphics(ax, kwargs.filename, Append = true);

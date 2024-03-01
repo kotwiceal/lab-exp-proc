@@ -63,7 +63,8 @@ function varargout = fithist(kwargs)
         kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'count', 'pdf', 'probability', 'percentage', 'countdensity'})} = 'pdf'
         kwargs.binedge double = []
         kwargs.range double = []
-        kwargs.normalize (1,:) char {mustBeMember(kwargs.normalize, {'none', 'zscore', 'norm', 'center'})} = 'none'
+        kwargs.normalize (1,:) char {mustBeMember(kwargs.normalize, {'none', 'zscore', 'norm', 'center', 'scale', 'range'})} = 'none'
+        kwargs.pow (1,:) double = []
         %% optimization parameters
         kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'none', 'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'gumbel2'
         kwargs.solver (1,:) char {mustBeMember(kwargs.solver, {'fit', 'opt'})} = 'fit'
@@ -77,7 +78,7 @@ function varargout = fithist(kwargs)
         kwargs.lb double = []
         kwargs.ub double = []
         kwargs.mb double = [0, 10];
-        kwargs.disp logical = false
+        kwargs.verbose logical = false
     end
 
     warning off
@@ -96,6 +97,8 @@ function varargout = fithist(kwargs)
             otherwise
                 kwargs.data = normalize(kwargs.data, kwargs.normalize);
         end
+
+        if ~isempty(kwargs.pow); kwargs.data = kwargs.data.^kwargs.pow; end
 
         if isempty(kwargs.binedge)
             [y, x] = histcounts(kwargs.data, 'Normalization', kwargs.norm);
@@ -202,9 +205,19 @@ function varargout = fithist(kwargs)
             modes(:, 1) = fa(coef, edges);
         end
     
-        if kwargs.disp
+        if kwargs.verbose
+            % show raw distribution parameters
+            param = struct(mean = mean(kwargs.data), mode = mode(kwargs.data), variance = var(kwargs.data), ...
+                skewness = skewness(kwargs.data), kurtosis = kurtosis(kwargs.data));
+            tab = [param.mean; param.mode; param.variance; param.skewness; param.kurtosis];
+            tab = array2table(tab, 'VariableNames', {'raw'}, 'RowName', {'mean', 'mode', 'variance', 'skewness', 'kurtosis'});
+            disp(tab);
+
+            % show optimization result
             tab = array2table(coef, 'VariableNames', split(num2str(1:size(coef, 2))), 'RowName', {'solution'});
             disp(tab);
+
+            % show fitted distribution parameters
             distparam(coef, distname = kwargs.distname, disp = true);
         end
     catch

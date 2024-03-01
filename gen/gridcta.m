@@ -179,6 +179,9 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
 
     if ~isempty(kwargs.filename)
         writematrix(tab, strcat(kwargs.filename, '.txt'), 'Delimiter', kwargs.delimiter);
+        if exist('ft', 'var')
+            save(strcat(kwargs.filename, '.mat'), 'ft')
+        end
     end
 
     if exist('ft', 'var')

@@ -1,50 +1,5 @@
-function varargout = guihist(data, kwargs)
+function varargout = guihist(varargin, kwargs)
 %% Visualize data statistics by means manually region selection.
-%% The function takes following arguments:
-%   data:           [n×m... double]                 - vector or multidimensional data
-%   x:              [n×m double]                    - spatial coordinate
-%   z:              [n×m double]                    - spatial coordinate
-%   range:          [1×2 double]                    - range to exclude data
-%   norm:           [char array]                    - type of statistics normalization
-%   binedge:        [1×q double]                    - bins count or edge grid
-%   normalize:      [char array]                    - data normalization
-%   shape:          [char array]                    - type of region selection
-%   mask:           [1×2 or 1×4 t×2 double]         - edge size to rectangle selection or n-row verxex to polygon selection 
-%   interaction:    [char array]                    - region selection behaviour: 'translate', 'all'   
-%   number:         [1×1 int]                       - count of selection regions
-%   xlabel:         [char array]                    - x-axis label of data subplot
-%   ylabel:         [char array]                    - y-axis label of data subplot
-%   zlabel:         [char array]                    - z-axis label of data subplot
-%   legend:         [1×1 logical]                   - show legend
-%   xlim:           [1×2 double]                    - x axis limit
-%   ylim:           [1×2 double]                    - y axis limit
-%   clim:           [1×2 double]                    - color axis limit
-%   colormap:       [char array]                    - colormap of 2D field
-%   markersize:     [1×1 double]                    - masker size
-%   cdf:            [1×1 logical]                   - plot cdf of statistics
-%   docked:         [1×1 logical]                   - docked figure
-%   aspect:         [char array]                    - axis ratio
-%   distname:       [char array]                    - type of statistics fit
-%   objnorm:        [1×1 double]                    - norm order at calculation objective function
-%   Aineq:          [p×l double]                    - linear optimization inequality constrain matrix
-%   bineq:          [l×1 double]                    - linear optimization inequality constrain right side
-%   Aeq:            [m×k double]                    - linear optimization equality constrain matrix
-%   beq:            [k×1 double]                    - linear optimization equality constrain right side
-%   nonlcon:        [funtion_handle]                - non-linear optimization constrain function
-%   x0:             [1×k doule]                     - inital approximation
-%   lb:             [1×k doule]                     - lower bound of parameters
-%   ub:             [1×k doule]                     - upper bpund of parameters
-%   mb:             [1×2 doule]                     - scale range of auto constrains
-%   disp:           [1×1 logical]                   - display of optimization result 
-%   mean1:          [1×2 double]                    - constraints of mean value the first mode
-%   mode1:          [1×2 double]                    - constraints of mode value the first mode
-%   var1:           [1×2 double]                    - constraints of variance value the first mode
-%   amp1:           [1×2 double]                    - constraints of amplitude value the first mode
-%   mean2:          [1×2 double]                    - constraints of mean value the second mode
-%   mode2:          [1×2 double]                    - constraints of mode value the second mode
-%   var2:           [1×2 double]                    - constraints of variance value the second mode
-%   amp2:           [1×2 double]                    - constraints of amplitude value the second mode
-%   quantile:       [1×1 double]                    - quantile threshold
 %% The function returns following results:
 %   getdata:        [function_handle]               - return cells stored raw or distribution
 %% Examples:
@@ -60,12 +15,10 @@ function varargout = guihist(data, kwargs)
 %% 5. Get raw data selected by two regions:
 % gd = guihist(gca, data.dwdlf, number = 2);
 % probes = gd();
-% probe{1} = probes{1};
-% probe{2} = probes{2};
 %% 6. Show histogram by all realization with custom parameters, pdf is fitted by 'beta1' distribution, by solver fmincon with l2 norm and lower and upper constrains:
 % guihist(data.dwdlf, mask = [25, 220, 25, 25], ...
 %     distname = 'beta1', objnorm = 2, lb = [1, 0, 0, 1, 1], ...
-%     ub = [1, 1e2, 0, 2e1, 1e4], norm = 'pdf', xlim = [0, 0.01], disp = true, cdf = true);
+%     ub = [1, 1e2, 0, 2e1, 1e4], norm = 'pdf', xlim = [0, 0.01], verbose = true, cdf = true);
 %% 7. Show histogram by all realization with custom parameters, pdf is fitted by 'beta2' distribution, by solver fmincon with l2 norm and lower, upper and non-linear constrains:
 % % description of 'beta2':
 % % f1 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f1 = @(a, x) f1(a(1:3), x);
@@ -80,61 +33,72 @@ function varargout = guihist(data, kwargs)
 % % gui
 % guihist(data.dwdlf, mask = [250, 50, 25, 25], ...
 %     distname = 'beta2', objnorm = 2, lb = lb, ub = ub, nonlcon = nonlcon, ...
-%     norm = 'pdf', xlim = [0, 0.01], disp = true, cdf = true);
+%     norm = 'pdf', xlim = [0, 0.01], verbose = true, cdf = true);
+
+    arguments (Repeating)
+        varargin double % vector or multidimensional data
+    end
 
     arguments
         %% data parameters
-        data double
-        kwargs.x double = []
-        kwargs.z double = []
-        kwargs.range double = []
+        kwargs.x double = [] % spatial coordinate
+        kwargs.z double = [] % spatial coordinate
+        kwargs.range double = [] % range to exclude data
+        %type of statistics normalization
         kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'count', 'pdf', 'cdf', 'cumcount', 'probability', 'percentage', 'countdensity'})} = 'pdf'
-        kwargs.binedge double = []
-        kwargs.normalize (1,:) char {mustBeMember(kwargs.normalize, {'none', 'zscore', 'norm', 'center'})} = 'none'
+        % bins count or edge grid
+        kwargs.binedge = []
+        % type of data normalization
+        kwargs.normalize (1,:) char {mustBeMember(kwargs.normalize, {'none', 'zscore', 'norm', 'center', 'scale', 'range'})} = 'none'
+        kwargs.pow (1,:) double = []
         %% roi and axis parameters
+        % type of region selection
         kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'rect', 'poly'})} = 'rect'
+        % edge size to rectangle selection or n-row verxex to polygon selection 
         kwargs.mask double = []
+        % region selection behaviour: 'translate', 'all'   
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
-        kwargs.number int8 = 1
-        kwargs.xlabel (1,:) char = []
-        kwargs.ylabel (1,:) char = []
-        kwargs.zlabel (1,:) char = []
-        kwargs.showlabel logical = true
-        kwargs.legend logical = false
-        kwargs.xlim double = []
-        kwargs.ylim double = []
-        kwargs.clim double = []
-        kwargs.colormap (1,:) char = 'turbo'
-        kwargs.markersize double = 3
-        kwargs.cdf logical = false
-        kwargs.cumsum logical = false
-        kwargs.docked logical = false
+        kwargs.number (1,1) double {mustBeInteger} = 1 % number of selection regions
+        kwargs.xlabel (1,:) char = [] % x-axis label of data subplot
+        kwargs.ylabel (1,:) char = [] % y-axis label of data subplot
+        kwargs.zlabel (1,:) char = [] % z-axis label of data subplot
+        kwargs.showlabel logical = true % show figure labels
+        kwargs.legend logical = false % show legend
+        kwargs.xlim double = [] % x-axis limit
+        kwargs.ylim double = [] % y-axis limit
+        kwargs.clim double = [] % color-axis limit
+        kwargs.colormap (1,:) char = 'turbo' % colormap name
+        kwargs.markersize double = 3 % 
+        kwargs.cdf logical = false % plot cdf of statistics
+        kwargs.cumsum logical = false % plot cumulative sum of statistics
+        kwargs.docked logical = false % docked figure
         kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal'
-        kwargs.title (1,:) char = []
-        kwargs.filename (1,:) char = []
-        kwargs.extension (1,:) char = '.png'
+        kwargs.title (1,:) char = [] % to show global title
+        kwargs.filename (1,:) char = [] % to store figure
+        kwargs.extension (1,:) char = '.png' % image extension of stored figure
         %% optimization parameters
+        % type of statistics fit
         kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'none', 'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'none'
-        kwargs.objnorm double = 2
-        kwargs.Aineq double = []
-        kwargs.bineq double = []
-        kwargs.Aeq double = []
-        kwargs.beq double = []
-        kwargs.nonlcon = []
-        kwargs.x0 double = []
-        kwargs.lb double = []
-        kwargs.ub double = []
-        kwargs.mb double = [0, 10]
-        kwargs.disp logical = false
+        kwargs.objnorm double = 2 % norm order at calculation objective function
+        kwargs.Aineq double = [] % linear optimization inequality constrain matrix
+        kwargs.bineq double = [] % linear optimization inequality constrain right side
+        kwargs.Aeq double = [] % linear optimization equality constrain matrix
+        kwargs.beq double = [] % linear optimization equality constrain right side
+        kwargs.nonlcon = [] % non-linear optimization constrain function
+        kwargs.x0 double = [] % inital approximation
+        kwargs.lb double = [] % lower bound of parameters
+        kwargs.ub double = [] % upper bpund of parameters
+        kwargs.mb double = [0, 10] % scale range of auto constrains
+        kwargs.verbose logical = false % display of statistic parameters and optimization result 
         %% restriction parameters
-        kwargs.mean1 double = []
-        kwargs.mode1 double = []
-        kwargs.var1 double = []
-        kwargs.amp1 double = []
-        kwargs.mean2 double = []
-        kwargs.mode2 double = []
-        kwargs.var2 double = []
-        kwargs.amp2 double = []
+        kwargs.mean1 double = [] % constraints of mean value the first mode
+        kwargs.mode1 double = [] % constraints of mode value the first mode
+        kwargs.var1 double = [] %  constraints of variance value the first mode
+        kwargs.amp1 double = [] % constraints of amplitude value the first mode
+        kwargs.mean2 double = [] % constraints of mean value the second mode
+        kwargs.mode2 double = [] % constraints of mode value the second mode
+        kwargs.var2 double = [] % constraints of variance value the second mode
+        kwargs.amp2 double = [] % constraints of amplitude value the second mode
         %% other parameters
         kwargs.quantile double = 0.9
     end
@@ -142,7 +106,7 @@ function varargout = guihist(data, kwargs)
     % define variables
     mode_markers = {'-o', '-s', '-x', '-<', '->', '-^'};
 
-    isvect = isvector(data);
+    isvect = isvector(varargin{1});
 
     % define dispalying type
     if isempty(kwargs.x) && isempty(kwargs.z)
@@ -151,17 +115,43 @@ function varargout = guihist(data, kwargs)
         disptype = 'spatial';
     end
 
-    % define funtion handle to probe data
-    switch disptype
-        case 'node'
-            select = @(roiobj) guigetdata(roiobj, data, shape = 'flatten');
-            select2d = @(roiobj) guigetdata(roiobj, data, shape = 'cut');
-        case 'spatial'
-            select = @(roiobj) guigetdata(roiobj, data, shape = 'flatten', ...
-                x = kwargs.x, z = kwargs.z);
-            select2d = @(roiobj) guigetdata(roiobj, data, shape = 'cut', ...
-                x = kwargs.x, z = kwargs.z);
+    switch numel(varargin)
+        case 1
+            % define funtion handle to probe data
+            switch disptype
+                case 'node'
+                    select = @(roiobj) guigetdata(roiobj, varargin{1}, shape = 'flatten');
+                    select2d = @(roiobj) guigetdata(roiobj, varargin{1}, shape = 'cut');
+                case 'spatial'
+                    select = @(roiobj) guigetdata(roiobj, varargin{1}, shape = 'flatten', ...
+                        x = kwargs.x, z = kwargs.z);
+            end
+        case 2
+            % define funtion handle to probe data
+            switch disptype
+                case 'node'
+                    select = @(roiobj) cat(2, guigetdata(roiobj, varargin{1}, shape = 'flatten'), ...
+                        guigetdata(roiobj, varargin{2}, shape = 'flatten'));
+                case 'spatial'
+                    select = @(roiobj) cat(2, guigetdata(roiobj, varargin{1}, shape = 'flatten', ...
+                        x = kwargs.x, z = kwargs.z), guigetdata(roiobj, varargin{2}, shape = 'flatten', ...
+                        x = kwargs.x, z = kwargs.z));
+            end
     end
+
+    fithistfunc = @(roi) fithist(data = select(roi), ...
+        distname = kwargs.distname, ...
+        objnorm = kwargs.objnorm, ...
+        nonlcon = kwargs.nonlcon, ...
+        lb = kwargs.lb, ...
+        x0 = kwargs.x0, ...
+        ub = kwargs.ub, ...
+        mb = kwargs.mb, ...
+        range = kwargs.range, ...
+        normalize = kwargs.normalize, ...
+        binedge = kwargs.binedge, ...
+        pow = kwargs.pow, ...
+        verbose = kwargs.verbose);
 
     % auto build non-linear constrain function
     temporary = isempty(cat(1, kwargs.mean1, kwargs.mode1, kwargs.var1, kwargs.amp1, kwargs.mean2, ...
@@ -186,18 +176,7 @@ function varargout = guihist(data, kwargs)
         end
         if kwargs.distname ~= "none"
             for i = 1:length(rois)       
-                [~, counts_raw, edges_raw, ~, ~, ~] = fithist(data = select(rois{i}), ...
-                    distname = kwargs.distname, ...
-                    objnorm = kwargs.objnorm, ...
-                    nonlcon = kwargs.nonlcon, ...
-                    lb = kwargs.lb, ...
-                    x0 = kwargs.x0, ...
-                    ub = kwargs.ub, ...
-                    mb = kwargs.mb, ...
-                    range = kwargs.range, ...
-                    normalize = kwargs.normalize, ...
-                    binedge = kwargs.binedge, ...
-                    disp = kwargs.disp);
+                [~, counts_raw, edges_raw, ~, ~, ~] = fithistfunc(rois{i});
                 result.dist{i} = [edges_raw, counts_raw];
             end
         end
@@ -205,24 +184,79 @@ function varargout = guihist(data, kwargs)
 
     function plot_raw_hist()
         %% show statistic of raw data
-        cla(ax{1}); hold(ax{1}, 'on'); box(ax{1}, 'on'); grid(ax{1}, 'on');
-        xlabel(ax{1}, 'edges'); ylabel(ax{1}, kwargs.norm);
+        cla(ax{1});
         for i = 1:length(rois)
-            if isempty(kwargs.binedge)
-                [counts, edges] = histcounts(select(rois{i}), 'Normalization', kwargs.norm);
-            else
-                [counts, edges] = histcounts(select(rois{i}), kwargs.binedge, 'Normalization', kwargs.norm);
+            switch numel(varargin)
+                case 1
+                    % normalization
+                    switch kwargs.normalize
+                        case 'none'
+                            temporary = select(rois{i});
+                        otherwise
+                            temporary = normalize(select(rois{i}), kwargs.normalize);
+                    end
+        
+                    if ~isempty(kwargs.pow); temporary = temporary.^kwargs.pow; end
+        
+                    param.mean(:,i) = mean(temporary);
+                    param.mode(:,i) = mode(temporary);
+                    param.variance(:,i) = var(temporary);
+                    param.skewness(:,i) = skewness(temporary);
+                    param.kurtosis(:,i) = kurtosis(temporary);
+        
+                    if isempty(kwargs.binedge)
+                        [counts, edges] = histcounts(temporary, 'Normalization', kwargs.norm);
+                    else
+                        [counts, edges] = histcounts(temporary, kwargs.binedge, 'Normalization', kwargs.norm);
+                    end
+        
+                    edges = edges(2:end);
+        
+                    if ~isempty(kwargs.range)
+                        index = excludedata(edges, counts, 'range', kwargs.range);
+                        edges = edges(index); counts = counts(index); clear index;
+                    end
+
+                    plot(ax{1}, edges, counts, 'Color', rois{i}.UserData.color, ...
+                        'DisplayName', strcat("raw ", num2str(i)))
+                    xlabel(ax{1}, 'edges'); ylabel(ax{1}, kwargs.norm);
+                    hold(ax{1}, 'on'); box(ax{1}, 'on'); grid(ax{1}, 'on');
+                case 2
+                    temporary = select(rois{i});
+
+                    % normalization
+                    switch kwargs.normalize
+                        case 'none'
+                            temporary = select(rois{i});
+                        otherwise
+                            temporary = normalize(select(rois{i}), 2, kwargs.normalize);
+                    end
+
+                    param.mean(:,i) = mean(temporary);
+                    param.mode(:,i) = mode(temporary);
+                    param.variance(:,i) = var(temporary);
+                    param.skewness(:,i) = skewness(temporary);
+                    param.kurtosis(:,i) = kurtosis(temporary);
+
+                    if isempty(kwargs.binedge)
+                        [counts, Xedges, Yedges] = histcounts2(temporary(:,1), temporary(:,2), 'Normalization', kwargs.norm);
+                    else
+                        if ~iscell(kwargs.binedge)
+                            [counts, Xedges, Yedges] = histcounts2(temporary(:,1), temporary(:,2), kwargs.binedge, kwargs.binedge, 'Normalization', kwargs.norm);
+                        else
+                            [counts, Xedges, Yedges] = histcounts2(temporary(:,1), temporary(:,2), kwargs.binedge{1}, kwargs.binedge{2}, 'Normalization', kwargs.norm);
+                        end
+                    end
+                    [Xedges, Yedges] = meshgrid(Xedges(1:end-1), Yedges(1:end-1));
+                    surf(ax{1}, Xedges, Yedges, counts', 'LineStyle', 'None'); clb = colorbar(ax{1});
+                    xlabel(ax{1}, 'edges_1'); ylabel(ax{1}, 'edges_2'); ylabel(clb, kwargs.norm);
+                    box(ax{1}, 'on'); grid(ax{1}, 'on');
             end
-
-            edges = edges(2:end);
-
-            if ~isempty(kwargs.range)
-                index = excludedata(edges, counts, 'range', kwargs.range);
-                edges = edges(index); counts = counts(index); clear index;
-            end
-
-            plot(ax{1}, edges, counts, 'Color', rois{i}.UserData.color, ...
-                'DisplayName', strcat("raw ", num2str(i)))
+        end
+        if kwargs.verbose
+            tab = reshape([param.mean; param.mode; param.variance; param.skewness; param.kurtosis], 5, []);
+            tab = array2table(tab, 'VariableNames', "raw"+split(num2str(1:size(temporary,2)))+" roi"+split(num2str(1:numel(rois)))', 'RowName', {'mean', 'mode', 'variance', 'skewness', 'kurtosis'});
+            disp(tab);
         end
     end
 
@@ -238,18 +272,7 @@ function varargout = guihist(data, kwargs)
         end
 
         for i = 1:length(rois)       
-            [~, modes, edges_fit, ~, edges_raw, counts_raw] = fithist(data = select(rois{i}), ...
-                distname = kwargs.distname, ...
-                objnorm = kwargs.objnorm, ...
-                nonlcon = kwargs.nonlcon, ...
-                lb = kwargs.lb, ...
-                x0 = kwargs.x0, ...
-                ub = kwargs.ub, ...
-                mb = kwargs.mb, ...
-                range = kwargs.range, ...
-                normalize = kwargs.normalize, ...
-                binedge = kwargs.binedge, ...
-                disp = kwargs.disp);
+            [~, modes, edges_fit, ~, edges_raw, counts_raw] = fithistfunc(rois{i});
 
             if length(rois) == 1
                 plot(ax{1}, edges_raw, counts_raw, 'Color', rois{i}.UserData.color, ...
@@ -295,7 +318,7 @@ function varargout = guihist(data, kwargs)
                 if size(cdf, 2) == 2
                     cdf(:, 2) = 1 - cdf(:, 2);
 
-                    if kwargs.disp
+                    if kwargs.verbose
                         [~, indcdfint] = min(abs(diff(cdf, 1, 2)));
                         [~, indqntl] = min(abs(cdf(:, 1)-kwargs.quantile));
                         tab = [edges_fit(indcdfint); edges_fit(indqntl)];
@@ -372,7 +395,10 @@ function varargout = guihist(data, kwargs)
                 plot_fit_hist();
         end
         if kwargs.cumsum
-            plot_cumsum();
+            switch numel(varargin)
+                case 1
+                plot_cumsum();
+            end
         end
         customize_appearance();
     end
@@ -383,9 +409,9 @@ function varargout = guihist(data, kwargs)
         hold(axroi, 'on'); grid(axroi, 'on'); box(axroi, 'on');
         switch disptype
             case 'node'
-                plot(axroi, data);
+                plot(axroi, varargin{1});
             case 'spatial'
-                plot(axroi, kwargs.x, data);
+                plot(axroi, kwargs.x, varargin{1});
         end
             if isempty(kwargs.xlabel); kwargs.xlabel = 'n'; end
             if isempty(kwargs.ylabel); kwargs.ylabel = 'value'; end
@@ -395,10 +421,10 @@ function varargout = guihist(data, kwargs)
     else
         switch disptype
             case 'node'
-                imagesc(axroi, data(:,:,1)); xlabel('x_{n}'); ylabel('z_{n}'); axis(axroi, 'image');
+                imagesc(axroi, varargin{1}(:,:,1)); xlabel('x_{n}'); ylabel('z_{n}'); axis(axroi, 'image');
             case 'spatial'
                 hold(axroi, 'on'); grid(axroi, 'on'); box(axroi, 'on');
-                contourf(axroi, kwargs.x, kwargs.z, data(:,:,1), 100, 'LineStyle', 'None'); 
+                contourf(axroi, kwargs.x, kwargs.z, varargin{1}(:,:,1), 100, 'LineStyle', 'None'); 
                 xlabel('x, mm'); ylabel('z, mm');
                 xlim([min(kwargs.x(:)), max(kwargs.x(:))]);
                 ylim([min(kwargs.z(:)), max(kwargs.z(:))]);
