@@ -92,7 +92,7 @@ function param = distparam(x, kwargs)
     if kwargs.disp
         tab = [param.mean; param.mode; param.variance; param.amplitude];
         if iscolumn(tab)
-            tab = array2table(tab, 'VariableNames', {'full'}, 'RowName', {'mean', 'mode', 'variance', 'amplitude'});
+            tab = array2table(tab, 'VariableNames', {kwargs.distname}, 'RowName', {'mean', 'mode', 'variance', 'amplitude'});
         else
             tab = array2table(tab, 'VariableNames', {'laminar', 'turbulent'}, 'RowName', {'mean', 'mode', 'variance', 'amplitude'});
         end

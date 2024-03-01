@@ -33,18 +33,17 @@ function varargout = loadcta(folder, kwargs)
         kwargs.output (1,:) char {mustBeMember(kwargs.output, {'struct', 'array'})} = 'struct'
     end
 
-    warning off
+    warning on
 
-    scan = []; data = []; raw = [];
+    scan = []; data = []; raw = []; cal = [];
 
     % get filenames
-    filenames.data = getfilenames(folder, extension = 'dat', subfolders = kwargs.subfolders);
-    indraw = contains(filenames.data, 'raw');
-    filenames.raw = filenames.data(indraw);
-    filenames.data = filenames.data(~indraw);
-    filenames.scan = getfilenames(folder, extension = 'txt', subfolders = kwargs.subfolders);
-    indscan = contains(filenames.scan, 'scan');
-    filenames.scan = filenames.scan(indscan);
+    filenames.dat = getfilenames(folder, extension = 'dat', subfolders = kwargs.subfolders);
+    filenames.txt = getfilenames(folder, extension = 'txt', subfolders = kwargs.subfolders);
+    filenames.raw = filenames.dat(contains(filenames.dat, 'raw'));
+    filenames.data = filenames.dat(~contains(filenames.dat, 'raw'));
+    filenames.scan = filenames.txt(contains(filenames.txt, 'scan'));
+    filenames.cal = filenames.txt(contains(filenames.txt, 'cal'));
 
     % load spectra
     try
@@ -53,8 +52,7 @@ function varargout = loadcta(folder, kwargs)
         end
         data = reshape(data, [size(data, 1:2), size(filenames.data)]);
     catch
-        disp("loadcta: data loading is failed")
-        data = [];
+        warning("data loading failed")
     end
 
     % load raw
@@ -62,7 +60,8 @@ function varargout = loadcta(folder, kwargs)
         switch kwargs.rawtype
             case 'ascii'
                 for i = 1:numel(filenames.raw)
-                    temporary = readtable(filenames.raw(i), 'Delimiter', kwargs.rawdelimiter, 'DecimalSeparator', kwargs.rawseparator);
+                    temporary = readtable(filenames.raw(i), 'Delimiter', kwargs.rawdelimiter, 'DecimalSeparator', kwargs.rawseparator, ...
+                        'VariableNamingRule', 'preserve');
                     temporary = table2array(temporary(5:end, 2:end));
                     raw = cat(2, raw, temporary); 
                 end
@@ -75,11 +74,11 @@ function varargout = loadcta(folder, kwargs)
                     temporary = cat(2, temporary, fread(id, 'int16', 'b'));
                     fclose(id);
                 end
-                raw = reshape(temporary, [size(temporary,1)/kwargs.numch, kwargs.numch, numel(filenames.raw)]);
+                raw = permute(reshape(temporary, [kwargs.numch, size(temporary,1)/kwargs.numch, numel(filenames.raw)]), [2, 1, 3]);
+                raw = raw(3:end,:,:);
         end
     catch
-        disp("loadcta: raw loading is failed")
-        raw = [];
+        warning("raw loading failed")
     end
 
     % load scan
@@ -88,8 +87,28 @@ function varargout = loadcta(folder, kwargs)
             scan = cat(3, scan, table2array(readtable(filenames.scan(i), 'Delimiter', kwargs.scandelimiter, 'DecimalSeparator', kwargs.scanseparator))); 
         end
     catch 
-        disp("loadcta: scan loading is failed")
-        scan = [];
+        warning("scan loading failed")
+    end
+
+    % load cal
+    try
+        if ~isempty(filenames.cal)
+            mes = "calibration loading failed";
+            temporary = readtable(filenames.cal, 'Delimiter', 'tab', 'VariableNamingRule', 'Preserve');
+            voltmap = table2array(temporary(1:3,1:2));
+            coef = table2array(temporary(6,:));
+
+            mes = "calibration applying failed";
+            % convert to voltage
+            sz = size(raw);
+            raw = permute(permute(raw,[2, 1, 3]).*voltmap(1:sz(2),2)+voltmap(1:sz(2),1), [2, 1, 3]);
+
+            % convert to velocity
+            eccor = ((coef(5)-coef(4))./(coef(5)-scan(:,10))).^0.5;
+            raw(:,1,:) = permute(coef(1)*((squeeze(raw(:,1,:)).*eccor').^2-coef(3)).^coef(2), [1, 3, 2]);
+        end
+    catch
+        warning(mes);
     end
 
     % return

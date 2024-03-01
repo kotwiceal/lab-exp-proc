@@ -219,7 +219,7 @@ function varargout = procinterm(data, kwargs)
                 intermittency = mean(binarized, 'omitmissing');
             else
                 if kwargs.batch
-                    binarized = procbinarclust()
+                    binarized = procbinarclust();
                 else
                     distance = []; center = [];
                     for i = 1:prod(sz(3:end))

@@ -72,7 +72,7 @@ function result = nlpfilter(x, kernel, method, kwargs)
                     rows = 0:(kernel(1)-1);
                     cols = 0:(kernel(2)-1);
                     x = padarray(x(:,:,:), floor(kernel/2), kwargs.padval);  
-                    [X1, X2, X3] = ndgrid(1:sz(1), 1:sz(2), 1:sz(3));
+                    [X1, X2, X3] = ndgrid(1:sz(1), 1:sz(2), 1:prod(sz(3:end)));
                     X1 = X1(1:kwargs.strides(1):end, 1:kwargs.strides(2):end, :);
                     X2 = X2(1:kwargs.strides(1):end, 1:kwargs.strides(2):end, :);
                     X3 = X3(1:kwargs.strides(1):end, 1:kwargs.strides(2):end, :);
@@ -87,7 +87,12 @@ function result = nlpfilter(x, kernel, method, kwargs)
                     parfor i = 2:numel(X1)
                         result(i, :) = method(x(X1(i)+rows, X2(i)+cols, X3(i)));
                     end
-                    result = squeeze(reshape(result, [sz1(1:2), sz(3:end), szout]));
+
+                    if szout == [1, 1]
+                        result = squeeze(reshape(result, [sz1(1:2), sz(3:end)]));
+                    else
+                        result = squeeze(reshape(result, [sz1(1:2), sz(3:end), szout]));
+                    end
                 end
             end
         case 'slice-cross'

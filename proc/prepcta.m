@@ -74,7 +74,6 @@ function varargout = prepcta(input, kwargs)
     for i = 1:size(raw, 3)
         s0(:,:,i) = spectrogram(raw(:, 1, i), win, kwargs.overlap , [], kwargs.fs);
         s1(:,:,i) = spectrogram(raw(:, 2, i), win, kwargs.overlap , [], kwargs.fs);
-        s2(:,:,i) = spectrogram(raw(:, 3, i), win, kwargs.overlap , [], kwargs.fs);
     end
 
     [~, f, ~] = spectrogram(raw(:, 1, 1), win, kwargs.overlap , [], kwargs.fs);
@@ -82,10 +81,8 @@ function varargout = prepcta(input, kwargs)
     % calculate auto/cross spetra
     s00 = squeeze(mean(s0.*conj(s0), 2));
     s01 = squeeze(mean(s0.*conj(s1), 2));
-    s02 = squeeze(mean(s0.*conj(s2), 2));
 
     s11 = squeeze(mean(s1.*conj(s1), 2));
-    s22 = squeeze(mean(s2.*conj(s2), 2));
 
     % to substract correrlated signal part 
     if kwargs.corvibr
