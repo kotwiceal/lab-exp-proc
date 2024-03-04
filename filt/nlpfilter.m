@@ -37,10 +37,10 @@ function result = nlpfilter(x, kernel, method, kwargs)
                     % calculate output array size
                     temporary = method(x(X1(1)+rows)); szout = size(temporary);
                     result = zeros(numel(X1), numel(temporary));
-                    result(1, :) = temporary; clear temporary;
+                    result(1, :) = temporary(:); clear temporary;
     
                     parfor i = 2:numel(X1)
-                        result(i, :) = method(x(X1(i)+rows));
+                        result(i, :) = reshape(method(x(X1(i)+rows)), [], 1);
                     end
                     result = squeeze(reshape(result, [sz1, szout]));
                 end
@@ -60,11 +60,12 @@ function result = nlpfilter(x, kernel, method, kwargs)
 
                     % calculate output array size
                     temporary = method(x(X1(1)+rows, X2(1)+cols)); szout = size(temporary);
+                    mask = [isscalar(temporary), isvector(temporary), ismatrix(temporary)];
                     result = zeros(numel(X1), numel(temporary));
-                    result(1, :) = temporary; clear temporary;
+                    result(1, :) = temporary(:); clear temporary;
 
                     parfor i = 2:numel(X1)
-                        result(i, :) = method(x(X1(i)+rows, X2(i)+cols));
+                        result(i, :) = reshape(method(x(X1(i)+rows, X2(i)+cols)), [], 1);
                     end
                     result = squeeze(reshape(result, [sz1, szout]));
                 else
@@ -81,14 +82,15 @@ function result = nlpfilter(x, kernel, method, kwargs)
 
                     % calculate output array size
                     temporary = method(x(X1(1)+rows, X2(1)+cols, X3(1))); szout = size(temporary);
+                    mask = [isscalar(temporary), isvector(temporary), ismatrix(temporary)];
                     result = zeros(numel(X1), numel(temporary));
-                    result(1, :) = temporary; clear temporary;
+                    result(1, :) = temporary(:); clear temporary;
 
                     parfor i = 2:numel(X1)
-                        result(i, :) = method(x(X1(i)+rows, X2(i)+cols, X3(i)));
+                        result(i, :) = reshape(method(x(X1(i)+rows, X2(i)+cols, X3(i))), [], 1);
                     end
 
-                    if szout == [1, 1]
+                    if strcmp(num2str(mask), '1  0  0')
                         result = squeeze(reshape(result, [sz1(1:2), sz(3:end)]));
                     else
                         result = squeeze(reshape(result, [sz1(1:2), sz(3:end), szout]));
@@ -97,17 +99,28 @@ function result = nlpfilter(x, kernel, method, kwargs)
             end
         case 'slice-cross'
             if isvector(x)
-                if numel(x) == kernel
+                if numel(x) == kernel(1)
                     result = method(x, kwargs.y);
                 else
+                    sz = numel(x);
                     rows = 0:(kernel(1)-1);
-                    X1 = 1:numel(x); X1 = X1(1:kwargs.strides(1):end);  X1 = X1(:);
+                    X1 = 1:numel(x); X1 = X1(1:kwargs.strides(1):end);  
+                    sz1 = numel(X1); X1 = X1(:);
                     x = padarray(x(:), floor(kernel(1)/2), kwargs.padval);
-                    y = padarray(kwargs.y, floor(kernel(1)/2), kwargs.padval);
-                    result = zeros(1, numel(X1));
+                    y = padarray(kwargs.y(:), floor(kernel(1)/2), kwargs.padval);
+
+                    % calculate output array size
+                    temporary = method(x(X1(1)+rows), y(X1(1)+rows)); szout = size(temporary);
+                    mask = [isscalar(temporary), isvector(temporary), ismatrix(temporary)];
+                    result = zeros(numel(X1), numel(temporary));
+                    result(1, :) = temporary(:); clear temporary;
+
                     parfor i = 1:numel(X1)
-                        temp = method(x(X1(i)+rows), y(X1(i)+rows));
-                        result(i) = temp;
+                        result(i, :) = reshape(method(x(X1(i)+rows), y(X1(i)+rows)), [], 1);
+                    end
+
+                    if ~strcmp(num2str(mask), '1  0  0')
+                        result = squeeze(reshape(result, [sz1(1), szout]));
                     end
                 end
             else
@@ -127,11 +140,12 @@ function result = nlpfilter(x, kernel, method, kwargs)
 
                     % calculate output array size
                     temporary = method(x(X1(1)+rows, X2(1)+cols), y(X1(1)+rows, X2(1)+cols)); szout = size(temporary);
+                    mask = [isscalar(temporary), isvector(temporary), ismatrix(temporary)];
                     result = zeros(numel(X1), numel(temporary));
-                    result(1, :) = temporary; clear temporary;
+                    result(1, :) = temporary(:); clear temporary;
     
                     parfor i = 2:numel(X1)
-                        result(i, :) = method(x(X1(i)+rows, X2(i)+cols), y(X1(i)+rows, X2(i)+cols));
+                        result(i, :) = reshape(method(x(X1(i)+rows, X2(i)+cols), y(X1(i)+rows, X2(i)+cols)), [], 1);
                     end
 
                     result = squeeze(reshape(result, [sz1, szout]));
@@ -157,18 +171,19 @@ function result = nlpfilter(x, kernel, method, kwargs)
                     else
                         temporary = method(x(X1(1)+rows, X2(1)+cols, X3(1)), y(X1(1)+rows, X2(1)+cols, X3(1)));
                     end
+                    mask = [isscalar(temporary), isvector(temporary), ismatrix(temporary)];
                     szout = size(temporary);
                     result = zeros(numel(X1), numel(temporary));
-                    result(1, :) = temporary; clear temporary;
+                    result(1, :) = temporary(:); clear temporary;
     
                     if ismatrix(y)
                         parfor i = 2:numel(X1)
-                            result(i, :) = method(x(X1(i)+rows, X2(i)+cols, X3(i)), y(X1(i)+rows, X2(i)+cols));
+                            result(i, :) = reshape(method(x(X1(i)+rows, X2(i)+cols, X3(i)), y(X1(i)+rows, X2(i)+cols)), [], 1);
                         end
                     else
                         if sz == szy
                             parfor i = 2:numel(X1)
-                                result(i, :) = method(x(X1(i)+rows, X2(i)+cols, X3(i)), y(X1(i)+rows, X2(i)+cols, X3(i)));
+                                result(i, :) = reshape(method(x(X1(i)+rows, X2(i)+cols, X3(i)), y(X1(i)+rows, X2(i)+cols, X3(i))), [], 1);
                             end
                         end
                     end
@@ -196,7 +211,7 @@ function result = nlpfilter(x, kernel, method, kwargs)
 
                 % process
                 parfor i = 2:numel(X1)
-                    result(i, :) = method(x(X1(i)+rows, X2(i)+cols, :));
+                    result(i, :) = reshape(method(x(X1(i)+rows, X2(i)+cols, :)), [], 1);
                 end
                 result = squeeze(reshape(result, [sz1, szout]));
             end
@@ -223,7 +238,7 @@ function result = nlpfilter(x, kernel, method, kwargs)
 
                 % process
                 parfor i = 2:numel(X1)
-                    result(i, :) = method(x(X1(i)+rows, X2(i)+cols, :), y(X1(i)+rows, X2(i)+cols, :));
+                    result(i, :) = reshape(method(x(X1(i)+rows, X2(i)+cols, :), y(X1(i)+rows, X2(i)+cols, :)), [], 1);
                 end
                 result = squeeze(reshape(result, [sz1, szout]));
             end

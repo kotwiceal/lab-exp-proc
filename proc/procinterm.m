@@ -100,6 +100,7 @@ function varargout = procinterm(data, kwargs)
         kwargs.distance (1,:) char {mustBeMember(kwargs.distance, {'sqeuclidean', 'cityblock', 'cosine', 'correlation', 'hamming'})} = 'sqeuclidean'
         kwargs.fillholes logical = false;
         kwargs.batch logical = true
+        kwargs.mask (:,:) double = [];
         %% neural network parameters
         kwargs.cnnversion (1,:) char {mustBeMember(kwargs.cnnversion, {'0.1', '0.2', '0.3', '0.4', '0.5', '0.6'})} = '0.1'
         kwargs.network = []
@@ -181,9 +182,31 @@ function varargout = procinterm(data, kwargs)
     end
 
     function binarized = procbinarclust()
-        [binarized, center, ~, distance] = kmeans(data(:), 2, 'Distance', kwargs.distance);
-        binarized = reshape(binarized, size(data));
-        distance = squeeze(reshape(distance, [size(data), 2]));
+        sz = size(data);
+        if isempty(kwargs.mask)
+            temporary = data;
+        else
+            index = poly2mask(kwargs.mask(:,1), kwargs.mask(:,2), sz(1), sz(2));
+            if ~ismatrix(data)
+                index = repmat(index(:), prod(sz(3:end)), 1);
+            end
+            temporary = data(index);
+        end
+        [binarized, center, ~, distance] = kmeans(temporary(:), 2, 'Distance', kwargs.distance);
+        if ~isempty(kwargs.mask)
+            temporary = nan(sz);
+            temporary(index) = binarized;
+            binarized = temporary;
+
+            temporary = nan([sz, 2]);
+            index = poly2mask(kwargs.mask(:,1), kwargs.mask(:,2), sz(1), sz(2));
+            index = repmat(index(:), prod(sz(3:end)*2), 1);
+            temporary(index) = distance(:);
+            distance = temporary;
+        else
+            binarized = reshape(binarized, sz);
+            distance = squeeze(reshape(distance, [sz, 2]));
+        end
         [~, index] = max(center);
         switch index
             case 1
