@@ -104,7 +104,7 @@ function varargout = loadcta(folder, kwargs)
             raw = permute(permute(raw,[2, 1, 3]).*voltmap(1:sz(2),2)+voltmap(1:sz(2),1), [2, 1, 3]);
 
             % convert to velocity
-            eccor = ((coef(5)-coef(4))./(coef(5)-scan(:,10))).^0.5;
+            eccor = ((coef(5)-coef(4))./(coef(5)-scan(1:sz(3),10))).^0.5;
             raw(:,1,:) = permute(coef(1)*((squeeze(raw(:,1,:)).*eccor').^2-coef(3)).^coef(2), [1, 3, 2]);
         end
     catch
