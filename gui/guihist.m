@@ -163,6 +163,13 @@ function varargout = guihist(varargin, kwargs)
 
     function result = getdatafunc()
         result = struct();
+        % store mask of ROI
+        for i = 1:length(rois)  
+            result.mask{i} = rois{i}.Position; 
+        end
+        if numel(result.mask) == 1
+            result.mask = result.mask{1};
+        end
         % normalization
         switch kwargs.normalize
             case 'none'
@@ -174,11 +181,9 @@ function varargout = guihist(varargin, kwargs)
                     result.raw{i} = normalize(select(rois{i}), kwargs.normalize);
                 end
         end
-        if kwargs.distname ~= "none"
-            for i = 1:length(rois)       
-                [~, counts_raw, edges_raw, ~, ~, ~] = fithistfunc(rois{i});
-                result.dist{i} = [edges_raw, counts_raw];
-            end
+        for i = 1:length(rois)       
+            [~, counts_raw, edges_raw, ~, ~, ~] = fithistfunc(rois{i});
+            result.dist{i} = [edges_raw, counts_raw];
         end
     end
 
@@ -254,7 +259,7 @@ function varargout = guihist(varargin, kwargs)
             end
         end
         if kwargs.verbose
-            tab = reshape([param.mean; param.mode; param.variance; param.skewness; param.kurtosis], 5, []);
+            tab = reshape([param.mean; param.mode; param.variance; param.skewness; param.kurtosis], [], 5)';
             tab = array2table(tab, 'VariableNames', "raw"+split(num2str(1:size(temporary,2)))+" roi"+split(num2str(1:numel(rois)))', 'RowName', {'mean', 'mode', 'variance', 'skewness', 'kurtosis'});
             disp(tab);
         end

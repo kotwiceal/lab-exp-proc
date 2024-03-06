@@ -49,7 +49,7 @@ function getdata = guilinedist(data, kwargs)
         kwargs.proj (1,:) char {mustBeMember(kwargs.proj, {'horz', 'vert', 'line'})} = 'horz'
         kwargs.angle (1,1) double = -22
         kwargs.center (1,:) char {mustBeMember( kwargs.center, {'none', 'poly1', 'mean'})} = 'none'
-        kwargs.winfun char {mustBeMember(kwargs.winfun, {'none', 'hann', 'hamming', 'tukey'})} = 'hann'
+        kwargs.winfun char {mustBeMember(kwargs.winfun, {'none', 'hann', 'hamming', 'tukey'})} = 'none'
         kwargs.tukey (1,1) double = 1;
         %% roi and axis parameters
         kwargs.frame int8 = []
@@ -277,8 +277,9 @@ function getdata = guilinedist(data, kwargs)
             case 'humming'
                 win = humming(szr(1));
             otherwise
-                win = ones(szr(1));
+                win = ones(szr(1), 1);
         end
+        win = repmat(win, 1, szr(2));
         raw = raw.*win;
     end
 
@@ -303,7 +304,7 @@ function getdata = guilinedist(data, kwargs)
             if ismatrix(kwargs.x) && ismatrix(kwargs.z)
                 for i = kwargs.frame
                     nexttile; contourf(kwargs.x, kwargs.z, data(:,:,i), 100, 'LineStyle', 'None'); 
-                    xlabel('x, mm'); ylabel('z, mm'); colormap(kwargs.colormap);
+                    xlabel('x, mm'); ylabel('z, mm'); colormap(kwargs.colormap); hold on; grid on; box on;
                     if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                     axis(kwargs.aspect);
                     if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
@@ -311,7 +312,7 @@ function getdata = guilinedist(data, kwargs)
             else
                 for i = kwargs.frame
                     nexttile; contourf(kwargs.x(:,:,i), kwargs.z(:,:,i), data(:,:,i), 100, 'LineStyle', 'None'); 
-                    xlabel('x, mm'); ylabel('z, mm'); colormap(kwargs.colormap);
+                    xlabel('x, mm'); ylabel('z, mm'); colormap(kwargs.colormap); hold on; grid on; box on;
                     if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                     axis(kwargs.aspect);
                     if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
