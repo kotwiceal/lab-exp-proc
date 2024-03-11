@@ -1,6 +1,6 @@
 function varargout = guiocr(data, kwargs)
     arguments
-        data
+        data % image gray or RGB
         kwargs.mask (1,:) double = []
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
         kwargs.docked logical = false
@@ -21,7 +21,7 @@ function varargout = guiocr(data, kwargs)
     end
 
     function result = getdatafunc()
-        result = ocrres;
+        result = struct(orc = ocrres, img = imcrop(data, rois{1}.Position));
     end
 
     if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end

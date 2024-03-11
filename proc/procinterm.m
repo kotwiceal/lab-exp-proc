@@ -98,13 +98,15 @@ function varargout = procinterm(data, kwargs)
         kwargs.weightparam double = [0.05, 0.05]
         %% cluster algorithm parameters
         kwargs.distance (1,:) char {mustBeMember(kwargs.distance, {'sqeuclidean', 'cityblock', 'cosine', 'correlation', 'hamming'})} = 'sqeuclidean'
-        kwargs.fillholes logical = false;
+        kwargs.fillholes logical = false
+        kwargs.imclose logical = false
+        kwargs.strel (1,1) double = 10
         kwargs.batch logical = true
-        kwargs.mask (:,:) double = [];
+        kwargs.mask (:,:) double = []
         %% neural network parameters
         kwargs.cnnversion (1,:) char {mustBeMember(kwargs.cnnversion, {'0.1', '0.2', '0.3', '0.4', '0.5', '0.6'})} = '0.1'
         kwargs.network = []
-        kwargs.crop double = [20, 20, 230, 280];
+        kwargs.crop double = [20, 20, 230, 280]
         kwargs.map double = [0, 1.5]
         %% processing parameters
         kwargs.kernel double = [30, 30]
@@ -245,6 +247,7 @@ function varargout = procinterm(data, kwargs)
                     binarized = procbinarclust();
                 else
                     distance = []; center = [];
+                    % todo: fix a processing of 4D data
                     for i = 1:prod(sz(3:end))
                         temporary = data(:, :, i); 
                         [temporary, center(:, i), ~, distance_temp] = kmeans(temporary(:), 2, 'Distance', kwargs.distance);
@@ -260,6 +263,14 @@ function varargout = procinterm(data, kwargs)
                         binarized(:, :, i) = temporary;
                     end
                 end
+                if kwargs.imclose
+                    temporary = [];
+                    binarized(isnan(binarized)) = 0;
+                    for i = 1:prod(sz(3:end))
+                        temporary(:, :, i) = imclose(binarized(:, :, i), strel('disk', kwargs.strel));
+                    end
+                    binarized = reshape(temporary, sz);
+                end
                 if kwargs.fillholes
                     temporary = [];
                     binarized(isnan(binarized)) = 0;
@@ -268,6 +279,7 @@ function varargout = procinterm(data, kwargs)
                     end
                     binarized = reshape(temporary, sz);
                 end
+                binarized(binarized==0) = nan;
                 intermittency = squeeze(mean(binarized, 3, 'omitmissing'));
             end
             varargout{2} = binarized;

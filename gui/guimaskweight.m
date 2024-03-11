@@ -1,12 +1,5 @@
 function getdata = guimaskweight(data, kwargs)
 %% Interactive weighting of multifram two-dimensional data.
-%% The function takes following arguments:
-%   data:           [n×m×k... double]       - two-dimensional multiframe data
-%   tukey:          [1×1 double]            - tukey window function parmeter
-%   mask:           [4×2×k double]          - four-vertex polygon
-%   docked:         [1×1 logical]           - docked figure flag
-%   aspect:         [1×l5 char]             - axis aspect ratio
-%   clim:           [1×2 double]            - colorbar limit
 %% The function returns following results:
 %   getdata:        [function_handle]       - function returning results at the last polygon displacements
 %% Examles:
@@ -16,13 +9,13 @@ function getdata = guimaskweight(data, kwargs)
 % prepres = prepresfunc();
 
     arguments
-        data double
-        kwargs.tukey double = 1
+        data double % two-dimensional multiframe data
+        kwargs.tukey double = 1 % tukey window function parmeter
         %% roi and axis parameters
-        kwargs.mask (1,1) double = []
-        kwargs.docked logical = true
-        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal'
-        kwargs.clim double = []
+        kwargs.mask (:,:) double = [] % four-vertex polygon
+        kwargs.docked logical = true % docked figure flag
+        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal' % axis aspect ratio
+        kwargs.clim double = [] % colorbar limit
     end
 
     sz = size(data); 
@@ -42,6 +35,7 @@ function getdata = guimaskweight(data, kwargs)
     end
 
     function result = getdatafunc()
+        mask= [];
         for i = 1:length(rois)
             mask(:,:,i) = rois{i}.Position;
             temp = select{i}(rois{i}); temp(isnan(temp)) = 0;
@@ -68,7 +62,7 @@ function getdata = guimaskweight(data, kwargs)
     if numel(kwargs.tukey) == 1; tukey = repmat(kwargs.tukey, 1, sz(3)); else; tukey = kwargs.tukey; end 
 
     for i = 1:sz(3)
-        nexttile; axroi = gca; imagesc(axroi, data(:,:,i,end)); xlim([0, sz(2)+1]);
+        nexttile; axroi = gca; imagesc(axroi, data(:,:,i,end)); xlim([0, sz(2)+1]); axis image;
         if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
         temp = guiselectregion(axroi, moving = @eventroiselmoving, shape = 'poly', ...
             mask = mask(:, :, i), interaction = 'all', number = 1);

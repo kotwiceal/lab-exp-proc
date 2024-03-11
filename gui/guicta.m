@@ -1,21 +1,5 @@
-function guicta(kwargs)
+function varargout = guicta(kwargs)
 %% Visualize CTA scanning results.
-%% The function takes following arguments:
-%   struct:         [struct]            - structude reterned by loadcta()
-%   freq:           [k×1 double]        - frequency vector
-%   spec:           [k×m double]        - auto-spectra
-%   scan:           [n×10×m double]     - scanning table
-%   vel:            [m×1 double]        - velocity
-%   limit:          [1×2 double]        - integration limit
-%   display:        [char array]        - displaying type
-%   dispstack:      [1×1 logical]       -
-%   u0:             [1×1 double]        - reference velocity
-%   growth:         [1×1 logical]       - to show growth curves
-%   interaction:    [char array]        - region selection behaviour
-%   xscale:         [char array]        - scale of x-axis of spectra plot
-%   yscale:         [char array]        - scale of y-axis of spectra plot
-%   docked:         [1×1 logical]       - docked figure
-%   title:          [char array]        - figure title
 %% Examples:
 %% 1. Load cta measurements, calculate auto-spectra and visualize (struct notation):
 % data = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931', output = 'struct');
@@ -28,25 +12,31 @@ function guicta(kwargs)
 % guicta(spec = spec, f = f, vel = vel);
 
     arguments
-        kwargs.struct {mustBeA(kwargs.struct, {'struct'})} = struct([])
-        kwargs.freq double = []
-        kwargs.spec double = []
-        kwargs.scan double = []
-        kwargs.vel double = []
-        kwargs.limit double = []
-        kwargs.display (1,:) char {mustBeMember(kwargs.display, {'x-y', 'y-z', 'y', 'z'})} = 'x-y'
+        kwargs.struct {mustBeA(kwargs.struct, {'struct'})} = struct([]) % structude reterned by loadcta()
+        kwargs.freq double = [] % frequency vector
+        kwargs.spec double = [] % auto-spectra
+        kwargs.scan double = [] % scanning table
+        kwargs.vel double = [] % velocity
+        kwargs.limit double = [] % integration limit
+        kwargs.display (1,:) char {mustBeMember(kwargs.display, {'x-y', 'y-z', 'y', 'z'})} = 'x-y' % displaying type
         kwargs.dispstack logical = false
-        kwargs.u0 double = 27.3
-        kwargs.growth logical = false
-        kwargs.x double = []
-        kwargs.y double = []
-        kwargs.z double = []
+        kwargs.u0 double = 27.3 % reference velocity
+        kwargs.growth logical = false % to show growth curves
+        kwargs.x double = [] % longitudinal coordinate vector
+        kwargs.y double = [] % vertical coordinate vector
+        kwargs.z double = [] % transversal coordinate vector
+        kwargs.reshape (1,:) double = [] % reshape specta, velocity and coordinates
         %% roi and axis parameters
-        kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
-        kwargs.xscale (1,:) char {mustBeMember(kwargs.xscale, {'linear', 'log'})} = 'log'
-        kwargs.yscale (1,:) char {mustBeMember(kwargs.yscale, {'linear', 'log'})} = 'log'
-        kwargs.docked logical = true
-        kwargs.title = []
+        kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all' % region selection behaviour
+        kwargs.xscale (1,:) char {mustBeMember(kwargs.xscale, {'linear', 'log'})} = 'log' % scale of x-axis of spectra plot
+        kwargs.yscale (1,:) char {mustBeMember(kwargs.yscale, {'linear', 'log'})} = 'log' % scale of y-axis of spectra plot
+        kwargs.displayname {mustBeA(kwargs.displayname, {'double', 'string', 'char', 'cell'})} = []
+        kwargs.docked logical = true % docked figure
+        kwargs.pbaspect logical = false % figure title
+        kwargs.fontsize (1,1) double = 14 % axis font size
+        kwargs.title = [] % figure title
+        kwargs.filename (1, :) char = [] % filename of storing figure
+        kwargs.extension (1, :) char = '.png' % extension of storing figure
     end
 
     if ~isempty(kwargs.struct)
@@ -67,18 +57,25 @@ function guicta(kwargs)
         xlab = 'f, Hz';
     end
 
+    function result = getdatafunc()
+        result = struct(amp = amp);
+    end
+
     function procamp()
         df = [rois{1}.Position(1), rois{1}.Position(1)+rois{1}.Position(3)];
         temp = get(axroi, 'YLim'); 
         rois{1}.Position = [rois{1}.Position(1), temp(1), rois{1}.Position(3), temp(2)-temp(1)];
         index = kwargs.freq>df(1)&kwargs.freq<=df(2);
-        % amp = squeeze(sqrt(sum(kwargs.spec(index, :), 1)))/size(kwargs.spec, 1);
-        amp = squeeze(sqrt(sum(kwargs.spec(index, :), 1)));
+        deltaf = kwargs.freq(2)-kwargs.freq(1);
+        amp = squeeze(sqrt(deltaf*sum(kwargs.spec(index, :), 1)));
         if ~ismatrix(kwargs.spec)
             amp = reshape(amp, sz(2:end));
         end
         if ~isempty(kwargs.u0)
             amp = amp./kwargs.u0;
+        end
+        if ~isempty(kwargs.reshape)
+            amp = reshape(amp, kwargs.reshape);
         end
     end
 
@@ -107,16 +104,18 @@ function guicta(kwargs)
                 xlabel('y'); ylabel('z');
                 view(ax, [-30, 30])
             case 'y'
-                if isempty(kwargs.y)
-                    kwargs.y = 1:numel(amp);
-                end
+                if isempty(kwargs.y); kwargs.y = 1:numel(amp); end
                 plot(ax, kwargs.y, amp, '.-');
+                if isempty(kwargs.u0); ylabel(ax, 'u`, m/s'); else; ylabel(ax, 'u`/u_0'); end
+                xlabel('y, mm');
             case 'z'
-                if isempty(kwargs.z)
-                    kwargs.z = 1:numel(amp);
-                end
+                if isempty(kwargs.z); kwargs.z = 1:numel(amp); end
                 plot(ax, kwargs.z, amp, '.-');
+                if isempty(kwargs.u0); ylabel(ax, 'u`, m/s'); else; ylabel(ax, 'u`/u_0'); end
+                xlabel('z, mm');
         end
+        set(gca, 'FontSize', kwargs.fontsize);
+        if ~isempty(kwargs.pbaspect); pbaspect([1, 1, 1]); end
     end
 
     function plotgrowth()
@@ -152,21 +151,26 @@ function guicta(kwargs)
         axroi = gca;
         if kwargs.dispstack
             sz = size(kwargs.spec);
+            if isempty(kwargs.z)
+                kwargs.z = repmat(1:sz(3), [sz(2), 1]);
+            end
             for i = 1:sz(2)
                 for j = 1:sz(3)
                     plot3(axroi, kwargs.freq, kwargs.z(i,j)*ones(1, sz(1)), kwargs.spec(:,i,j));  
                 end
             end
-            set(axroi, 'ZScale', kwargs.yscale, 'XScale', kwargs.xscale);
+            set(axroi, 'ZScale', kwargs.yscale, 'XScale', kwargs.xscale, 'FontSize', kwargs.fontsize);
             view(axroi, [-30, 30]);
             xlabel(axroi, xlab); ylabel('z'); zlabel('PSD');
             pbaspect([1 5 1]) 
         else
-            set(axroi, 'YScale', kwargs.yscale, 'XScale', kwargs.xscale);
+            set(axroi, 'YScale', kwargs.yscale, 'XScale', kwargs.xscale, 'FontSize', kwargs.fontsize);
             plot(axroi, kwargs.freq, kwargs.spec(:,:));   
             xlabel(axroi, xlab); ylabel('PSD');
         end
     
+        if ~isempty(kwargs.pbaspect); pbaspect([1, 1, 1]); end
+
         if ~isempty(kwargs.limit)
             mask = [kwargs.limit(1), 0, kwargs.limit(2)-kwargs.limit(1), 1];
         else
@@ -221,7 +225,14 @@ function guicta(kwargs)
     end
 
     if ~isempty(kwargs.title)
-        sgtitle(kwargs.title)
+        sgtitle(kwargs.title, 'FontSize', kwargs.fontsize);
+    end
+
+    varargout{1} = @getdatafunc;
+
+    if ~isempty(kwargs.filename)
+        savefig(gcf, strcat(kwargs.filename, '.fig'))
+        exportgraphics(gcf, strcat(kwargs.filename, kwargs.extension), Resolution = 600)
     end
 
 end

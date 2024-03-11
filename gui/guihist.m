@@ -122,8 +122,11 @@ function varargout = guihist(varargin, kwargs)
                 case 'node'
                     select = @(roiobj) guigetdata(roiobj, varargin{1}, shape = 'flatten');
                     select2d = @(roiobj) guigetdata(roiobj, varargin{1}, shape = 'cut');
+                    selectraw = @(roiobj) guigetdata(roiobj, varargin{1}, shape = 'raw');
                 case 'spatial'
                     select = @(roiobj) guigetdata(roiobj, varargin{1}, shape = 'flatten', ...
+                        x = kwargs.x, z = kwargs.z);
+                    selectraw = @(roiobj) guigetdata(roiobj, varargin{1}, shape = 'raw', ...
                         x = kwargs.x, z = kwargs.z);
             end
         case 2
@@ -184,6 +187,14 @@ function varargout = guihist(varargin, kwargs)
         for i = 1:length(rois)       
             [~, counts_raw, edges_raw, ~, ~, ~] = fithistfunc(rois{i});
             result.dist{i} = [edges_raw, counts_raw];
+        end
+        try
+            temporary = cell(1, length(rois));
+            for i = 1:length(rois)
+                temporary{i} = selectraw(rois{i});
+            end
+            result.rawnd = temporary{i};
+        catch
         end
     end
 
