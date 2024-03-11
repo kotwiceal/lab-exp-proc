@@ -1,40 +1,27 @@
 function guitile(data, kwargs)
 %% Visualize multiframe data.
-%% The function takes following arguments:
-%   data:               [n×m×k double]                  - multidimensional data
-%   x:                  [n×m double]                    - spatial coordinate
-%   z:                  [n×m double]                    - spatial coordinate
-%   xlim:               [1×2 double]                    - x axis limit
-%   ylim:               [1×2 double]                    - y axis limit
-%   clim:               [1×2 double]                    - colorbar limit
-%   displayname:        [string array]                  - list of labeled curves
-%   legend:             [1×1 logical]                   - show legend
-%   docked:             [1×1 logical]                   - docker figure
-%   colormap:           [char array]                    - colormap
-%   aspect:             [char array]                    - axis ratio
-%   location:           [1×l6 char]                     - legend location name
-%   title:              [1×l7 char]                     - figure title
-%   filename:           [1×l8 char]                     - filename of storing figure
-%   extension:          [1×l9 char]                     - file extention of storing figure
 
     arguments
-        data double
-        kwargs.x double = []
-        kwargs.z double = []
+        data double % matrix/pase-wise array
+        kwargs.x double = [] % longitudinal coordinate matrix/pase-wise array
+        kwargs.z double = [] % tranversal coordinate matrix/pase-wise array
         %% axis parameters
-        kwargs.xlim double = []
-        kwargs.ylim double = []
-        kwargs.clim double = []
-        kwargs.displayname string = []
-        kwargs.legend logical = false
-        kwargs.docked logical = false
-        kwargs.colormap (1,:) char = 'turbo'
-        kwargs.colorbar logical = true
-        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal'
+        kwargs.xlim (1,2) double = [] % x-axis limit
+        kwargs.ylim (1,2) double = [] % y-axis limit
+        kwargs.clim (1,2) double = [] % color-axis limit
+        kwargs.displayname string = [] % list of labels
+        kwargs.legend logical = false % show legend
+        kwargs.docked logical = false % docker figure
+        kwargs.colormap (1,:) char = 'turbo' % colormap
+        kwargs.colorbar logical = true % show colorbar
+        kwargs.clabel (1,:) char = [] % color-axis label
+        kwargs.fontsize (1,1) double = 14 % axis font size
+        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal' % axis ratio
+        % legend location
         kwargs.location (1,:) char {mustBeMember(kwargs.location, {'north','south','east','west','northeast','northwest','southeast','southwest','northoutside','southoutside','eastoutside','westoutside','northeastoutside','northwestoutside','southeastoutside','southwestoutside','best','bestoutside','layout','none'})} = 'best'
-        kwargs.title = []
-        kwargs.filename (1, :) char = []
-        kwargs.extension (1, :) char = '.png'
+        kwargs.title = [] % figure global title
+        kwargs.filename (1, :) char = [] % filename of storing figure
+        kwargs.extension (1, :) char = '.png' % extention of storing figure
     end
 
     warning off
@@ -52,8 +39,13 @@ function guitile(data, kwargs)
                 nexttile; imagesc(data(:,:,i)); xlabel('x_{n}'); ylabel('z_{n}'); colormap(kwargs.colormap);
                 if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                 if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
-                if kwargs.colorbar; colorbar(); end
-                axis('image');
+                if kwargs.colorbar
+                    clb = colorbar();
+                    if ~isempty(kwargs.clabel)
+                        ylabel(clb, kwargs.clabel);
+                    end
+                end
+                axis('image'); set(gca, FontSize = kwargs.fontsize);
             end
         case 'spatial'
             if ismatrix(kwargs.x) && ismatrix(kwargs.z)
@@ -63,8 +55,14 @@ function guitile(data, kwargs)
                     if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                     axis(kwargs.aspect);
                     if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
-                    if kwargs.colorbar; colorbar(); end
+                    if kwargs.colorbar
+                        clb = colorbar();
+                        if ~isempty(kwargs.clabel)
+                            ylabel(clb, kwargs.clabel);
+                        end
+                    end
                     xlim([min(kwargs.x(:)), max(kwargs.x(:))]); ylim([min(kwargs.z(:)), max(kwargs.z(:))]);
+                    set(gca, FontSize = kwargs.fontsize);
                 end
             else
                 for i = 1:size(data, 3)
@@ -73,7 +71,13 @@ function guitile(data, kwargs)
                     if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                     axis(kwargs.aspect);
                     if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
-                    if kwargs.colorbar; colorbar(); end
+                    if kwargs.colorbar
+                        clb = colorbar();
+                        if ~isempty(kwargs.clabel)
+                            ylabel(clb, kwargs.clabel);
+                        end
+                    end
+                    set(gca, FontSize = kwargs.fontsize);
                 end
             end
     end

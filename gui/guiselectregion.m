@@ -1,25 +1,16 @@
 function rois = guiselectregion(axroi, kwargs)
 %% Interactive data selection.
-%% The function takes following arguments:
-%   axroi:          [matlab.graphics.axis.Axes]     - axis object of canvas that selection data events are being occured
-%   data:           [n×m... double]                 - multidimensional data
-%   shape:          [1×l1 char]                     - type of region selection
-%   mask:           [double]                        - two row vertex to line selection; edge size to rectangle selection; n-row verxex to polygon selection 
-%   interaction:    [1×l2 char]                     - region selection behaviour
-%   number:         [1×1 int8]                      - count of selection regions
-%   moving:         [function_handle]               - callback at moving ROI
-%   moved:          [function_handle]               - callback at had moving ROI
 %% The function returns following results:
 %   rois:           [object]                        - ROI cell objects
 
     arguments
-        axroi matlab.graphics.axis.Axes
-        kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'line', 'rect', 'poly', 'cube'})} = 'rect'
-        kwargs.mask {mustBeA(kwargs.mask, {'double', 'cell'})} = []
-        kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
-        kwargs.number (1,1) int8 = 1
-        kwargs.moving function_handle = @(~, ~) []
-        kwargs.moved function_handle = @(~, ~) []
+        axroi matlab.graphics.axis.Axes % axis object of canvas that selection data events are being occured
+        kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'line', 'rect', 'poly', 'cube'})} = 'rect' % type of region selection
+        kwargs.mask {mustBeA(kwargs.mask, {'double', 'cell'})} = [] % two row vertex to line selection; edge size to rectangle selection; n-row verxex to polygon selection 
+        kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all' % region selection behaviour
+        kwargs.number (1,1) double {mustBeInteger} = 1 % count of selection regions
+        kwargs.moving function_handle = @(~, ~) [] % callback at moving ROI
+        kwargs.moved function_handle = @(~, ~) [] % callback at had moving ROI
     end
 
     colors = {[0 0.4470 0.7410], [0.8500 0.3250 0.0980], [0.9290 0.6940 0.1250], [0.4940 0.1840 0.5560], ...
