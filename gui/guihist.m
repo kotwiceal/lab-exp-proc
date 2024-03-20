@@ -62,7 +62,6 @@ function varargout = guihist(varargin, kwargs)
         kwargs.xlabel (1,:) char = [] % x-axis label of data subplot
         kwargs.ylabel (1,:) char = [] % y-axis label of data subplot
         kwargs.zlabel (1,:) char = [] % z-axis label of data subplot
-        kwargs.showlabel logical = true % show figure labels
         kwargs.legend logical = false % show legend
         kwargs.xlim double = [] % x-axis limit
         kwargs.ylim double = [] % y-axis limit
@@ -72,7 +71,7 @@ function varargout = guihist(varargin, kwargs)
         kwargs.cdf logical = false % plot cdf of statistics
         kwargs.cumsum logical = false % plot cumulative sum of statistics
         kwargs.docked logical = false % docked figure
-        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal'
+        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto', 'image'})} = 'auto'
         kwargs.title (1,:) char = [] % to show global title
         kwargs.filename (1,:) char = [] % to store figure
         kwargs.extension (1,:) char = '.png' % image extension of stored figure
@@ -429,19 +428,14 @@ function varargout = guihist(varargin, kwargs)
             case 'spatial'
                 plot(axroi, kwargs.x, varargin{1});
         end
-            if isempty(kwargs.xlabel); kwargs.xlabel = 'n'; end
-            if isempty(kwargs.ylabel); kwargs.ylabel = 'value'; end
-            if kwargs.showlabel
-                xlabel(axroi, kwargs.xlabel); ylabel(axroi, kwargs.ylabel);
-            end
     else
         switch disptype
             case 'node'
-                imagesc(axroi, varargin{1}(:,:,1)); xlabel('x_{n}'); ylabel('z_{n}'); axis(axroi, 'image');
+                imagesc(axroi, varargin{1}(:,:,1)); 
+                if kwargs.aspect ~= "auto"; axis(axroi, kwargs.aspect); end
             case 'spatial'
                 hold(axroi, 'on'); grid(axroi, 'on'); box(axroi, 'on');
                 contourf(axroi, kwargs.x, kwargs.z, varargin{1}(:,:,1), 100, 'LineStyle', 'None'); 
-                xlabel('x, mm'); ylabel('z, mm');
                 xlim([min(kwargs.x(:)), max(kwargs.x(:))]);
                 ylim([min(kwargs.z(:)), max(kwargs.z(:))]);
                 axis(axroi, kwargs.aspect);
@@ -451,6 +445,8 @@ function varargout = guihist(varargin, kwargs)
             clim(axroi, kwargs.clim);
         end
     end
+    if ~isempty(kwargs.xlabel); xlabel(axroi, kwargs.xlabel); end
+    if ~isempty(kwargs.ylabel); ylabel(axroi, kwargs.ylabel); end
 
     if isvect && ~isempty(kwargs.mask)
         yl = get(axroi, 'YLim');

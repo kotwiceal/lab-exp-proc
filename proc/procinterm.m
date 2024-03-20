@@ -130,7 +130,7 @@ function varargout = procinterm(data, kwargs)
         kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'average', 'gaussian', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'mode'})} = 'median'
         kwargs.prefiltker double = [15, 15]
         %% post-processing parameters
-        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'average', 'gaussian', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'mode'})} = 'median'
+        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'average', 'gaussian', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'mode'})} = 'none'
         kwargs.postfiltker double = [15, 15]
     end
 
@@ -242,45 +242,52 @@ function varargout = procinterm(data, kwargs)
             if isvector(data)
                 binarized = procbinarclust();
                 intermittency = mean(binarized, 'omitmissing');
+                distance = []; center = [];
             else
-                if kwargs.batch
+                if ismatrix(data)
                     binarized = procbinarclust();
-                else
+                    intermittency = mean(binarized, 1, 'omitmissing');
                     distance = []; center = [];
-                    % todo: fix a processing of 4D data
-                    for i = 1:prod(sz(3:end))
-                        temporary = data(:, :, i); 
-                        [temporary, center(:, i), ~, distance_temp] = kmeans(temporary(:), 2, 'Distance', kwargs.distance);
-                        temporary = reshape(temporary, size(data, 1:2));
-                        distance(:,:,:,i) = reshape(distance_temp, [size(data, [1, 2]), 2]);
-                        [~, index] = max(center(:, i));
-                        switch index
-                            case 1
-                                temporary = -(temporary - 2);
-                            case 2
-                                temporary = temporary - 1;
+                else
+                    if kwargs.batch
+                        binarized = procbinarclust();
+                    else
+                        distance = []; center = [];
+                        % todo: fix a processing of 4D data
+                        for i = 1:prod(sz(3:end))
+                            temporary = data(:, :, i); 
+                            [temporary, center(:, i), ~, distance_temp] = kmeans(temporary(:), 2, 'Distance', kwargs.distance);
+                            temporary = reshape(temporary, size(data, 1:2));
+                            distance(:,:,:,i) = reshape(distance_temp, [size(data, [1, 2]), 2]);
+                            [~, index] = max(center(:, i));
+                            switch index
+                                case 1
+                                    temporary = -(temporary - 2);
+                                case 2
+                                    temporary = temporary - 1;
+                            end
+                            binarized(:, :, i) = temporary;
                         end
-                        binarized(:, :, i) = temporary;
                     end
-                end
-                if kwargs.imclose
-                    temporary = [];
-                    binarized(isnan(binarized)) = 0;
-                    for i = 1:prod(sz(3:end))
-                        temporary(:, :, i) = imclose(binarized(:, :, i), strel('disk', kwargs.strel));
+                    if kwargs.imclose
+                        temporary = [];
+                        binarized(isnan(binarized)) = 0;
+                        for i = 1:prod(sz(3:end))
+                            temporary(:, :, i) = imclose(binarized(:, :, i), strel('disk', kwargs.strel));
+                        end
+                        binarized = reshape(temporary, sz);
                     end
-                    binarized = reshape(temporary, sz);
-                end
-                if kwargs.fillholes
-                    temporary = [];
-                    binarized(isnan(binarized)) = 0;
-                    for i = 1:prod(sz(3:end))
-                        temporary(:, :, i) = imfill(binarized(:, :, i), 'holes');
+                    if kwargs.fillholes
+                        temporary = [];
+                        binarized(isnan(binarized)) = 0;
+                        for i = 1:prod(sz(3:end))
+                            temporary(:, :, i) = imfill(binarized(:, :, i), 'holes');
+                        end
+                        binarized = reshape(temporary, sz);
                     end
-                    binarized = reshape(temporary, sz);
+                    binarized(binarized==0) = nan;
+                    intermittency = squeeze(mean(binarized, 3, 'omitmissing'));
                 end
-                binarized(binarized==0) = nan;
-                intermittency = squeeze(mean(binarized, 3, 'omitmissing'));
             end
             varargout{2} = binarized;
             varargout{3} = distance;
