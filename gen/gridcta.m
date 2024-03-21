@@ -78,11 +78,14 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
         kwargs.ax10 double = []
         kwargs.ax20 double = []
         kwargs.ax30 double = []
+        kwargs.ax1s double = []
+        kwargs.ax2s double = []
         kwargs.show logical = true
         kwargs.delimiter (1,:) char = 'tab'
         kwargs.pointwise logical = false, 
         kwargs.fit (1,:) char {mustBeMember(kwargs.fit, {'', 'poly01', 'poly10', 'poly11', 'poly02', 'poly20', 'poly22', 'poly21', 'poly12'})} = ''
         kwargs.repelem (1,1) double = 1
+        kwargs.docked (1,1) logical = false
     end
 
     nax1 = size(ax1, 2);
@@ -98,6 +101,13 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
         reshape(permute(scan_mat_ax3,kwargs.scanorder),[1 nax3*nax2*nax1]))';
     
     iscorbase = ~(isempty(kwargs.ax10) && isempty(kwargs.ax20) && isempty(kwargs.ax30));
+
+    % shift the scan in x-z plane by linear law
+    if ~isempty(kwargs.ax1s) && ~isempty(kwargs.ax2s)
+        [kwargs.ax1s, kwargs.a21s] = prepareCurveData(kwargs.ax1s, kwargs.ax2s);
+        ft = fit(kwargs.ax1s, kwargs.a21s, 'poly1');
+        scan(:, 2) = scan(:, 2) - ft(scan(:, 1));
+    end
 
     if iscorbase
         if (numel(kwargs.ax10) == 1) && (numel(kwargs.ax20) == 1) && (numel(kwargs.ax30) == 1) 
@@ -131,9 +141,9 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
         end
     end
 
-    if (kwargs.show)
-        figure('WindowStyle', 'docked');
-        hold on; box on; grid on;  
+    if kwargs.show
+        if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout('flow');
+        nexttile; hold on; box on; grid on;  
         plot3(scan(:,1), scan(:,2), scan(:,3), '.', 'DisplayName', 'scan');
         plot3(kwargs.ax10(:), kwargs.ax20(:), kwargs.ax30(:), '.', 'DisplayName', 'base')
         if iscorbase

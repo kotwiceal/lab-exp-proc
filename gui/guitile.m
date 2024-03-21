@@ -40,7 +40,7 @@ function guitile(data, kwargs)
         case 'node'
             for i = 1:size(data, 3)
                 nexttile; imagesc(data(:,:,i)); colormap(kwargs.colormap);
-                if ~isempty(cl(i,:)); clim(cl(i,:)); end
+                if ~isempty(cl); clim(cl(i,:)); end
                 if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
                 if kwargs.colorbar
                     clb = colorbar();
@@ -63,7 +63,7 @@ function guitile(data, kwargs)
                             contourf(kwargs.x, kwargs.y, data(:,:,i), 100, 'LineStyle', 'None'); 
                     end
                     colormap(kwargs.colormap);
-                    if ~isempty(cl(i,:)); clim(cl(i,:)); end
+                    if ~isempty(cl); clim(cl(i,:)); end
                     axis(kwargs.aspect);
                     if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
                     if kwargs.colorbar
@@ -87,7 +87,7 @@ function guitile(data, kwargs)
                             contourf(kwargs.x(:,:,i), kwargs.y(:,:,i), data(:,:,i), 100, 'LineStyle', 'None'); 
                     end
                     colormap(kwargs.colormap);
-                    if ~isempty(cl(i,:)); clim(cl(i,:)); end
+                    if ~isempty(cl); clim(cl(i,:)); end
                     axis(kwargs.aspect);
                     if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
                     if kwargs.colorbar
