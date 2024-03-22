@@ -46,6 +46,7 @@ function varargout = prepcta(input, kwargs)
         kwargs.fit = []
         kwargs.output (1,:) char {mustBeMember(kwargs.output, {'struct', 'array'})} = 'struct'
         kwargs.steps (1,:) double = [50, 400, 800]
+        kwargs.parproc (1,1) logical = false
     end
 
     % choose input type
@@ -56,7 +57,7 @@ function varargout = prepcta(input, kwargs)
         kwargs.scan = input.scan;
     end
 
-    s0 = []; s1 = []; s2 = [];
+    s0 = []; s1 = [];
 
     % build window function
     switch kwargs.wintype
@@ -72,20 +73,56 @@ function varargout = prepcta(input, kwargs)
     acf = 1/mean(win); % amplitude correction factor;
     ecf = 1/rms(win); % energy correction factor;
 
+    sz = size(raw);
+
     % calculate spectrogram
-    for i = 1:size(raw, 3)
-        s0(:,:,i) = spectrogram(raw(:, 1, i), win, kwargs.overlap , [], kwargs.fs);
-        s1(:,:,i) = spectrogram(raw(:, 2, i), win, kwargs.overlap , [], kwargs.fs);
+    if kwargs.parproc
+        s0 = spectrogram(raw(:, 2, 1), win, kwargs.overlap , [], kwargs.fs);
+        s1 = spectrogram(raw(:, 2, 1), win, kwargs.overlap , [], kwargs.fs);
+
+        s00 = zeros(size(s0, 1), prod(sz(3:end)));
+        s11 = zeros(size(s0, 1), prod(sz(3:end)));
+        s01 = zeros(size(s0, 1), prod(sz(3:end)));
+
+        s00(:, 1) = squeeze(mean(s0.*conj(s0), 2));
+        s11(:, 1) = squeeze(mean(s1.*conj(s1), 2));
+        s01(:, 1) = squeeze(mean(s0.*conj(s1), 2)); 
+
+        parfor i = 2:size(raw, 3)
+            s0 = spectrogram(raw(:, 1, i), win, kwargs.overlap , [], kwargs.fs);
+            s1 = spectrogram(raw(:, 2, i), win, kwargs.overlap , [], kwargs.fs);
+            % calculate auto/cross spetra
+            s00(:, i) = squeeze(mean(s0.*conj(s0), 2));
+            s11(:, i) = squeeze(mean(s1.*conj(s1), 2));
+            s01(:, i) = squeeze(mean(s0.*conj(s1), 2)); 
+        end
+    else
+        s0 = spectrogram(raw(:, 2, 1), win, kwargs.overlap , [], kwargs.fs);
+        s1 = spectrogram(raw(:, 2, 1), win, kwargs.overlap , [], kwargs.fs);
+
+        s00 = zeros(size(s0, 1), prod(sz(3:end)));
+        s11 = zeros(size(s0, 1), prod(sz(3:end)));
+        s01 = zeros(size(s0, 1), prod(sz(3:end)));
+
+        s00(:, 1) = squeeze(mean(s0.*conj(s0), 2));
+        s11(:, 1) = squeeze(mean(s1.*conj(s1), 2));
+        s01(:, 1) = squeeze(mean(s0.*conj(s1), 2)); 
+
+        for i = 2:size(raw, 3)
+            s0 = spectrogram(raw(:, 1, i), win, kwargs.overlap , [], kwargs.fs);
+            s1 = spectrogram(raw(:, 2, i), win, kwargs.overlap , [], kwargs.fs);
+            % calculate auto/cross spetra
+            s00(:, i) = squeeze(mean(s0.*conj(s0), 2));
+            s11(:, i) = squeeze(mean(s1.*conj(s1), 2));
+            s01(:, i) = squeeze(mean(s0.*conj(s1), 2)); 
+        end
     end
 
+    clear s0 s1;
+
+    % frequency grid
     [~, f, ~] = spectrogram(raw(:, 1, 1), win, kwargs.overlap , [], kwargs.fs);
     df = f(2)-f(1);
-
-    % calculate auto/cross spetra
-    s00 = squeeze(mean(s0.*conj(s0), 2));
-    s01 = squeeze(mean(s0.*conj(s1), 2));
-
-    s11 = squeeze(mean(s1.*conj(s1), 2));
 
     % to substract correrlated signal part 
     if kwargs.corvibr

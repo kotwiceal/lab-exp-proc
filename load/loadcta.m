@@ -31,6 +31,8 @@ function varargout = loadcta(folder, kwargs)
         kwargs.rawtype (1,:) char {mustBeMember(kwargs.rawtype, {'ascii', 'bin'})} = 'bin'
         kwargs.numch (1,1) double = 2
         kwargs.output (1,:) char {mustBeMember(kwargs.output, {'struct', 'array'})} = 'struct'
+        kwargs.parload (1,1) logical = false
+        kwargs.calib (1,1) logical = true
     end
 
     warning on
@@ -68,11 +70,25 @@ function varargout = loadcta(folder, kwargs)
                 chsz = size(temporary, 2);
                 raw = reshape(raw, [size(raw, 1), chsz, size(filenames.raw)]);
             case 'bin'
-                temporary = [];
-                for i = 1:numel(filenames.raw)
-                    id = fopen(filenames.raw(i), 'r');
-                    temporary = cat(2, temporary, fread(id, 'int16', 'b'));
-                    fclose(id);
+                id = fopen(filenames.raw(1), 'r');
+                test = fread(id, 'int16', 'b');
+                fclose(id);
+
+                temporary = zeros(numel(test), numel(filenames.raw));
+                temporary(:, 1) = test;
+
+                if kwargs.parload
+                    parfor i = 2:numel(filenames.raw)   
+                        id = fopen(filenames.raw(i), 'r');
+                        temporary(:, i) = fread(id, 'int16', 'b');
+                        fclose(id);
+                    end
+                else
+                    for i = 2:numel(filenames.raw) 
+                        id = fopen(filenames.raw(i), 'r');
+                        temporary(:, i) = fread(id, 'int16', 'b');
+                        fclose(id);
+                    end
                 end
                 raw = permute(reshape(temporary, [kwargs.numch, size(temporary,1)/kwargs.numch, numel(filenames.raw)]), [2, 1, 3]);
                 raw = raw(3:end,:,:);
@@ -92,7 +108,7 @@ function varargout = loadcta(folder, kwargs)
 
     % load cal
     try
-        if ~isempty(filenames.cal)
+        if ~isempty(filenames.cal) & kwargs.calib
             mes = "calibration loading failed";
             temporary = readtable(filenames.cal, 'Delimiter', 'tab', 'VariableNamingRule', 'Preserve');
             voltmap = table2array(temporary(1:3,1:2));
@@ -106,6 +122,7 @@ function varargout = loadcta(folder, kwargs)
             % convert to velocity
             eccor = ((coef(5)-coef(4))./(coef(5)-scan(1:sz(3),10))).^0.5;
             raw(:,1,:) = permute(coef(1)*((squeeze(raw(:,1,:)).*eccor').^2-coef(3)).^coef(2), [1, 3, 2]);
+            raw = real(raw);
         end
     catch
         warning(mes);
@@ -114,9 +131,10 @@ function varargout = loadcta(folder, kwargs)
     % return
     switch kwargs.output
         case 'struct'
-            result.scan = scan;
-            result.data = data;
-            result.raw = raw;
+            result = struct();
+            if ~isempty(scan); result.scan = scan; end
+            if ~isempty(data); result.data = data; end
+            if ~isempty(raw); result.raw = raw; end
             varargout{1} = result;
         case 'array'
             varargout{1} = scan;

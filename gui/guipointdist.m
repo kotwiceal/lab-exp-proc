@@ -51,10 +51,8 @@ function guipointdist(field, marker, kwargs)
     function eventmoving(~, ~)
         % binding to nodes
         for i = 1:length(rois)
-            [~, xit] = min(abs(kwargs.x-rois{i}.Position(1)), [], 'all');
-            [~, xi(i)] = ind2sub(size(field, [1, 2]), xit);
-            [~, yit] = min(abs(kwargs.y-rois{i}.Position(2)), [], 'all');
-            [yi(i), ~] = ind2sub(size(field, [1, 2]), yit);
+            [~, indt] = min(abs(kwargs.x-rois{i}.Position(1)).*abs(kwargs.y-rois{i}.Position(2)), [], 'all');
+            [yi(i), xi(i)] = ind2sub(size(field, [1, 2]), indt);
             rois{i}.Position = [kwargs.x(yi(i),xi(i)), kwargs.y(yi(i),xi(i))];
         end
     end
