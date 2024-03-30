@@ -8,11 +8,10 @@ function varargout = nonlinfilt(varargin, kwargs)
         kwargs.kernel (1,:) {mustBeA(kwargs.kernel, {'double', 'cell'})} = []
         kwargs.stride (1,:) {mustBeA(kwargs.stride, {'double', 'cell'})} = []
         kwargs.offset (1,:) {mustBeA(kwargs.offset, {'double', 'cell'})} = []
-        kwargs.padval = nan
+        kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string'})} = nan
     end
 
-    %% build grid
-
+    sz = cell(1, numel(varargin));
     for i = 1:numel(varargin)
         if isvector(varargin{i})
             varargin{i} = varargin{i}(:);
@@ -141,8 +140,6 @@ function varargout = nonlinfilt(varargin, kwargs)
         end
     end
 
-    % todo: append permute to choose filtering direction
-
     % padding
     for j = 1:numel(varargin)
         varargin{j} = padarray(varargin{j}, floor(kwargs.kernel{j}/2), kwargs.padval);
@@ -165,106 +162,62 @@ function varargout = nonlinfilt(varargin, kwargs)
         kwargs.offset{i} = temporary;
     end
 
-    % window intex
+    % window index
+    xr = cell(1, numel(kwargs.kernel));
     for i = 1:numel(kwargs.kernel)
+        temporary = cell(1, numel(kwargs.kernel{i}));
         for j = 1:size(kwargs.kernel{i}, 2)
-            xr{i, j} = ndgrid(0:kwargs.kernel{i}(j)-1)+kwargs.offset{i}(j);
+            temporary{j} = ndgrid(0:kwargs.kernel{i}(j)-1)+kwargs.offset{i}(j);
         end
+        xr{i} = temporary;
     end
 
-    % sliding index
-    maxel = zeros(1, numel(sz));
+    % subscript index
+    x = cell(1, numel(sz));
+    sz1 = cell(1, numel(sz));
     for i = 1:numel(sz)
-        maxel(i) = size(sz{i}, 2);
-    end
-    x = cell(numel(kwargs.kernel), max(maxel(:)));
-    for i = 1:numel(kwargs.kernel)
-        switch size(kwargs.kernel{i}, 2)
-            case 1
-                x{i, 1} = ndgrid(1:sz{i}(1));
-                x{i, 1} = x{1}(1:kwargs.stride{i}(1):end);
-            case 2
-                [x{i, 1}, x{i, 2}] = ndgrid(1:sz{i}(1), 1:sz{i}(2));
-                x{i, 1} = x{i, 1}(1:kwargs.stride{i}(1):end, 1:kwargs.stride{i}(2):end);
-                x{i, 2} = x{i, 2}(1:kwargs.stride{i}(1):end, 1:kwargs.stride{i}(2):end);
-            case 3
-                [x{i, 1}, x{i, 2}, x{i, 3}] = ndgrid(1:sz{i}(1), 1:sz{i}(2), 1:sz{i}(3));
-                x{i, 1} = x{i, 1}(1:kwargs.stride{i}(1):end, 1:kwargs.stride{i}(2):end, 1:kwargs.stride{i}(3):end);
-                x{i, 2} = x{i, 2}(1:kwargs.stride{i}(1):end, 1:kwargs.stride{i}(2):end, 1:kwargs.stride{i}(3):end);
-                x{i, 3} = x{i, 3}(1:kwargs.stride{i}(1):end, 1:kwargs.stride{i}(2):end, 1:kwargs.stride{i}(3):end);
+        temporary = cell(1, numel(sz{i}));
+        for j = 1:numel(sz{i})
+            sz1{i}(j) = numel(1:kwargs.stride{i}(j):sz{i}(j));
+            temporary{j} = 1:kwargs.stride{i}(j):sz{i}(j);
         end
-        sz1{i} = size(x{i, 1}); nel{i} = numel(x{i, 1});
+        [temporary{:}] = ndgrid(temporary{:});
+        x{i} = temporary;
     end
-
-    %% redefine kernel method
-
-    maskbool = @(x) [isscalar(x), isvector(x), ismatrix(x)];
-
-    switch numel(varargin)
-        case 1
-            % 1D filter of 1D data
-            if isvector(varargin{1})
-                method = @(index) kwargs.method(varargin{1}(x{1}(index)+xr{1}));
-            end
         
-            % 2D filter of 2D data
-            if ismatrix(varargin{1})
-                method = @(index) kwargs.method(varargin{1}(x{1}(index)+xr{1}, x{2}(index)+xr{2}));
-            end
-        
-            % 2D filter of ND data
-            if ~ismatrix(varargin{1})
-                method = @(index) kwargs.method(varargin{1}(x{1}(index)+xr{1}, x{2}(index)+xr{2}, x{3}(index)+xr{3}));
-            end
-        case 2
-            mask = [maskbool(varargin{1}); maskbool(varargin{2})];
-
-            % 1D filter of 1D data + 1D data 
-            if isvector(varargin{1}) && ~ismatrix(varargin{1}) && isvector(varargin{2}) && ~ismatrix(varargin{2})
-                method = @(index) kwargs.method(varargin{1}(x{1, 1}(index)+xr{1, 1}), varargin{2}(x{2, 1}(index)+xr{2, 1}));
-            end
-        
-            % 2D filter of 2D data + 1D data
-            if ismatrix(varargin{1}) && ismatrix(varargin{2})
-                method = @(index) kwargs.method(varargin{1}(x{1, 1}(index)+xr{1, 1}, x{1, 2}(index)+xr{1, 2}), ...
-                    varargin{2}(x{2, 1}(index)+xr{2, 1}));
-            end
-
-            % 2D filter of 2D data + 2D data
-            if ismatrix(varargin{1}) && ismatrix(varargin{2})
-                method = @(index) kwargs.method(varargin{1}(x{1, 1}(index)+xr{1, 1}, x{1, 2}(index)+xr{1, 2}), ...
-                    varargin{2}(x{2, 1}(index)+xr{2, 1}, x{2, 2}(index)+xr{2, 2}));
-            end
-        
-            % 2D filter of ND data + 2D data
-            if ~ismatrix(varargin{1}) && ismatrix(varargin{2})
-                method = @(index) kwargs.method(varargin{1}(x{1, 1}(index)+xr{1, 1}, x{1, 2}(index)+xr{1, 2}, x{1, 3}(index)+xr{1, 3}), ...
-                    varargin{2}(x{2, 1}(index)+xr{2, 1}, x{2, 2}(index)+xr{2, 2}));
-            end
-
-            % 2D filter of ND data + ND data
-            if ~ismatrix(varargin{1}) && ~ismatrix(varargin{2})
-                method = @(index) kwargs.method(varargin{1}(x{1}(index)+xr{1}, x{2}(index)+xr{2}, x{3}(index)+xr{3}), ...
-                    varargin{2}(x{1}(index)+xr{1}, x{2}(index)+xr{2}, x{3}(index)+xr{3}));
-            end
+    % evaluate non-linear kernel function result
+    ind = 1;
+    dataslice = cell(1, numel(sz));
+    for i = 1:numel(sz)
+        temporary = cell(1, numel(sz{i}));
+        for j = 1:numel(sz{i})
+            temporary{j} = x{i}{j}(ind) + xr{i}{j};
+        end
+        dataslice{i} = varargin{i}(temporary{:});
     end
+    
+    temporary = kwargs.method(dataslice{:});
 
-    %% filtering
-
-    temporary = method(1); 
     szout = size(temporary);
-    mask = [isscalar(temporary), isvector(temporary), ismatrix(temporary)];
-
     if isscalar(temporary) || isvector(temporary)
         szout = prod(szout);
     end
 
-    result = zeros(numel(x{1, 1}), numel(temporary));
+    result = zeros(numel(x{1}{1}), numel(temporary));
     result(1, :) = temporary(:); 
     
-
-    for i = 2:nel{1}
-        result(i, :) = reshape(method(i), [], 1); 
+    % main loop
+    nel = size(result, 1);
+    parfor k = 2:nel
+        dataslice = cell(1, numel(sz));
+        for i = 1:numel(sz)
+            temp = cell(1, numel(sz{i}));
+            for j = 1:numel(sz{i})
+                temp{j} = x{i}{j}(k) + xr{i}{j};
+            end
+            dataslice{i} = varargin{i}(temp{:});
+        end
+        result(k, :) = reshape(kwargs.method(dataslice{:}), [], 1); 
     end
 
     result = squeeze(reshape(result, [sz1{1}, szout]));
