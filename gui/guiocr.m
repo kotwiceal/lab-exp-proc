@@ -1,16 +1,19 @@
 function varargout = guiocr(data, kwargs)
+%% Interactive character recognizer.
+
     arguments
         data % image gray or RGB
         kwargs.mask (1,:) double = []
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
         kwargs.docked logical = false
+        kwargs.LayoutAnalysis (1,:) char {mustBeMember(kwargs.LayoutAnalysis, {'auto', 'page', 'block', 'line', 'word', 'character'})} = 'auto'
     end
 
     ocrres = [];
 
     function event(~, ~)
 
-        ocrres = ocr(data, rois{1}.Position);
+        ocrres = ocr(data, rois{1}.Position, LayoutAnalysis = kwargs.LayoutAnalysis);
 
         dataocr = insertObjectAnnotation(data, 'rectangle', ...
             ocrres.WordBoundingBoxes, ocrres.Words, LineWidth = 1, FontSize = 10);

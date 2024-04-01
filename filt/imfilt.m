@@ -1,22 +1,16 @@
-function data = imagfilter(data, kwargs)
+function data = imfilt(data, kwargs)
 %% Multidimenstion data fitlering by build-in methods
-%% The function takes following arguments:
-%   data:           [n×m... double]         - multidimensional data
-%   filt:           [char array]            - filter name
-%   filtker:        [1×2 double]            - kernel size
-%   weight:         [n×m... double]         - gridded window function by shape initial data to perform weighted filtering
-%   weightname:     [char array]            - name of window function 
-%   weightparam:    [1×k double]            - parameters of window function 
-%% The function returns following results:
-%   data:           [n×m... double]         - filtered data
 
     arguments
-        data double
+        data double % multidimensional data
+        % filter name
         kwargs.filt (1,:) char {mustBeMember(kwargs.filt, {'none', 'gaussian', 'average', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'wiener-median', 'mode'})} = 'gaussian'
-        kwargs.filtker double = [3, 3]
+        kwargs.filtker double = [3, 3] % kernel size
         kwargs.weight double = []
+        % gridded window function by shape initial data to perform weighted filtering
         kwargs.weightname (1,:) char {mustBeMember(kwargs.weightname, {'tukeywin'})} = 'tukeywin'
-        kwargs.weightparam double = [0.05, 0.05]
+        % name of window function 
+        kwargs.weightparam double = [0.05, 0.05] % parameters of window function 
         kwargs.omitmissing logical = true
     end
 

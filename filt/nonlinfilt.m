@@ -9,13 +9,13 @@ function varargout = nonlinfilt(varargin, kwargs)
         kwargs.stride (1,:) {mustBeA(kwargs.stride, {'double', 'cell'})} = []
         kwargs.offset (1,:) {mustBeA(kwargs.offset, {'double', 'cell'})} = []
         kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string'})} = nan
+        kwargs.verbose (1,1) logical = true
     end
 
     sz = cell(1, numel(varargin));
     for i = 1:numel(varargin)
-        if isvector(varargin{i})
-            varargin{i} = varargin{i}(:);
-        end        
+        % flat vector data
+        if isvector(varargin{i}); varargin{i} = varargin{i}(:); end        
         sz{i} = size(varargin{i});
     end
 
@@ -123,6 +123,8 @@ function varargout = nonlinfilt(varargin, kwargs)
         end
     end
 
+    timerVal = tic;
+
     % adjust kernel, stride an offset to data size
     for i = 1:numel(varargin)
         if ndims(varargin{i}) > size(kwargs.kernel{i}, 2)
@@ -211,16 +213,18 @@ function varargout = nonlinfilt(varargin, kwargs)
     parfor k = 2:nel
         dataslice = cell(1, numel(sz));
         for i = 1:numel(sz)
-            temp = cell(1, numel(sz{i}));
+            temporary = cell(1, numel(sz{i}));
             for j = 1:numel(sz{i})
-                temp{j} = x{i}{j}(k) + xr{i}{j};
+                temporary{j} = x{i}{j}(k) + xr{i}{j};
             end
-            dataslice{i} = varargin{i}(temp{:});
+            dataslice{i} = varargin{i}(temporary{:});
         end
         result(k, :) = reshape(kwargs.method(dataslice{:}), [], 1); 
     end
 
     result = squeeze(reshape(result, [sz1{1}, szout]));
+
+    if kwargs.verbose; disp(strcat("nonlinfilt: elapsed time is ", num2str(toc(timerVal)), " seconds")); end
 
     varargout{1} = result;
 end

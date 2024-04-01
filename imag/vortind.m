@@ -1,47 +1,37 @@
 function result = vortind(u, w, kwargs)
-%% Process a vortex identification criteria
-%% The function takes following arguments:
-%   u:              [n×m×... double]    - first vector component
-%   w:              [n×m×... double]    - second vector component
-%   type:           [char array]        - type of vortex identification criteria
-%   threshold:      [char array]        - apply threshold 
-%   pow:            [1×1 double]        - raise to the power of processing value
-%   abs:            [1×1 logical]       - absolute value
-%   eigord:         [1×1 double]        - eigen-value order
-%   diffilter:      [char array]        - difference schema
-%   prefilter:      [char array]        - smooth filter
-%   prefiltker:     [1×2 double]        - kernel of smooth filter
-%
-%% The function returns following results:
-%   result:     [n×mx... double]    - vortex identification criteria
+    %% Process a vortex identification criteria
 
     arguments
-        u double
-        w double
+        u double % first vector component
+        w double % second vector component
+        % type of vortex identification criteria
         kwargs.type (1,:) char {mustBeMember(kwargs.type, {'q', 'l2', 'd'})} = 'q'
-        kwargs.diffilter (1,:) char {mustBeMember(kwargs.diffilter, {'sobel', '4ord', '4ordgauss', '2ord'})} = 'sobel'
+        % differentiation kernel
+        kwargs.diffilt (1,:) char {mustBeMember(kwargs.diffilt, {'sobel', '4ord', '4ordgauss', '2ord'})} = 'sobel'
+        % threshold type
         kwargs.threshold (1,:) char {mustBeMember(kwargs.threshold, {'none', 'neg', 'pos'})} = 'none'
-        kwargs.pow double = []
-        kwargs.abs logical = false
-        kwargs.eigord double = 1
+        kwargs.pow double = [] % raise result to the power
+        kwargs.abs logical = false % absolute value of result
+        kwargs.eigord double = 1 % eigenvalue odrer
+        % prefilter kernel
         kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'gaussian'
-        kwargs.prefiltker double = [3, 3]
+        kwargs.prefiltker double = [3, 3] % prefilter kernel size
     end
 
     % velocity prefiltering
-    u = imagfilter(u, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
-    w = imagfilter(w, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
+    u = imfilt(u, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
+    w = imfilt(w, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
 
     % derivation
-    Gx = difkernel(kwargs.diffilter); Gz = Gx';
+    Gx = difkernel(kwargs.diffilt); Gz = Gx';
     dudx = imfilter(u, Gx); dudz = imfilter(u, Gz);
     dwdx = imfilter(w, Gx); dwdz = imfilter(w, Gz);
 
     % gradient prefiltering
-    dudx = imagfilter(dudx, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
-    dudz = imagfilter(dudz, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
-    dwdx = imagfilter(dwdx, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
-    dwdz = imagfilter(dwdz, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
+    dudx = imfilt(dudx, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
+    dudz = imfilt(dudz, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
+    dwdx = imfilt(dwdx, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
+    dwdz = imfilt(dwdz, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
 
     gradvel = cat(ndims(u)+1, dudx, dudz, dwdx, dwdz);
     gradvel = reshape(gradvel, [size(u), 2, 2]);

@@ -1,5 +1,5 @@
 function fitdistcoef =  procfitdistcoef(data, kwargs)
-%% Fit statistical distribution by theoretical distributions.
+%% Fit statistical distribution by analytical distributions.
 %% The function takes following arguments:
 %   data:           [n×m... double]     - multidimensional data
 %   norm:           [char]              - type of statistics normalization
@@ -72,7 +72,11 @@ function fitdistcoef =  procfitdistcoef(data, kwargs)
         kwargs.weight double = []
         kwargs.weightname (1,:) char {mustBeMember(kwargs.weightname, {'tukeywin'})} = 'tukeywin'
         kwargs.weightparam double = [0.05, 0.05]
+        %% support parameters
+        kwargs.verbose (1,1) logical = true
     end
+
+    timerVal = tic;
 
     if isempty(kwargs.nonlcon)
         kwargs.nonlcon = @(x) nonlconfitdist(x, distname = kwargs.distname, mean1 = kwargs.mean1, mode1 = kwargs.mode1, ...
@@ -85,6 +89,9 @@ function fitdistcoef =  procfitdistcoef(data, kwargs)
     if isvector(data); type = 'slice'; resize = false; else; type = 'deep'; resize = true; end
     fitdistcoef = nlpfilter(data, kwargs.kernel, @(x) nlkernel(x), strides = kwargs.strides, type = type, resize = resize);
     
-    fitdistcoef = imagfilter(fitdistcoef, filt = kwargs.postfilt, filtker = kwargs.postfiltker, ...
+    fitdistcoef = imfilt(fitdistcoef, filt = kwargs.postfilt, filtker = kwargs.postfiltker, ...
         weight = kwargs.weight, weightname = kwargs.weightname, weightparam = kwargs.weightparam);
+
+    if kwargs.verbose; disp(strcat("procfitdistcoef: elapsed time is ", num2str(toc(timerVal)), " seconds")); end
+
 end

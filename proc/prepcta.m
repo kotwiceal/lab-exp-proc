@@ -1,52 +1,34 @@
 function varargout = prepcta(input, kwargs)
-%% Preparing CTA measurements: calculate spectra, perform cross-correlation correction, reshaping 
-%% The function takes following arguments:
-%   input:              [double, struct]
-%   scan:               [n×10×m double]
-%   wintype:            [char array]                - type of window function
-%   winsize:            [1×1 double]                - width of window function
-%   overlap:            [1×1 double]                - overlap of windows
-%   fs:                 [1×1 double]                - frequency sampling
-%   norm:               [char array]                - to norm spectra
-%   corvibr:            [1×1 logical]               - supress vibration term via cross-correlation correction
-%   reshape:            [1×q double]                - reshape data
-%   permute:            [1×q double]                - permute data
-%   unit:               [char array]                - transform scan unit  
-%   fit:                [function_handle]           - reverse a correction of vectical scanning component
-%   output:             [char array]                - specify function return value
-%   steps:              [1×3 double]                - step motors linear shift vector
-%% The function returns following results:
-%   spec:               [k×m double] 
-%   f:                  [k×1 double]
-%   vel:                [m×1 double]
-%   x:                  [m×1 double]
-%   y:                  [m×1 double]
-%   z:                  [m×1 double]
-%% Examples:
-%% 1. Load cta measurements, calculate auto-spectra (struct notation):
-% data = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931');
-% dataprep = prepcta(p1, output = 'struct');
+    %% Preparing CTA measurements: calculate spectra, perform cross-correlation correction.
 
-%% 2. Load cta measurements, calculate auto-spectra (array notation):
-% [scan, data, raw] = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931', output = 'array');
-% [spec, f, vel, x, y, z] = prepcta(raw, scan = scan);
+    %% Examples:
+    %% 1. Load cta measurements, calculate auto-spectra (struct notation):
+    % data = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931');
+    % dataprep = prepcta(p1, output = 'struct');
+
+    %% 2. Load cta measurements, calculate auto-spectra (array notation):
+    % [scan, data, raw] = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931', output = 'array');
+    % [spec, f, vel, x, y, z] = prepcta(raw, scan = scan);
 
     arguments
         input {mustBeA(input, {'double', 'struct'})}
-        kwargs.scan double = []
+        kwargs.scan (:,:) double = [] % scan table
+        % window function
         kwargs.wintype (1,:) char {mustBeMember(kwargs.wintype, {'uniform', 'hanning', 'hamming'})} = 'hanning'
-        kwargs.winsize double = 4096
-        kwargs.overlap double = 3072
-        kwargs.fs double = 25e3
+        kwargs.winsize double = 4096 % window function width
+        kwargs.overlap double = 3072 % window function overlap
+        kwargs.fs (1,1) double = 25e3 % frequency sampling
+        % spectra norm
         kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'none', 'psd', 'psd-corrected'})} = 'psd-corrected'
-        kwargs.corvibr logical = true;
-        kwargs.reshape double = []
-        kwargs.permute double = []
+        kwargs.corvibr (1,1) logical = true; % supress vibrations via cross-correlation correction
+        kwargs.reshape double = [] % reshape data
+        kwargs.permute double = [] % permute data
+        % transform scan unit
         kwargs.unit (1,:) char {mustBeMember(kwargs.unit, {'mm', 'count'})} = 'mm'
-        kwargs.fit = []
+        kwargs.fit = [] % fitobj to reverse a correction of vectical scanning component
         kwargs.output (1,:) char {mustBeMember(kwargs.output, {'struct', 'array'})} = 'struct'
-        kwargs.steps (1,:) double = [50, 400, 800]
-        kwargs.parproc (1,1) logical = false
+        kwargs.steps (1,:) double = [50, 400, 800] % single step displacement of step motor in um
+        kwargs.parproc (1,1) logical = false % perfor parallel processing
     end
 
     % choose input type
@@ -55,6 +37,9 @@ function varargout = prepcta(input, kwargs)
     else
         raw = input.raw;
         kwargs.scan = input.scan;
+        if isfield(input, 'fs'); kwargs.fs = input.fs; end
+        if isfield(input, 'reshape'); kwargs.reshape = input.reshape; end
+        if isfield(input, 'permute'); kwargs.fs = input.permute; end
     end
 
     s0 = []; s1 = [];
