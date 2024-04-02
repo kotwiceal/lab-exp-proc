@@ -1,24 +1,15 @@
 function varargout = predinterm(data, kwargs)
-%% Predict trained CNN to process intermittency.
-%% The function takes following arguments:
-%   data:                       [n×m... double]     - multidimensional data
-%   network:                    [object]            - instance of sequence network
-%   version:                    [char array]        - version of convolutional neural network
-%   map:                        [1×2 double]        - mapping data range to specified
-%   crop:                       [1×4 double]        - crop data: [x0, y0, width, height]
-%   padval:                     [1×1 double]        - padding value
-%   fillmissmeth:               [char array]        - method of filling missing data
-%% The function returns following results:
-%   intermittency:              [n×m double]
-%   binarized:                  [n×m... double]
+    %% Predict trained CNN to process intermittency.
 
     arguments
-        data double
+        data double % multidimensional data
+        % version of convolutional neural network
         kwargs.version (1,:) char {mustBeMember(kwargs.version, {'0.1', '0.2', '0.3', '0.4', '0.5', '0.6'})} = '0.1'
-        kwargs.network = []
-        kwargs.map double = [0, 1.5]
-        kwargs.crop (1,4) double = []
-        kwargs.padval (1,1) double = nan
+        kwargs.network = [] % instance of sequence network
+        kwargs.map (1,:) double = [0, 1.5] % mapping data range to specified
+        kwargs.crop (1,4) double = [] % crop data: [x0, y0, width, height]
+        kwargs.padval (1,1) double = nan % padding value
+        % method of filling missing data
         kwargs.fillmissmeth (1,:) char {mustBeMember(kwargs.fillmissmeth, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'none'
     end
 

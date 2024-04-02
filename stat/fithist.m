@@ -1,84 +1,58 @@
 function varargout = fithist(kwargs)
-%% Analytical approximation of one-dimensional statistical distribution by single or bi-mode distributions.
-%% The function takes following arguments:
-%   data:           [m×1 double]        - statistical data
-%   x:              [n×1 double]        - statistical edges
-%   y:              [n×1 double]        - statistical counts
-%   norm:           [char array]        - type of statistics normalization
-%   binedge:        [double]            - bins count or edge grid 
-%   range:          [1×2 double]        - range to exclude data
-%   normalize:      [char array]        - data normalization
+    %% Analytical approximation of one-dimensional statistical distribution by single or bi-mode distributions.
 
-%   distname:       [char array]        - approximation distribution name
-%   solver:         [char array]        - execute fit or optimization: 'fit', 'opt'
-%   objnorm:        [1×l double]        - norm order at calculation objective function
-%   Aineq:          [p×l double]        - linear optimization inequality constrain matrix
-%   bineq:          [l×1 double]        - linear optimization inequality constrain right side
-%   Aeq:            [m×k double]        - linear optimization equality constrain matrix
-%   beq:            [k×1 double]        - linear optimization equality constrain right side
-%   nonlcon:        [funtion_handle]    - non-linear optimization constrain function
-%   x0:             [1×k doule]         - inital parameters
-%   lb:             [1×k doule]         - lower bound of parameters
-%   ub:             [1×k doule]         - upper bpund of parameters
-%   mb:             [1×2 doule]         - scale range of auto constrains
-%   disp:           [1×1 logical]       - display optimization result and distribution parameters
-%% The function returns following results:
-%   f:              [1×1 cfit]          - fit object
-%   modes:          [n×k double]        - approximate distribution modes assembled to column vector mapped by specific edges grid
-%   edges:          [n×1 double]        - mesh of modes
-%   coef:           [1×l double]        - solution of optimization problem
-%   x:              [n×1 double]        - statistical edges
-%   y:              [n×1 double]        - statistical counts
-%% Examples:
-%% 1. Fit raw data by two beta distributions with lower, upper and non-linear constrains:
-% % gui
-% rois = guihist(gca, data.dwdlf);
-% probe = guigetdata(rois{1}, data.dwdlf, shape = 'flatten'); % get raw data
-%
-% % constrain function
-% nonlcon = @(x) nonlconfitdist(x,distname='beta2',rmode1=[1e-4,6e-4],rvar1=[1e-8,1e-7],rmode2=[7e-4,5e-3],rvar2=[1e-7,1e-5]);
-% % boundary constrains
-% lb = [0, 1e-3, 0, 7.8, 6416, 1e-3, 1e-2, 0, 0, 0];
-% ub = [2, 2e1, 1e-2, 7.8, 6416, 10, 2e1, 1e-2, 1e3, 1e4];
-% % initial vector
-% x0 = [1, 1, 1e-3, 5, 1e3, 1, 1, 3e-3, 10, 2e3];
-% % fit
-% [f, modes, edges, fval, x, y] = fithist(data = probe, distname = 'beta2', ...
-%       objnorm = 2, nonlcon = nonlcon, x0 = x0, lb = lb, ub = ub, disp = true);
-%% 2. Fit pdf curve by two skew normal distributions:
-% % gui
-% rois = guihist(gca, data.dwdlf);
-% probe = guigetdata(rois{1}, data.dwdlf, shape = 'flatten'); % get raw data
-% [y, x] = histcounts(probe, 'normalization', 'pdf');
-% x = x(2:end);
-%
-% % fit
-% [f, modes, edges, ~, ~, ~] = fithist(x = x, y = y, type = 'beta2');
+    %% Examples:
+    %% 1. Fit raw data by two beta distributions with lower, upper and non-linear constrains:
+    % % gui
+    % rois = guihist(gca, data.dwdlf);
+    % probe = guigetdata(rois{1}, data.dwdlf, shape = 'flatten'); % get raw data
+    %
+    % % constrain function
+    % nonlcon = @(x) nonlconfitdist(x,distname='beta2',rmode1=[1e-4,6e-4],rvar1=[1e-8,1e-7],rmode2=[7e-4,5e-3],rvar2=[1e-7,1e-5]);
+    % % boundary constrains
+    % lb = [0, 1e-3, 0, 7.8, 6416, 1e-3, 1e-2, 0, 0, 0];
+    % ub = [2, 2e1, 1e-2, 7.8, 6416, 10, 2e1, 1e-2, 1e3, 1e4];
+    % % initial vector
+    % x0 = [1, 1, 1e-3, 5, 1e3, 1, 1, 3e-3, 10, 2e3];
+    % % fit
+    % [f, modes, edges, fval, x, y] = fithist(data = probe, distname = 'beta2', ...
+    %       objnorm = 2, nonlcon = nonlcon, x0 = x0, lb = lb, ub = ub, disp = true);
+    %% 2. Fit pdf curve by two skew normal distributions:
+    % % gui
+    % rois = guihist(gca, data.dwdlf);
+    % probe = guigetdata(rois{1}, data.dwdlf, shape = 'flatten'); % get raw data
+    % [y, x] = histcounts(probe, 'normalization', 'pdf');
+    % x = x(2:end);
+    %
+    % % fit
+    % [f, modes, edges, ~, ~, ~] = fithist(x = x, y = y, type = 'beta2');
     
     arguments
         %% data parameters
-        kwargs.data double = []
-        kwargs.x double = []
-        kwargs.y double = []
+        kwargs.data double = [] % statistical data
+        kwargs.x double = [] % statistical edges
+        kwargs.y double = [] % statistical counts
+        % type of statistics normalization
         kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'count', 'pdf', 'probability', 'percentage', 'countdensity'})} = 'pdf'
-        kwargs.binedge double = []
-        kwargs.range double = []
+        kwargs.binedge (1,:) double = [] % bins count or edge grid 
+        kwargs.range (1,:) double = [] % range to exclude data
+        % data normalization
         kwargs.normalize (1,:) char {mustBeMember(kwargs.normalize, {'none', 'zscore', 'norm', 'center', 'scale', 'range'})} = 'none'
         kwargs.pow (1,:) double = []
         %% optimization parameters
+        % approximation distribution name
         kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'none', 'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'gumbel2'
-        kwargs.solver (1,:) char {mustBeMember(kwargs.solver, {'fit', 'opt'})} = 'fit'
-        kwargs.objnorm double = 2
-        kwargs.Aineq double = []
-        kwargs.bineq double = []
-        kwargs.Aeq double = []
-        kwargs.beq double = []
-        kwargs.nonlcon = []
-        kwargs.x0 double = []
-        kwargs.lb double = []
-        kwargs.ub double = []
-        kwargs.mb double = [0, 10];
-        kwargs.verbose logical = false
+        kwargs.objnorm (1,1) double = 2 % norm order at calculation objective function
+        kwargs.Aineq (:,:) double = [] % linear optimization inequality constrain matrix
+        kwargs.bineq (1,:) double = [] % linear optimization inequality constrain right side
+        kwargs.Aeq (:,:) double = [] % linear optimization equality constrain matrix
+        kwargs.beq (1,:) double = [] % linear optimization equality constrain right side
+        kwargs.nonlcon = [] % non-linear optimization constrain function
+        kwargs.x0 (1,:) double = [] % inital parameters
+        kwargs.lb (1,:) double = [] % lower bound of parameters
+        kwargs.ub (1,:) double = [] % upper bpund of parameters
+        kwargs.mb (1,:) double = [0, 10]; % scale range of auto constrains
+        kwargs.verbose (1,1) logical = false % display optimization result and distribution parameters
     end
 
     warning off

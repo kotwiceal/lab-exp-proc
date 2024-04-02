@@ -1,39 +1,38 @@
 function varargout = guihist(varargin, kwargs)
-%% Visualize data statistics by means manually region selection.
-%% The function returns following results:
-%   getdata:        [function_handle]               - return cells stored raw or distribution
-%% Examples:
-%% 1. Show histogram by specific realization with default parameters:
-% guihist(data.dwdlf(:,:,1));
-%% 2. Show histogram by all realization with default parameters (ndim(data.dwdlf) = 3):
-% guihist(data.dwdlf);
-%% 3. Show histograms by all realization by two selection regions:
-% guihist(gca, data.dwdlf, number = 2);
-%% 4. Get raw data selected by gui:
-% gd = guihist(data.dwdlf);
-% probe = gd();
-%% 5. Get raw data selected by two regions:
-% gd = guihist(gca, data.dwdlf, number = 2);
-% probes = gd();
-%% 6. Show histogram by all realization with custom parameters, pdf is fitted by 'beta1' distribution, by solver fmincon with l2 norm and lower and upper constrains:
-% guihist(data.dwdlf, mask = [25, 220, 25, 25], ...
-%     distname = 'beta1', objnorm = 2, lb = [1, 0, 0, 1, 1], ...
-%     ub = [1, 1e2, 0, 2e1, 1e4], norm = 'pdf', xlim = [0, 0.01], verbose = true, cdf = true);
-%% 7. Show histogram by all realization with custom parameters, pdf is fitted by 'beta2' distribution, by solver fmincon with l2 norm and lower, upper and non-linear constrains:
-% % description of 'beta2':
-% % f1 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f1 = @(a, x) f1(a(1:3), x);
-% % f2 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f2 = @(a, x) f2(a(4:end), x);
-% % fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
-%
-% % constrain function
-% nonlcon = @(x) nonlconfitdist(x,distname='beta2',rmode1=[1e-4,6e-4],rvar1=[1e-8,1e-7],rmode2=[7e-4,5e-3],rvar2=[1e-7,1e-5]);
-% % boundary constrains
-% lb = [0, 1e-3, 0, 7.8, 6416, 1e-3, 1e-2, 0, 0, 0];
-% ub = [2, 2e1, 1e-2, 7.8, 6416, 10, 2e1, 1e-2, 1e3, 1e4];
-% % gui
-% guihist(data.dwdlf, mask = [250, 50, 25, 25], ...
-%     distname = 'beta2', objnorm = 2, lb = lb, ub = ub, nonlcon = nonlcon, ...
-%     norm = 'pdf', xlim = [0, 0.01], verbose = true, cdf = true);
+    %% Visualize data statistics by means manually region selection.
+
+    %% Examples:
+    %% 1. Show histogram by specific realization with default parameters:
+    % guihist(data.dwdlf(:,:,1));
+    %% 2. Show histogram by all realization with default parameters (ndim(data.dwdlf) = 3):
+    % guihist(data.dwdlf);
+    %% 3. Show histograms by all realization by two selection regions:
+    % guihist(gca, data.dwdlf, number = 2);
+    %% 4. Get raw data selected by gui:
+    % gd = guihist(data.dwdlf);
+    % probe = gd();
+    %% 5. Get raw data selected by two regions:
+    % gd = guihist(gca, data.dwdlf, number = 2);
+    % probes = gd();
+    %% 6. Show histogram by all realization with custom parameters, pdf is fitted by 'beta1' distribution, by solver fmincon with l2 norm and lower and upper constrains:
+    % guihist(data.dwdlf, mask = [25, 220, 25, 25], ...
+    %     distname = 'beta1', objnorm = 2, lb = [1, 0, 0, 1, 1], ...
+    %     ub = [1, 1e2, 0, 2e1, 1e4], norm = 'pdf', xlim = [0, 0.01], verbose = true, cdf = true);
+    %% 7. Show histogram by all realization with custom parameters, pdf is fitted by 'beta2' distribution, by solver fmincon with l2 norm and lower, upper and non-linear constrains:
+    % % description of 'beta2':
+    % % f1 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f1 = @(a, x) f1(a(1:3), x);
+    % % f2 = @(a, x) a(1)*betapdf(x, a(2), a(3)); f2 = @(a, x) f2(a(4:end), x);
+    % % fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
+    %
+    % % constrain function
+    % nonlcon = @(x) nonlconfitdist(x,distname='beta2',rmode1=[1e-4,6e-4],rvar1=[1e-8,1e-7],rmode2=[7e-4,5e-3],rvar2=[1e-7,1e-5]);
+    % % boundary constrains
+    % lb = [0, 1e-3, 0, 7.8, 6416, 1e-3, 1e-2, 0, 0, 0];
+    % ub = [2, 2e1, 1e-2, 7.8, 6416, 10, 2e1, 1e-2, 1e3, 1e4];
+    % % gui
+    % guihist(data.dwdlf, mask = [250, 50, 25, 25], ...
+    %     distname = 'beta2', objnorm = 2, lb = lb, ub = ub, nonlcon = nonlcon, ...
+    %     norm = 'pdf', xlim = [0, 0.01], verbose = true, cdf = true);
 
     arguments (Repeating)
         varargin double % vector or multidimensional data

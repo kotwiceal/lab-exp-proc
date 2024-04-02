@@ -1,97 +1,68 @@
 function fitdistcoef =  procfitdistcoef(data, kwargs)
-%% Fit statistical distribution by analytical distributions.
-%% The function takes following arguments:
-%   data:           [n×m... double]     - multidimensional data
-%   norm:           [char]              - type of statistics normalization
-%   binedge:        [1×l double]        - bins count or edge grid 
-%   distname:       [char array]        - type of statistics fit
+    %% Fit statistical distribution by analytical distributions.
 
-%   fitdistinit:    [1×1 logical]       - advanced initializing approximation of optimization problem
-%   fitdistcoef:    [n×m×k double]      - fit approximation coefficients
-%   fitdistfilt:    [char array]        - filter name to filter initial fit coefficients
-%   fitdistfiltker: [1×2 double]        - filter size to filter initial fit coefficients
-%   weight:         [n×m... double]     - gridded window function by shape initial data to perform weighted filtering
-%   weightname:     [char array]        - name of window function 
-%   weightparam:    [1×k double]        - parameters of window function 
-
-%   kernel:         [1×2 double]        - size of processing window
-%   strides:        [1×2 double]        - strides of processing window
-%
-%   objnorm:        [1×l double]        - norm order at calculation objective function
-%   nonlcon:        [funtion_handle]    - non-linear optimization constrain function
-%   x0:             [1×k doule]         - inital parameters
-%   lb:             [1×k doule]         - lower bound of parameters
-%   ub:             [1×k doule]         - upper bpund of parameters
-
-%   mean1:          [1×2 double]         - constraints of mean value the first mode
-%   mode1:          [1×2 double]         - constraints of mode value the first mode
-%   var1:           [1×2 double]         - constraints of variance value the first mode
-%   amp1:           [1×2 double]         - constraints of amplitude value the first mode
-%   mean2:          [1×2 double]         - constraints of mean value the second mode
-%   mode2:          [1×2 double]         - constraints of mode value the second mode
-%   var2:           [1×2 double]         - constraints of variance value the second mode
-%   amp2:           [1×2 double]         - constraints of amplitude value the second mode
-
-%   postfilt:       [char array]         - method to filter intermittency field
-%   postfiltker:    [1×2 double]         - kernel of filtering intermittency field
-%% The function returns following results:
-%   fitdistcoef:    [n×m... double]      - fit coefficients
-%% Examples:
-%% 1. Fit distribution of directed velocity gradient by bimode gumbel distribution with custom restrictions:
-% fitdistcoef = procfitdistcoef(data.dwdl, distname = 'gumbel2', mode1 = mode1, var1 = var1, ...
-%     mode2 = mode2, var2 = var2, binedge = binedge, x0 = x0, lb = lb, ub = ub, ...
-%     strides = [5, 5], kernel = [30, 30], postfilt = 'none');
+    %% Examples:
+    %% 1. Fit distribution of directed velocity gradient by bimode gumbel distribution with custom constraints:
+    % fitdistcoef = procfitdistcoef(data.dwdl, distname = 'gumbel2', mode1 = mode1, var1 = var1, ...
+    %     mode2 = mode2, var2 = var2, binedge = binedge, x0 = x0, lb = lb, ub = ub, ...
+    %     strides = [5, 5], kernel = [30, 30], postfilt = 'none');
 
     arguments
-        data double
+        data double % multidimensional data
         %% data parameters
+        % type of statistics normalization
         kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'count', 'pdf', 'probability', 'percentage', 'countdensity'})} = 'pdf'
-        kwargs.binedge double = []
+        kwargs.binedge (1,:) double = [] % bins count or edge grid
+        % type of statistics fit
         kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'gamma2', 'beta2', 'beta2l', 'gumbel2'})} = 'gumbel2'
         %% processing parameters
-        kwargs.kernel double = [30, 30]
-        kwargs.strides double = [5, 5]
+        kwargs.kernel (1,:) double = [30, 30] % size of processing window
+        kwargs.stride (1,:) double = [5, 5] % strides of processing window
         %% optimization parameters
-        kwargs.objnorm double = 2
-        kwargs.nonlcon = []
-        kwargs.x0 double = []
-        kwargs.lb double = []
-        kwargs.ub double = []
+        kwargs.objnorm (1,1) double = 2 % norm order at calculation objective function
+        kwargs.nonlcon = [] % non-linear optimization constrain function
+        kwargs.x0 (1,:) double = [] % inital parameters
+        kwargs.lb (1,:) double = [] % lower bound of parameters
+        kwargs.ub (1,:) double = [] % upper bpund of parameters
         %% restriction parameters
-        kwargs.mean1 double = []
-        kwargs.mode1 double = []
-        kwargs.var1 double = []
-        kwargs.amp1 double = []
-        kwargs.mean2 double = []
-        kwargs.mode2 double = []
-        kwargs.var2 double = []
-        kwargs.amp2 double = []
+        kwargs.mean1 (1,:) double = [] % constraints of mean value the first mode
+        kwargs.mode1 (1,:) double = [] % constraints of mode value the first mode
+        kwargs.var1 (1,:) double = [] % constraints of variance value the first mode
+        kwargs.amp1 (1,:) double = [] % constraints of amplitude value the first mode
+        kwargs.mean2 (1,:) double = [] % constraints of mean value the second mode
+        kwargs.mode2 (1,:) double = [] % constraints of mode value the second mode
+        kwargs.var2 (1,:) double = [] % constraints of variance value the second mode
+        kwargs.amp2 (1,:) double = [] % constraints of amplitude value the second mode
         %% post-pocessing parameters
-        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'average', 'gaussian', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'mode'})} = 'median-weighted'
-        kwargs.postfiltker double = [50, 50]
-        kwargs.weight double = []
-        kwargs.weightname (1,:) char {mustBeMember(kwargs.weightname, {'tukeywin'})} = 'tukeywin'
-        kwargs.weightparam double = [0.05, 0.05]
+        % method to filter intermittency field
+        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'average', 'gaussian', 'median', 'wiener', 'mode'})} = 'median'
+        kwargs.postfiltker double = [5, 5] % kernel of filtering intermittency field
+        kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string'})} = 'symmetric' % padding value
         %% support parameters
         kwargs.verbose (1,1) logical = true
     end
 
-    timerVal = tic;
+    timer = tic; szd = size(data);
 
     if isempty(kwargs.nonlcon)
         kwargs.nonlcon = @(x) nonlconfitdist(x, distname = kwargs.distname, mean1 = kwargs.mean1, mode1 = kwargs.mode1, ...
             var1 = kwargs.var1, amp1 = kwargs.amp1, mean2 = kwargs.mean2, mode2 = kwargs.mode2, var2 = kwargs.var2, amp2 = kwargs.amp2);
     end
 
-    nlkernel = @(x) fitdistfilter(x, method = 'fitdistcoef', norm = kwargs.norm, binedge = kwargs.binedge, ...
+    nlkernel = @(x) fitdistfilt(x, method = 'fitdistcoef', norm = kwargs.norm, binedge = kwargs.binedge, ...
         distname = kwargs.distname, x0 = kwargs.x0, lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
 
-    if isvector(data); type = 'slice'; resize = false; else; type = 'deep'; resize = true; end
-    fitdistcoef = nlpfilter(data, kwargs.kernel, @(x) nlkernel(x), strides = kwargs.strides, type = type, resize = resize);
+    if ~isvector(data)
+        kwargs.kernel = [kwargs.kernel, szd(3)];
+        kwargs.stride = [kwargs.stride, szd(3)];
+    end
     
-    fitdistcoef = imfilt(fitdistcoef, filt = kwargs.postfilt, filtker = kwargs.postfiltker, ...
-        weight = kwargs.weight, weightname = kwargs.weightname, weightparam = kwargs.weightparam);
+    fitdistcoef = nonlinfilt(data, method = @(x) nlkernel(x), kernel = kwargs.kernel, stride = kwargs.stride, padval = kwargs.padval);
 
-    if kwargs.verbose; disp(strcat("procfitdistcoef: elapsed time is ", num2str(toc(timerVal)), " seconds")); end
+    fitdistcoef = imfilt(fitdistcoef, filt = kwargs.postfilt, filtker = kwargs.postfiltker);
+
+    fitdistcoef = imdresize(fitdistcoef, szd(1:2));
+
+    if kwargs.verbose; disp(strcat("procfitdistcoef: elapsed time is ", num2str(toc(timer)), " seconds")); end
 
 end

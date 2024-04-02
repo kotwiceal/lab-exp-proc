@@ -1,37 +1,26 @@
-function y = fitdistfilter(x, kwargs)
-%% Window filtering of statistical data: perform two mode histogram approximation 
-% by given distribution, process criteria of statistical mode separation - ratio of distribution integrals
-%% The function takes following arguments:
-%   x:              [n×m double]        - multidimensional data
-%   norm:           [char array]        - type of statistics normalization
-%   binedge:        [double]            - bins count or edge grid 
-%   distname:       [char array]        - name of approximation family distribution
-%   method:         [char array]        - method of intermittency processing
-%   quantile:       [1×1 double]        - quantile threshold
-%   root:           [char array]        - method to find root of two cdf intersection
-%   objnorm:        [1×1 double]        - norm order of objective function
-%   x0:             [1×k doule]         - inital parameters
-%   lb:             [1×k doule]         - lower bound of parameters
-%   ub:             [1×k doule]         - upper bpund of parameters
-%   nonlcon:        [funtion_handle]    - non-linear optimization constrain function
-%% The function returns following results:
-%   y:              [double]            - filter step result
+function y = fitdistfilt(x, kwargs)
+    %% Window filtering of statistical data: perform two mode histogram approximation 
+    % by given distribution, process criteria of statistical mode separation - ratio of distribution integrals
 
     arguments
-        x double
+        x double % multidimensional data
+        % type of statistics normalization
         kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'count', 'pdf', 'probability', 'percentage', 'countdensity'})} = 'pdf'
-        kwargs.binedge double = []
+        kwargs.binedge double = [] % bins count or edge grid
+        % name of approximation family distribution
         kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'gauss2', 'beta2', 'beta2l', 'gamma2', 'gumbel2'})} = 'gumbel2'
         %% algorithm parameters
+        % method of intermittency processing
         kwargs.method (1,:) char {mustBeMember(kwargs.method, {'quantile-threshold', 'cdf-intersection', 'integral-ratio', 'fitdistcoef'})} = 'integral-ratio'
-        kwargs.quantile double = 0.2
+        kwargs.quantile (1,1) double = 0.9 % quantile threshold
+        % method to find root of two cdf intersection
         kwargs.root (1,:) char {mustBeMember(kwargs.root, {'diff', 'fsolve', 'fminbnd'})} = 'diff'
         %% optimization parameters
-        kwargs.objnorm double = 2
-        kwargs.x0 double = []
-        kwargs.lb double = []
-        kwargs.ub double = []
-        kwargs.nonlcon = []
+        kwargs.objnorm (1,1) double = 2 % norm order of objective function
+        kwargs.x0 (1,:) double = [] % inital parameters
+        kwargs.lb (1,:) double = [] % lower bound of parameters
+        kwargs.ub (1,:) double = [] % upper bpund of parameters
+        kwargs.nonlcon = [] % non-linear optimization constrain function
     end
 
     function y = quantilethreshold(edges, modes, root, quantile)

@@ -1,14 +1,15 @@
 function guipointdist(field, marker, kwargs)
-%% Interactive visualization 1D data by given marker on 2D field.
-%% Examples:
-%% 1. Visualize 2D fields and plot 1D data by corresponding marker with subscript [5, 6]
-% % ndim(spec) = = ndim(intlotspec) + 1
-% % size(spec) = [1d data, x-axis, y-axis, case]
-% % size(intlotspec) = [x-axis, y-axis, case]
-% % node mode
-% guipointdist(data = intlotspec, point = spec, displayname = {'dbd', 'ref.'}, aspect = 'image', mask = [5, 7])
-% % spatial mode: size(x) = size(intlotspec, [1, 2]); size(y) = size(intlotspec, [1, 2]);
-% guipointdist(data = intlotspec, point = spec, displayname = {'dbd', 'ref.'}, aspect = 'image', mask = [5, 7], x = x, y = y)
+    %% Interactive visualization 1D data by given marker on 2D field.
+    
+    %% Examples:
+    %% 1. Visualize 2D fields and plot 1D data by corresponding marker with subscript [5, 6]
+    % % ndim(spec) = = ndim(intlotspec) + 1
+    % % size(spec) = [1d data, x-axis, y-axis, case]
+    % % size(intlotspec) = [x-axis, y-axis, case]
+    % % node mode
+    % guipointdist(data = intlotspec, point = spec, displayname = {'dbd', 'ref.'}, aspect = 'image', mask = [5, 7])
+    % % spatial mode: size(x) = size(intlotspec, [1, 2]); size(y) = size(intlotspec, [1, 2]);
+    % guipointdist(data = intlotspec, point = spec, displayname = {'dbd', 'ref.'}, aspect = 'image', mask = [5, 7], x = x, y = y)
 
     arguments
         field double % matrix/pase-wise array
@@ -29,6 +30,8 @@ function guipointdist(field, marker, kwargs)
         kwargs.clabel (1,:) char = [] % color-axis label of field subplot
         kwargs.mxlabel (1,:) char = [] % x-axis label of marker subplot
         kwargs.mylabel (1,:) char = [] % y-axis label of marker subplot
+        kwargs.mxlim (1,:) double = [] % x-axis limit of marker subplot
+        kwargs.mylim (1,:) double = [] % y-axis limit of marker subplot
         kwargs.xscale (1,:) char {mustBeMember(kwargs.xscale, {'linear', 'log'})} = 'log'
         kwargs.yscale (1,:) char {mustBeMember(kwargs.yscale, {'linear', 'log'})} = 'log'
         kwargs.clim (:,:) double = [] % color-axis limit
@@ -66,6 +69,8 @@ function guipointdist(field, marker, kwargs)
         end
         if ~isempty(kwargs.mxlabel); xlabel(axevent, kwargs.mxlabel); end
         if ~isempty(kwargs.mylabel); ylabel(axevent, kwargs.mylabel); end
+        if ~isempty(kwargs.mxlim); xlim(axevent, kwargs.mxlim); end
+        if ~isempty(kwargs.mylim); xlim(axevent, kwargs.mylim); end
         if ~isempty(kwargs.displayname); legend(axevent, kwargs.displayname); end
     end
 

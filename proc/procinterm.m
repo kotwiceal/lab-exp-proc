@@ -39,27 +39,25 @@ function result = procinterm(data, kwargs)
         kwargs.root (1,:) char {mustBeMember(kwargs.root, {'diff', 'fsolve', 'fminbnd'})} = 'diff'
         %% advanced fit distribution parameters
         kwargs.fitdistinit (1,1) logical = true % advanced initializing approximation of optimization problem
-        kwargs.fitdistcoef double = [] % fit approximation coefficients
-        kwargs.fitdistfiltker (1,:) double = [50, 50] % filter size to filt initial fit coefficients at processing
-        kwargs.fitdistfiltstrd (1,:) double = [30, 30] % filter strides to filt initial fit coefficients at processing
+        kwargs.fitdistcoef (:,:,:) double = [] % fit approximation coefficients
+        kwargs.fitdistfiltker (1,:) double = [30, 30] % filter size to filt initial fit coefficients at processing
+        kwargs.fitdistfiltstrd (1,:) double = [5, 5] % filter strides to filt initial fit coefficients at processing
         % filter kernel to smooth initial fit coefficients
-        kwargs.fitdistpostfilt (1,:) char {mustBeMember(kwargs.fitdistpostfilt, {'none', 'average', 'gaussian', 'median', 'median-weighted', 'wiener', 'mode'})} = 'median-weighted'
-        kwargs.fitdistpostfiltker (1,:) double = [50, 50] % filter kernel size at smooth initial fit coefficients at postporcessing
-        kwargs.weight double = [] % gridded window function by shape initial data to perform weighted filtering
-        kwargs.weightname (1,:) char {mustBeMember(kwargs.weightname, {'tukeywin'})} = 'tukeywin' % name of window function
-        kwargs.weightparam (1, 2) double = [0.05, 0.05] % parameters of window function
+        kwargs.fitdistpostfilt (1,:) char {mustBeMember(kwargs.fitdistpostfilt, {'none', 'average', 'gaussian', 'median', 'wiener', 'mode'})} = 'median'
+        kwargs.fitdistpostfiltker (1,:) double = [5, 5] % filter kernel size at smooth initial fit coefficients at postporcessing
         %% cluster algorithm parameters
         % cluster method metric
         kwargs.distance (1,:) char {mustBeMember(kwargs.distance, {'sqeuclidean', 'cityblock', 'cosine', 'correlation', 'hamming'})} = 'sqeuclidean'
         kwargs.fill (1,1) logical = false % fill closed domain of processed fields
-        kwargs.imerode (1,1) logical = false
-        kwargs.erodeker (1,1) double = 5
-        kwargs.imclose logical = false
-        kwargs.closeker (1,1) double = 10
-        kwargs.dilate (1,1) logical = false
-        kwargs.dilateker (1,:) double = 5
-        kwargs.batch logical = true
-        kwargs.mask (:,:) double = []
+        kwargs.imerode (1,1) logical = false % image morphological erosion
+        kwargs.erodeker (1,:) double = 5 % kernel of morphological erosion
+        kwargs.imclose logical = false % apply a close morphological operation to 2D binarized data
+        kwargs.closeker (1,:) double = 10 % kernel of close morphological operation
+        kwargs.dilate (1,1) logical = false % apply a dilate morphological operation to 2D binarized data
+        kwargs.dilateker (1,:) double = 5 % kernel of 2D dilate morphological operation
+        kwargs.dilate1d (1,1) logical = false % apply a dilate morphological operation to 1D binarized data
+        kwargs.dilate1dker (1,:) double = [1, 1, 15] % kernel of 1D dilate morphological operation
+        kwargs.mask (:,:) double = [] % polygonal mask to select 2D data
         %% neural network parameters
         % version of convolutional neural network
         kwargs.cnnversion (1,:) char {mustBeMember(kwargs.cnnversion, {'0.1', '0.2', '0.3', '0.4', '0.5', '0.6'})} = '0.1'
@@ -68,7 +66,8 @@ function result = procinterm(data, kwargs)
         kwargs.map double = [0, 1.5] % mapping data range to specified
         %% processing parameters
         kwargs.kernel double = [30, 30] % size of processing window
-        kwargs.strides double = [5, 5] % strides of processing window
+        kwargs.stride double = [5, 5] % strides of processing window
+        kwargs.offset (1,:) {mustBeA(kwargs.offset, {'double', 'cell'})} = [] % offset of processing window
         %% optimization parameters
         kwargs.objnorm double = 2 % norm order at calculation objective function
         kwargs.nonlcon = [] % non-linear optimization constrain function
@@ -87,79 +86,101 @@ function result = procinterm(data, kwargs)
         %% pre-pocessing parameters
         % method to filter threshold field
         kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'average', 'gaussian', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'mode', 'dilate'})} = 'median'
-        kwargs.prefiltker double = [15, 15] % kernel of filtering threshold field
+        kwargs.prefiltker double = [4, 4] % kernel of filtering threshold field
+        kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string'})} = 'symmetric' % padding value
         %% post-processing parameters
         % method to filter intermittency field
         kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'average', 'gaussian', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'mode'})} = 'none'
-        kwargs.postfiltker double = [15, 15] % kernel of filtering intermittency field
+        kwargs.postfiltker double = [5, 5] % kernel of filtering intermittency field
+        kwargs.resize (1,1) logical = true
         %% support parameters
         kwargs.verbose (1,1) logical = true % show logger
     end
 
-    function result = procfitdistfilt(method)
+    function [result, fitdistcoef] = procfitdistfilt(data, kwargs)
+        szd = size(data); fitdistcoef = [];
         if kwargs.fitdistinit
             if isempty(kwargs.fitdistcoef)
                 fitdistcoef = procfitdistcoef(data, norm = kwargs.norm, binedge = kwargs.binedge, ...
                     distname = kwargs.distname, x0 = kwargs.x0, lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon, ...
-                    kernel = kwargs.fitdistfiltker, strides = kwargs.fitdistfiltstrd, ...
-                    postfilt = kwargs.fitdistpostfilt, postfiltker = kwargs.fitdistpostfiltker, ...
-                    weight = kwargs.weight, weightname = kwargs.weightname, weightparam = kwargs.weightparam);
+                    kernel = kwargs.fitdistfiltker, stride = kwargs.fitdistfiltstrd, ...
+                    postfilt = kwargs.fitdistpostfilt, postfiltker = kwargs.fitdistpostfiltker, verbose = kwargs.verbose);
             else
                 fitdistcoef = kwargs.fitdistcoef;
             end
 
-            if isvector(data)
-                type = 'slice-cross'; resize = false; x0 = @(y) median(y, 1, 'omitmissing');
+            szf = size(fitdistcoef);
+
+            if ~isvector(data)
+                kernel = kwargs.kernel; stride = kwargs.stride;
+                kwargs.kernel = cell(1, 2); kwargs.stride = cell(1, 2); kwargs.offset = cell(1, 2);
+                kwargs.kernel{1} = [kernel, szd(3)];
+                kwargs.stride{1} = [stride, szd(3)];
+                kwargs.offset{1} = [0, 0, 0];
+                kwargs.kernel{2} = [kernel, szf(3)];
+                kwargs.stride{2} = [stride, szf(3)];
+                kwargs.offset{2} = [0, 0, 0];
+
+                x0 = @(y) squeeze(median(y, [1, 2], 'omitmissing'));
             else
-                type = 'deep-cross'; resize = true; x0 = @(y) squeeze(median(y, [1, 2], 'omitmissing'));
+                x0 = @(y) median(y, 1, 'omitmissing');
             end
 
-            nlkernel = @(x, y) fitdistfilter(x, method = method, norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
+            nlkernel = @(x, y) fitdistfilt(x, method = kwargs.method, norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
                 quantile = kwargs.quantile, distname = kwargs.distname, x0 = x0(y), ...
                 lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
 
-            result = nlpfilter(data, kwargs.kernel, @(x, y) nlkernel(x, y), strides = kwargs.strides, type = type, y = fitdistcoef, resize = resize);
+            result = nonlinfilt(data, fitdistcoef, method = @(x, y) nlkernel(x, y), ...
+                kernel = kwargs.kernel, stride = kwargs.stride, offset = kwargs.offset, padval = kwargs.padval);
         else
-            nlkernel = @(x) fitdistfilter(x, method = method, norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
+            nlkernel = @(x) fitdistfilt(x, method = kwargs.method, norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
                 quantile = kwargs.quantile, distname = kwargs.distname, x0 = kwargs.x0, ...
                 lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
-            if isvector(data); type = 'slice'; resize = false; else; type = 'deep'; resize = true; end
-            result = nlpfilter(data, kwargs.kernel, @(x) nlkernel(x), strides = kwargs.strides, type = type, resize = resize);
+
+            if ~isvector(data)
+                kwargs.kernel = [kwargs.kernel, szd(3)];
+                kwargs.stride = [kwargs.stride, szd(3)];
+            end
+
+            result = nonlinfilt(data, method = @(x) nlkernel(x), kernel = kwargs.kernel, stride = kwargs.stride, padval = kwargs.padval);
         end
-        if method ~= "integral-ratio"
-            result = imfilt(result, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
+        if kwargs.method ~= "integral-ratio"
+            result = imfilt(result, filt = kwargs.prefilt, filtker = kwargs.prefiltker, padval = kwargs.padval);
+            if ~isvector(data)
+                result = imdresize(result, szd(1:2));
+            end
         end
     end
 
-    function binarized = procfitdistbinar(threshold)
+    function binarized = procfitdistbinar(data, threshold)
         binarized = data ./ threshold; binarized(binarized >= 1) = 1; binarized(binarized < 1) = 0;
     end
 
-    function [binarized, center, distance] = procbinarclust()
-        sz = size(data);
+    function [binarized, center, distance] = procclust(data, kwargs)
+        szd = size(data);
         if isempty(kwargs.mask)
             temporary = data;
         else
-            index = poly2mask(kwargs.mask(:,1), kwargs.mask(:,2), sz(1), sz(2));
+            index = poly2mask(kwargs.mask(:,1), kwargs.mask(:,2), szd(1), szd(2));
             if ~ismatrix(data)
-                index = repmat(index(:), prod(sz(3:end)), 1);
+                index = repmat(index(:), prod(szd(3:end)), 1);
             end
             temporary = data(index);
         end
         [binarized, center, ~, distance] = kmeans(temporary(:), 2, 'Distance', kwargs.distance);
         if ~isempty(kwargs.mask)
-            temporary = zeros(sz);
+            temporary = zeros(szd);
             temporary(index) = binarized;
             binarized = temporary;
 
-            temporary = zeros([sz, 2]);
-            index = poly2mask(kwargs.mask(:,1), kwargs.mask(:,2), sz(1), sz(2));
-            index = repmat(index(:), prod(sz(3:end)*2), 1);
+            temporary = zeros([szd, 2]);
+            index = poly2mask(kwargs.mask(:,1), kwargs.mask(:,2), szd(1), szd(2));
+            index = repmat(index(:), prod(szd(3:end)*2), 1);
             temporary(index) = distance(:);
             distance = temporary;
         else
-            binarized = reshape(binarized, sz);
-            distance = squeeze(reshape(distance, [sz, 2]));
+            binarized = reshape(binarized, szd);
+            distance = squeeze(reshape(distance, [szd, 2]));
         end
         [~, index] = max(center);
         switch index
@@ -177,23 +198,22 @@ function result = procinterm(data, kwargs)
             var1 = kwargs.var1, amp1 = kwargs.amp1, mean2 = kwargs.mean2, mode2 = kwargs.mode2, var2 = kwargs.var2, amp2 = kwargs.amp2);
     end
 
-    sz = size(data);
-
     timerVal = tic;
 
     switch kwargs.method
         case 'quantile-threshold'
-            threshold = procfitdistfilt('quantile-threshold');
-            binarized = procfitdistbinar(threshold);
+            [threshold, fitdistcoef] = procfitdistfilt(data, kwargs);
+            binarized = procfitdistbinar(data, threshold);
         case 'cdf-intersection'
-            threshold = procfitdistfilt('cdf-intersection');
-            binarized = procfitdistbinar(threshold);
+            [threshold, fitdistcoef] = procfitdistfilt(data, kwargs);
+            binarized = procfitdistbinar(data, threshold);
         case 'cluster'
-            [binarized, center, distance] = procbinarclust();
+            [binarized, center, distance] = procclust(data, kwargs);
     end
 
     % morphological postprocessing
     if ~isempty(binarized)
+        if kwargs.dilate1d; binarized = nonlinfilt(binarized, method = @(x) sum(x(:))>0, kernel = kwargs.dilate1dker); end
         if kwargs.imerode; binarized = immorph(binarized, method = 'erode', strelker = kwargs.erodeker); end
         if kwargs.imclose; binarized = immorph(binarized, method = 'close', strelker = kwargs.closeker); end
         if kwargs.fill; binarized = immorph(binarized, method = 'fill'); end
@@ -208,7 +228,7 @@ function result = procinterm(data, kwargs)
 
     switch kwargs.method
         case 'integral-ratio'
-            intermittency = procfitdistfilt('integral-ratio');
+            [intermittency, fitdistcoef] = procfitdistfilt(data, kwargs);
         case 'cnn'
             [intermittency, binarized] = predinterm(data, network = kwargs.network, version = kwargs.cnnversion, ...
                 crop = kwargs.crop, map = kwargs.map);
@@ -216,6 +236,11 @@ function result = procinterm(data, kwargs)
 
     % postfiltering
     intermittency = imfilt(intermittency, filt = kwargs.postfilt, filtker = kwargs.postfiltker);
+
+    switch kwargs.method
+        case 'integral-ratio'
+            if kwargs.resize; intermittency = imdresize(intermittency, size(data, [1, 2])); end
+    end
 
     if kwargs.verbose; disp(strcat("procinterm: elapsed time is ", num2str(toc(timerVal)), " seconds")); end
 

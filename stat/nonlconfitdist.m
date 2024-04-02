@@ -1,33 +1,19 @@
 function [c, ceq] = nonlconfitdist(x, kwargs)
-%% Non-linear constraint function for two mode distribution fitting
-%% The function takes following arguments:
-%   x:         [1×n double]         - parameter vector
-%   distname:  [char array]         - approximation distribution name
-%   mean1:     [1×2 double]         - constraints of mean value the first mode
-%   mode1:     [1×2 double]         - constraints of mode value the first mode
-%   var1:      [1×2 double]         - constraints of variance value the first mode
-%   amp1:      [1×2 double]         - constraints of amplitude value the first mode
-%   mean2:     [1×2 double]         - constraints of mean value the second mode
-%   mode2:     [1×2 double]         - constraints of mode value the second mode
-%   var2:      [1×2 double]         - constraints of variance value the second mode
-%   amp2:      [1×2 double]         - constraints of amplitude value the second mode
-%% The function returns following results:
-%   c:          [k×1 double]        - non-linear inequality vector
-%   ceq:        [m×1 double]        - non-linear equality vector
+    %% Non-linear constraint function for two mode distribution fitting
 
     arguments
-        x double
+        x double % parameter vector
         kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'gamma2', 'beta2', 'beta2l', 'gumbel2'})} = 'gumbel2'
 
-        kwargs.mean1 double = []
-        kwargs.mode1 double = []
-        kwargs.var1 double = []
-        kwargs.amp1 double = []
+        kwargs.mean1 (1,:) double = [] % constraints of mean value the first mode
+        kwargs.mode1 (1,:) double = [] % constraints of mode value the first mode
+        kwargs.var1 (1,:) double = [] % constraints of variance value the first mode
+        kwargs.amp1 (1,:) double = [] % constraints of amplitude value the first mode
 
-        kwargs.mean2 double = []
-        kwargs.mode2 double = []
-        kwargs.var2 double = []
-        kwargs.amp2 double = []
+        kwargs.mean2 (1,:) double = [] % constraints of mean value the second mode
+        kwargs.mode2 (1,:) double = [] % constraints of mode value the second mode
+        kwargs.var2 (1,:) double = [] % constraints of variance value the second mode
+        kwargs.amp2 (1,:) double = [] % constraints of amplitude value the second mode
     end
 
     c = []; ceq = [];

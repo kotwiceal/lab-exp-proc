@@ -21,6 +21,7 @@ function result = prepinterm(data, kwargs)
         % prefilter type
         kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'gaussian', 'average', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'wiener-median', 'mode'})} = 'gaussian'
         kwargs.prefiltker double = [3, 3] % prefilter kernel size
+        kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string'})} = 'symmetric' % padding value
         % fill missing data
         kwargs.fillmiss (1,:) char {mustBeMember(kwargs.fillmiss, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'none'
         kwargs.pow double = 2 % raise to the power
@@ -65,9 +66,7 @@ function result = prepinterm(data, kwargs)
         end
     end
 
-    if isfield(data, 'raw')
-        v = squeeze(data.raw(:,1,:));
-    end
+    if isfield(data, 'raw'); v = data.raw; end
 
     % processing
     switch kwargs.type
@@ -89,7 +88,7 @@ function result = prepinterm(data, kwargs)
         case 'dt'
             diffilt = difkernel(kwargs.diffilt); diffilt = diffilt(:,1)';
             kernel = ones(1, ndims(v)); kernel(kwargs.dirdim) = numel(diffilt);
-            result = nonlinfilt(v, kernel = kernel, method = @(x) diffilt*x(:));
+            result = nonlinfilt(v, kernel = kernel, method = @(x) diffilt*x(:), padval = kwargs.padval);
             if ~isempty(kwargs.pow); result = result.^kwargs.pow; end
     end
 

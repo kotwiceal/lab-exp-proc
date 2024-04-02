@@ -144,7 +144,11 @@ function varargout = nonlinfilt(varargin, kwargs)
 
     % padding
     for j = 1:numel(varargin)
-        varargin{j} = padarray(varargin{j}, floor(kwargs.kernel{j}/2), kwargs.padval);
+        % avoid over padding at filtering with total slice along specified dimensionals
+        mask = sz{j} == kwargs.kernel{j} & sz{j} == kwargs.stride{j};
+        padsize = floor(kwargs.kernel{j}/2); padsize(mask) = 0;
+        
+        varargin{j} = padarray(varargin{j}, padsize, kwargs.padval);
         for i = 1:size(kwargs.offset{j}, 2)
             if kwargs.offset{j}(i) ~= 0
                 padsize = zeros(1, size(kwargs.offset{j}, 2));

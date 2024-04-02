@@ -13,6 +13,7 @@ function varargout = prepcta(input, kwargs)
     arguments
         input {mustBeA(input, {'double', 'struct'})}
         kwargs.scan (:,:) double = [] % scan table
+        kwargs.raw (1,1) logical = false
         % window function
         kwargs.wintype (1,:) char {mustBeMember(kwargs.wintype, {'uniform', 'hanning', 'hamming'})} = 'hanning'
         kwargs.winsize double = 4096 % window function width
@@ -127,13 +128,15 @@ function varargout = prepcta(input, kwargs)
         x = squeeze(kwargs.scan(:,1,:));
         z = squeeze(kwargs.scan(:,2,:));
         y = squeeze(kwargs.scan(:,3,:));
-        vel = kwargs.scan(:, 4);
+        vm = kwargs.scan(:, 4);
     end
 
     % return to uncorrected vertical positions
     if ~isempty(kwargs.fit) && ~isempty(kwargs.scan)
         y = y - round(kwargs.fit(x, z)); 
     end
+
+    if kwargs.raw; raw = squeeze(raw(:,1,:)); end
 
     % reshape spectra, scanning points and velocity
     if ~isempty(kwargs.reshape)
@@ -142,18 +145,21 @@ function varargout = prepcta(input, kwargs)
             x = reshape(x, kwargs.reshape);
             z = reshape(z, kwargs.reshape);
             y = reshape(y, kwargs.reshape);
-            vel = reshape(vel, kwargs.reshape);
+            vm = reshape(vm, kwargs.reshape);
         end
+        if kwargs.raw; raw = reshape(raw, [size(raw, 1), kwargs.reshape]); end
+        if isempty(kwargs.permute); raw = permute(raw, [2:ndims(raw), 1]); end
     end
 
     if ~isempty(kwargs.permute)
-        s00 = permute(s00, [1. kwargs.permute+1]);
+        s00 = permute(s00, [1, kwargs.permute+1]);
         if ~isempty(kwargs.scan)
-            vel = permute(vel, kwargs.permute);
+            vm = permute(vm, kwargs.permute);
             x = permute(x, kwargs.permute);
             y = permute(y, kwargs.permute);
             z = permute(z, kwargs.permute);
         end
+        if kwargs.raw; raw = permute(raw, [1, kwargs.permute]); end
     end
 
     % transform units
@@ -170,20 +176,22 @@ function varargout = prepcta(input, kwargs)
             result.spec = s00;
             result.f = f;
             if ~isempty(kwargs.scan)
-                result.vel = vel;
+                result.vm = vm;
                 result.x = x;
                 result.y = y;
                 result.z = z;
             end
+            if kwargs.raw; result.raw = raw; end
             varargout{1} = result;
         case 'array'
             varargout{1} = s00;
             varargout{2} = f;
             if ~isempty(kwargs.scan)
-                varargout{3} = vel;
+                varargout{3} = vm;
                 varargout{4} = x;
                 varargout{5} = y;
                 varargout{6} = z;
             end
+            if kwargs.raw; varargout{7} = raw; end
     end
 end

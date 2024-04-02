@@ -1,16 +1,11 @@
 function param = distparam(x, kwargs)
-%% Processing of distribution parameters.
-%% The function takes following arguments:
-%   x:          [1×n double]            - parameter vector
-%   distname:   [char array]            - approximation distribution name
-%   disp:       [1×1 logical]           - display distribution parameters
-%% The function returns following results:
-%   param:      [struct]                - distribution parameters
+    %% Calculate distribution parameters.
 
     arguments
-        x double
+        x double % parameter vector
+        % approximation distribution name
         kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'gumbel2'
-        kwargs.disp logical = false
+        kwargs.disp (1,1) logical = false % display distribution parameters
     end
 
     param = struct();
