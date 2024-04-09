@@ -4,21 +4,21 @@ function result = immorph(data, kwargs)
     arguments
         data double % multidimensional data
         % morphological method
-        kwargs.method (1,:) char {mustBeMember(kwargs.method , {'none', 'fill', 'erode', 'dialte', 'close', 'open'})} = 'erode'
+        kwargs.method (1,:) char {mustBeMember(kwargs.method , {'none', 'fill', 'erode', 'dilate', 'close', 'open'})} = 'erode'
         kwargs.strel (1,:) char {mustBeMember(kwargs.strel, {'disk'})} = 'disk' % structure element
         kwargs.strelker (1,:) double = 4 % kernel of structure element
         kwargs.parproc (1,1) logical = false % perform parallel processing
     end
 
-    strl = strel(kwargs.strelker, kwargs.strelker);
+    strl = strel(kwargs.strel, kwargs.strelker);
 
     switch kwargs.method 
         case 'fill'
             method = @(img) imfill(img, 'holes');
         case 'erode'
             method = @(img) imerode(img, strl);
-        case 'dialte'
-            method = @(img) imdialte(img, strl);
+        case 'dilate'
+            method = @(img) imdilate(img, strl);
         case 'close'
             method = @(img) imclose(img, strl);
         case 'open'

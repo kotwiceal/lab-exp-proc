@@ -10,7 +10,7 @@ function guitile(data, kwargs)
         kwargs.ylim (1,:) double = [] % y-axis limit
         kwargs.xlabel (1,:) char = [] % x-axis label of data subplot
         kwargs.ylabel (1,:) char = [] % y-axis label of data subplot
-        kwargs.clim (:,:) double = [] % color-axis limit
+        kwargs.clim (:,:) {mustBeA(kwargs.clim, {'double', 'cell'})} = [] % color-axis limit
         kwargs.show (1,:) {mustBeMember(kwargs.show, {'surf', 'contourf'})} = 'contourf'
         kwargs.displayname string = [] % list of labels
         kwargs.legend logical = false % show legend
@@ -33,7 +33,7 @@ function guitile(data, kwargs)
 
     % initialize figure
     if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout('flow');
-    if ~isvector(kwargs.clim);  cl = kwargs.clim; else; cl = repmat(kwargs.clim, size(data, 3), 1); end
+    if ~isvector(kwargs.clim); cl = kwargs.clim; else; cl = repmat(kwargs.clim, size(data, 3), 1); end
     isnode = isempty(kwargs.x) && isempty(kwargs.y);
     if isnode
         pltfunc = @(i) imagesc(data(:,:,i));

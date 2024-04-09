@@ -1,4 +1,4 @@
-function guipointdist(field, marker, kwargs)
+function getdata = guipointdist(field, marker, kwargs)
     %% Interactive visualization 1D data by given marker on 2D field.
     
     %% Examples:
@@ -12,14 +12,14 @@ function guipointdist(field, marker, kwargs)
     % guipointdist(data = intlotspec, point = spec, displayname = {'dbd', 'ref.'}, aspect = 'image', mask = [5, 7], x = x, y = y)
 
     arguments
-        field double % matrix/pase-wise array
-        marker double % marker data
-        kwargs.mx double = [] % marker data coordinate
-        kwargs.x double = [] % longitudinal coordinate matrix/pase-wise array
-        kwargs.y double = [] % tranversal coordinate matrix/pase-wise array
+        field {mustBeA(field, {'double', 'cell'})} % matrix/pase-wise array
+        marker {mustBeA(marker, {'double', 'cell'})} % marker data
+        kwargs.mx {mustBeA(kwargs.mx, {'double', 'cell'})} = [] % marker data coordinate
+        kwargs.x {mustBeA(kwargs.x, {'double', 'cell'})} = [] % longitudinal coordinate matrix/pase-wise array
+        kwargs.y {mustBeA(kwargs.y, {'double', 'cell'})} = [] % tranversal coordinate matrix/pase-wise array
         %% roi parameters
-        kwargs.axtarget (1,1) double = 1 % order of targer ROI axis
-        kwargs.mask (1,:) double = [] % predefined position of ROI markers
+        kwargs.axtarget (1,:) double = 1 % order of targer ROI axis
+        kwargs.mask {mustBeA(kwargs.mask, {'double', 'cell'})} = [] % predefined position of ROI markers
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all' % interaction behaviour of ROI instances
         kwargs.number (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.number, 1)} = 1 % number of ROI instances
         %% axis parameters
@@ -36,6 +36,7 @@ function guipointdist(field, marker, kwargs)
         kwargs.yscale (1,:) char {mustBeMember(kwargs.yscale, {'linear', 'log'})} = 'log'
         kwargs.clim (:,:) double = [] % color-axis limit
         kwargs.displayname string = [] % list of labels
+        kwargs.mdisplayname string = [] % list of labels
         kwargs.legend logical = false % show legend
         kwargs.docked logical = false % docker figure
         kwargs.colormap (1,:) char = 'turbo' % colormap
@@ -51,12 +52,35 @@ function guipointdist(field, marker, kwargs)
 
     xi = ones(1, kwargs.number); yi = ones(1, kwargs.number); ax = cell(1, size(field, 3));
 
+    if isa(field, 'double'); field = {field}; end
+    if isa(marker, 'double'); marker = {marker}; end
+    if isa(kwargs.x, 'double'); kwargs.x = {kwargs.x}; end
+    if isa(kwargs.y, 'double'); kwargs.y = {kwargs.y}; end
+    if isempty(kwargs.mx)
+        for i = 1:numel(marker)
+            kwargs.mx{i} = 1:size(marker{i}, 1); 
+        end
+    end
+    if isa(kwargs.mx, 'double'); kwargs.mx = {kwargs.mx}; end
+    if isa(kwargs.mask, 'double'); kwargs.mask = {kwargs.mask}; end
+    if numel(kwargs.mask) == 1
+        temp = kwargs.mask{1};
+        for i = 1:numel(field)
+            kwargs.mask{i} = temp;
+        end
+    end
+
     function eventmoving(~, ~)
         % binding to nodes
-        for i = 1:length(rois)
-            [~, indt] = min(abs(kwargs.x-rois{i}.Position(1)).*abs(kwargs.y-rois{i}.Position(2)), [], 'all');
-            [yi(i), xi(i)] = ind2sub(size(field, [1, 2]), indt);
-            rois{i}.Position = [kwargs.x(yi(i),xi(i)), kwargs.y(yi(i),xi(i))];
+        for j = 1:numel(rois)
+            for i = 1:numel(rois{j})
+                if rois{j}{i}.Position ~= rois{j}{i}.UserData.PreviousPosition
+                    [~, indt] = min(abs(kwargs.x{j}-rois{j}{i}.Position(1)).*abs(kwargs.y{j}-rois{j}{i}.Position(2)), [], 'all');
+                    [yi(i), xi(i)] = ind2sub(size(field{j}, [1, 2]), indt);
+                    rois{j}{i}.Position = [kwargs.x{j}(yi(i),xi(i)), kwargs.y{j}(yi(i),xi(i))];
+                    rois{j}{i}.UserData.PreviousPosition = rois{j}{i}.Position;
+                end
+            end
         end
     end
 
@@ -64,52 +88,80 @@ function guipointdist(field, marker, kwargs)
         % plot 1D data
         cla(axevent); hold(axevent, 'on'); box(axevent, 'on'); grid(axevent, 'on');
         set(axevent, XScale = kwargs.xscale, YScale = kwargs.yscale, FontSize = kwargs.fontsize);
-        for i = 1:length(rois)
-            plot(axevent, kwargs.mx, squeeze(marker(:,yi(i),xi(i),:)))
+        for i = 1:numel(rois)
+            for j = 1:numel(rois{i})
+                plot(axevent, kwargs.mx{i}, squeeze(marker{i}(:,yi(j),xi(j),:)))
+            end
         end
         if ~isempty(kwargs.mxlabel); xlabel(axevent, kwargs.mxlabel); end
         if ~isempty(kwargs.mylabel); ylabel(axevent, kwargs.mylabel); end
         if ~isempty(kwargs.mxlim); xlim(axevent, kwargs.mxlim); end
         if ~isempty(kwargs.mylim); xlim(axevent, kwargs.mylim); end
-        if ~isempty(kwargs.displayname); legend(axevent, kwargs.displayname); end
+        if ~isempty(kwargs.displayname); legend(axevent, kwargs.mdisplayname, Location = kwargs.location); end
     end
-
-    if isempty(kwargs.mx); kwargs.mx = 1:size(marker, 1); end
 
     % initialize figure
     if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout('flow');
-    if ~isvector(kwargs.clim);  cl = kwargs.clim; else; cl = repmat(kwargs.clim, size(field, 3), 1); end
-    isnode = isempty(kwargs.x) && isempty(kwargs.y);
-    if isnode
-        pltfunc = @(data) imagesc(data);
-        [kwargs.x, kwargs.y] = meshgrid(1:size(field, 2), 1:size(field, 1));
-    else
-        pltfunc = @(data) contourf(kwargs.x, kwargs.y, data, 100, 'LineStyle', 'None');
+    if ~isvector(kwargs.clim);  cl = kwargs.clim; else; cl = repmat(kwargs.clim, size(field{1}, 3), 1); end
+    pltfunc = cell(1, numel(field));
+    for i = 1:numel(kwargs.x)
+        isnode = isempty(kwargs.x{i}) && isempty(kwargs.y{i});
+        if isnode
+            pltfunc{i} = @(data) imagesc(data);
+            [kwargs.x{i}, kwargs.y{i}] = meshgrid(1:size(field{i}, 2), 1:size(field{i}, 1));
+        else
+            pltfunc{i} = @(data) contourf(kwargs.x{i}, kwargs.y{i}, data, 100, 'LineStyle', 'None');
+        end
     end
 
-    % plot 2D data
-    for i = 1:size(field, 3)
-        ax{i} = nexttile; pltfunc(field(:,:,i));
-        colormap(kwargs.colormap);
-        if ~isempty(cl); clim(cl(i,:)); end
-        if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
-        if kwargs.colorbar
-            clb = colorbar();
-            if ~isempty(kwargs.clabel)
-                ylabel(clb, kwargs.clabel);
-            end
+    function reuslt = getdatafunc()
+        reuslt = struct();
+        % store figure
+        if ~isempty(kwargs.filename)
+            savefig(gcf, strcat(kwargs.filename, '.fig'))
+            exportgraphics(gcf, strcat(kwargs.filename, kwargs.extension), Resolution = 600)
         end
-        axis(kwargs.aspect); set(gca, FontSize = kwargs.fontsize);
-        if ~isempty(kwargs.xlabel); xlabel(kwargs.xlabel); end
-        if ~isempty(kwargs.ylabel); ylabel(kwargs.ylabel); end
+    end
+
+    k = 0;
+    % plot 2D data
+    for j = 1:numel(field)
+        for i = 1:size(field{j}, 3)
+            k = k + 1;
+            ax{k} = nexttile; pltfunc{j}(field{j}(:,:,i));
+            colormap(kwargs.colormap);
+            if ~isempty(cl); clim(cl(i,:)); end
+            if ~isempty(kwargs.displayname); title(kwargs.displayname(k), 'FontWeight', 'Normal'); end
+            if kwargs.colorbar
+                clb = colorbar();
+                if ~isempty(kwargs.clabel)
+                    ylabel(clb, kwargs.clabel);
+                end
+            end
+            axis(kwargs.aspect); set(gca, FontSize = kwargs.fontsize);
+            if ~isempty(kwargs.xlabel); xlabel(kwargs.xlabel); end
+            if ~isempty(kwargs.ylabel); ylabel(kwargs.ylabel); end
+        end
     end
     if ~isempty(kwargs.title); sgtitle(kwargs.title); end
 
     % initialize ROI instances
     axevent = nexttile; hold(axevent, 'on'); box(axevent, 'on'); grid(axevent, 'on');
-    rois = guiselectregion(ax{kwargs.axtarget}, moving = @eventmoving, moved = @eventmoved, shape = 'point', ...
-        mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);
+    rois = {};
+    for i = kwargs.axtarget
+        temp = guiselectregion(ax{i}, moving = @eventmoving, moved = @eventmoved, shape = 'point', ...
+            mask = kwargs.mask{i}, interaction = kwargs.interaction, number = kwargs.number);
+        rois = cat(2, rois, {temp});
+    end
+
+    for i = 1:numel(rois)
+        for j = 1:numel(rois{i})
+            rois{i}{j}.UserData.PreviousPosition = [nan, nan]; 
+        end
+    end
     eventmoving(); eventmoved();
+
+    getdata = @getdatafunc;
 
     % store figure
     if ~isempty(kwargs.filename)

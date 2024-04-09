@@ -40,7 +40,9 @@ function varargout = prepcta(input, kwargs)
         kwargs.scan = input.scan;
         if isfield(input, 'fs'); kwargs.fs = input.fs; end
         if isfield(input, 'reshape'); kwargs.reshape = input.reshape; end
-        if isfield(input, 'permute'); kwargs.fs = input.permute; end
+        if isfield(input, 'permute'); kwargs.permute = input.permute; end
+        if isfield(input, 'fit'); kwargs.fit = input.fit; end
+        if isfield(input, 'ft'); kwargs.fit = input.ft; end
     end
 
     s0 = []; s1 = [];
@@ -159,7 +161,7 @@ function varargout = prepcta(input, kwargs)
             y = permute(y, kwargs.permute);
             z = permute(z, kwargs.permute);
         end
-        if kwargs.raw; raw = permute(raw, [1, kwargs.permute]); end
+        if kwargs.raw; raw = permute(raw, [1, kwargs.permute + 1]); end
     end
 
     % transform units

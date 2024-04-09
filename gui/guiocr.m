@@ -1,5 +1,5 @@
 function varargout = guiocr(data, kwargs)
-%% Interactive character recognizer.
+    %% Interactive character recognizer.
 
     arguments
         data % image gray or RGB

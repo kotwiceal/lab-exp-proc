@@ -1,22 +1,28 @@
 function varargout = nonlinfilt(varargin, kwargs)
+    %% Sliding window non-linear filter
+
     arguments (Repeating)
-        varargin double
+        varargin double % data
     end
 
     arguments
-        kwargs.method function_handle
-        kwargs.kernel (1,:) {mustBeA(kwargs.kernel, {'double', 'cell'})} = []
-        kwargs.stride (1,:) {mustBeA(kwargs.stride, {'double', 'cell'})} = []
-        kwargs.offset (1,:) {mustBeA(kwargs.offset, {'double', 'cell'})} = []
-        kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string'})} = nan
-        kwargs.verbose (1,1) logical = true
+        kwargs.method function_handle % non-linear kernel function
+        kwargs.kernel (1,:) {mustBeA(kwargs.kernel, {'double', 'cell'})} = [] % window size
+        kwargs.stride (1,:) {mustBeA(kwargs.stride, {'double', 'cell'})} = [] % window stride
+        kwargs.offset (1,:) {mustBeA(kwargs.offset, {'double', 'cell'})} = [] % window offset
+        kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string'})} = nan % padding value
+        kwargs.verbose (1,1) logical = true % logger
     end
 
     sz = cell(1, numel(varargin));
     for i = 1:numel(varargin)
         % flat vector data
-        if isvector(varargin{i}); varargin{i} = varargin{i}(:); end        
-        sz{i} = size(varargin{i});
+        if isvector(varargin{i})
+            varargin{i} = varargin{i}(:); 
+            sz{i} = numel(varargin{i});
+        else
+            sz{i} = size(varargin{i});
+        end        
     end
 
     % validation kernel, stride, offset type
@@ -123,7 +129,7 @@ function varargout = nonlinfilt(varargin, kwargs)
         end
     end
 
-    timerVal = tic;
+    timer = tic;
 
     % adjust kernel, stride an offset to data size
     for i = 1:numel(varargin)
@@ -131,16 +137,37 @@ function varargout = nonlinfilt(varargin, kwargs)
             temporary = ones(1, ndims(varargin{i}));
             temporary(1:numel(kwargs.kernel{i})) = kwargs.kernel{i};
             kwargs.kernel{i} = temporary;
-        
+
             temporary = ones(1, ndims(varargin{i}));
             temporary(1:numel(kwargs.stride{i})) = kwargs.stride{i};
             kwargs.stride{i} = temporary;
-        
+
             temporary = zeros(1, ndims(varargin{i}));
             temporary(1:numel(kwargs.offset{i})) = kwargs.offset{i};
             kwargs.offset{i} = temporary;
         end
     end
+
+    % evaluate a size of filtered data
+    szf = cell(1, numel(sz));
+    for i = 1:numel(sz)
+        if isvector(kwargs.stride{i})
+            for j = 1:numel(sz{i})
+                szf{i}(j) = numel(1:kwargs.stride{i}(j):sz{i}(j));
+            end
+        else
+            szf{i} = size(kwargs.stride{i}, ndims(kwargs.stride{i}));
+        end
+    end
+    
+    % check a consistency of filtered data size
+    szfnumel = zeros(1, numel(szf));
+    for i = 1:numel(szf); szfnumel(i) = numel(szf{i}); end
+    if numel(unique(szfnumel)) ~= 1; error(strcat("inconsistent dimensions of filter strides: ", jsonencode(szfnumel))); end
+    szfval = zeros(numel(szf), szfnumel(1));
+    for i = 1:numel(szf); szfval(i,:) = szf{i}; end
+    if ~isvector(unique(szfval, 'row')); error(strcat("inconsistent grid of filter strides: ", jsonencode(szfval))); end
+    szf = szf{1};
 
     % padding
     for j = 1:numel(varargin)
@@ -167,37 +194,21 @@ function varargout = nonlinfilt(varargin, kwargs)
         temporary(temporary<0) = 0;
         kwargs.offset{i} = temporary;
     end
-
-    % window index
-    xr = cell(1, numel(kwargs.kernel));
-    for i = 1:numel(kwargs.kernel)
-        temporary = cell(1, numel(kwargs.kernel{i}));
-        for j = 1:size(kwargs.kernel{i}, 2)
-            temporary{j} = ndgrid(0:kwargs.kernel{i}(j)-1)+kwargs.offset{i}(j);
-        end
-        xr{i} = temporary;
-    end
-
-    % subscript index
-    x = cell(1, numel(sz));
-    sz1 = cell(1, numel(sz));
-    for i = 1:numel(sz)
-        temporary = cell(1, numel(sz{i}));
-        for j = 1:numel(sz{i})
-            sz1{i}(j) = numel(1:kwargs.stride{i}(j):sz{i}(j));
-            temporary{j} = 1:kwargs.stride{i}(j):sz{i}(j);
-        end
-        [temporary{:}] = ndgrid(temporary{:});
-        x{i} = temporary;
-    end
         
     % evaluate non-linear kernel function result
     ind = 1;
     dataslice = cell(1, numel(sz));
     for i = 1:numel(sz)
+        subind = cell(1, numel(szf) + 1); subind{numel(szf) + 1} = 1:numel(szf);
+        [subind{1:end-1}] = ind2sub(szf, ind);
+
+        kernel = kwargs.kernel{i};
+        stride = kwargs.stride{i};
+        offset = kwargs.offset{i};
+
         temporary = cell(1, numel(sz{i}));
         for j = 1:numel(sz{i})
-            temporary{j} = x{i}{j}(ind) + xr{i}{j};
+            temporary{j} = stride(j)*(subind{j}-1)+1 + (0:kernel(j)-1) + offset(j);
         end
         dataslice{i} = varargin{i}(temporary{:});
     end
@@ -209,7 +220,7 @@ function varargout = nonlinfilt(varargin, kwargs)
         szout = prod(szout);
     end
 
-    result = zeros(numel(x{1}{1}), numel(temporary));
+    result = zeros(prod(szf), numel(temporary));
     result(1, :) = temporary(:); 
     
     % main loop
@@ -217,18 +228,25 @@ function varargout = nonlinfilt(varargin, kwargs)
     parfor k = 2:nel
         dataslice = cell(1, numel(sz));
         for i = 1:numel(sz)
+            subind = cell(1, numel(szf) + 1); subind{numel(szf) + 1} = 1:numel(szf);
+            [subind{1:end-1}] = ind2sub(szf, k);
+    
+            kernel = kwargs.kernel{i};
+            stride = kwargs.stride{i};
+            offset = kwargs.offset{i};
+
             temporary = cell(1, numel(sz{i}));
             for j = 1:numel(sz{i})
-                temporary{j} = x{i}{j}(k) + xr{i}{j};
+                temporary{j} = stride(j)*(subind{j}-1)+1 + (0:kernel(j)-1) + offset(j);
             end
             dataslice{i} = varargin{i}(temporary{:});
         end
         result(k, :) = reshape(kwargs.method(dataslice{:}), [], 1); 
     end
 
-    result = squeeze(reshape(result, [sz1{1}, szout]));
+    result = squeeze(reshape(result, [szf, szout]));
 
-    if kwargs.verbose; disp(strcat("nonlinfilt: elapsed time is ", num2str(toc(timerVal)), " seconds")); end
+    if kwargs.verbose; disp(strcat("nonlinfilt: elapsed time is ", num2str(toc(timer)), " seconds")); end
 
     varargout{1} = result;
 end

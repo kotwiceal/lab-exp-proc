@@ -68,6 +68,7 @@ function result = procinterm(data, kwargs)
         kwargs.kernel double = [30, 30] % size of processing window
         kwargs.stride double = [5, 5] % strides of processing window
         kwargs.offset (1,:) {mustBeA(kwargs.offset, {'double', 'cell'})} = [] % offset of processing window
+        kwargs.avgdim (1,:) double = [] % averaging dimension
         %% optimization parameters
         kwargs.objnorm double = 2 % norm order at calculation objective function
         kwargs.nonlcon = [] % non-linear optimization constrain function
@@ -220,10 +221,14 @@ function result = procinterm(data, kwargs)
     end
 
     % averaging
-    if ismatrix(data)
-        intermittency = squeeze(mean(binarized, 2, 'omitmissing'));
+    if isempty(kwargs.avgdim)
+        if ismatrix(data)
+            intermittency = squeeze(mean(binarized, 2, 'omitmissing'));
+        else
+            intermittency = squeeze(mean(binarized, 3, 'omitmissing'));
+        end
     else
-        intermittency = squeeze(mean(binarized, 3, 'omitmissing'));
+        intermittency = squeeze(mean(binarized, kwargs.avgdim, 'omitmissing'));
     end
 
     switch kwargs.method
