@@ -1,54 +1,37 @@
 function getdata = guiautospec(data, kwargs)
-%% Visualize auto-spectrum function of selected by rectangle ROI data.
-%% The function takes following arguments:
-%   data:           [n×m double]                    - matrix data
-%   x:              [n×m double]                    - longitudinal spatial coordinate
-%   y:              [n×m double]                    - transversal spatial coordinate
-%   norm:           [char array]                    - norm spectrum
-%   center:         [char array]                    - center spectrum
-%   winfun:         [char array]                    - window funtion at Fourier transform
-%   mask:           [1×2 double]                    - location and size of rectangle selection
-%   interaction:    [char array]                    - region selection behaviour: 'translate', 'all' (see ROI object) 
-%   aspect:         [char array]                    - axis aspect ratio
-%   clim:           [1×2 double]                    - color axis limit
-%   cscale:         [char array]                    - colormap scale
-%   display:        [char array]                    - display type: 'imagesc', 'surf'
-%   docked:         [1×1 logical]                   - docker figure
-%   colormap:       [char array]                    - colormap of color axis
-%   title:          [char array]                    - figure title
-%   filename:       [char array]                    - filename to save figure
-%   extension:      [char array]                    - extension of saved figure
-%   unit:           [char array]                    - label axis unit
-%% The function returns following results:
-%   getdata:        [function handle]               - function returning the last spectrum processing
-%% Examples
-%% 1. Show auto-spectra of signal with default parameters:
-% guiautospec(data);
-%% 2. Show auto-spectra of signal with custom parameters:
-% guiautospec(data, mask = [100, 150, 25, 25], display = '2d', clim = [0, 1], aspect = 'auto', center = 'none');
+    %% Visualize auto-spectrum function of selected by rectangle ROI data.
+
+    %% The function returns following results:
+    %   getdata: [function handle] - function returning the last spectrum processing
+
+    %% Examples
+    %% 1. Show auto-spectra of signal with default parameters:
+    % guiautospec(data);
+    %% 2. Show auto-spectra of signal with custom parameters:
+    % guiautospec(data, mask = [100, 150, 25, 25], display = '2d', clim = [0, 1], aspect = 'auto', center = 'none');
         
     arguments
-        data double
-        kwargs.x double = []
-        kwargs.y double = []
+        data (:,:) double % matrix data
+        kwargs.x (:,:) double = [] % longitudinal spatial coordinate
+        kwargs.y (:,:) double = [] % transversal spatial coordinate
         %% spectra processing parameters
-        kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'none', 'psd'})} = 'psd'
-        kwargs.center (1,:) char {mustBeMember( kwargs.center, {'none', 'poly11', 'mean'})} = 'poly11'
-        kwargs.winfun char {mustBeMember(kwargs.winfun, {'none', 'hann', 'hamming', 'tukey'})} = 'hann'
+        kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'none', 'psd'})} = 'psd' % norm auto-spectra
+        kwargs.center (1,:) char {mustBeMember( kwargs.center, {'none', 'poly11', 'mean'})} = 'poly11' % center data
+        kwargs.winfun char {mustBeMember(kwargs.winfun, {'none', 'hann', 'hamming', 'tukey'})} = 'hann' % window funtion at Fourier transform
         %% roi and axis parameters
-        kwargs.mask (:,:) double = []
-        kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
-        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal'
-        kwargs.clim double = []
-        kwargs.climspec double = []
-        kwargs.cscale (1,:) char {mustBeMember(kwargs.cscale, {'linear', 'log'})} = 'log'
-        kwargs.display (1,:) char {mustBeMember(kwargs.display, {'2d', '3d'})} = '2d'
-        kwargs.docked logical = false
-        kwargs.colormap (1,:) char = 'turbo'
-        kwargs.title = []
-        kwargs.filename (1, :) char = []
-        kwargs.extension (1, :) char = '.png'
-        kwargs.unit (1,:) char {mustBeMember(kwargs.unit, {'none', 'mm'})} = 'mm'
+        kwargs.mask (:,:) double = [] % location and size of rectangle selection
+        kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all' % region selection behaviour
+        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal' % axis aspect ratio
+        kwargs.clim (1,:) double = [] % color axis limit
+        kwargs.climspec (1,:) double = []
+        kwargs.cscale (1,:) char {mustBeMember(kwargs.cscale, {'linear', 'log'})} = 'log' % colormap scale
+        kwargs.display (1,:) char {mustBeMember(kwargs.display, {'2d', '3d'})} = '2d' % display type
+        kwargs.docked (1,1) logical = false % docked figure
+        kwargs.colormap (1,:) char = 'turbo' % colormap of color axis
+        kwargs.title (:,:) char = [] % figure title
+        kwargs.filename (1, :) char = [] % filename to save figure
+        kwargs.extension (1, :) char = '.png' % extension of saved figure
+        kwargs.unit (1,:) char {mustBeMember(kwargs.unit, {'none', 'mm'})} = 'mm' % label axis unit
     end
 
     raw = []; spec = []; xraw = []; yraw = []; fx = []; fy = [];

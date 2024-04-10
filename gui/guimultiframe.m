@@ -1,20 +1,17 @@
 function guimultiframe(varargin, kwargs)
-%% Interactive visualization of page-wise 2D data.
-%% The function takes following arguments:
-%   data:       [n×m×k... double]   - three dimensional data
-%   clim:       [double]            - color axis limit
-%   title:      [char array]        - figure title 
-%% Examples:
-%% 1. Show multi-frame data
-% guimultiframe(radn(120, 130, 10), clim = [-1, 1])
+    %% Interactive visualization of page-wise 2D data.
+
+    %% Examples:
+    %% 1. Show multi-frame data
+    % guimultiframe(radn(120, 130, 10), clim = [-1, 1])
 
     arguments (Repeating)
-        varargin
+        varargin (:,:,:) double
     end
 
     arguments
-        kwargs.clim double = [0, 1]
-        kwargs.title char = ''
+        kwargs.clim double = [0, 1] % color axis limit
+        kwargs.title char = [] % figure title 
         kwargs.cdiv logical = false
     end
 

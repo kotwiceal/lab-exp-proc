@@ -1,15 +1,16 @@
 function varargout = guicta(kwargs)
-%% Visualize CTA scanning results.
-%% Examples:
-%% 1. Load cta measurements, calculate auto-spectra and visualize (struct notation):
-% data = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931', output = 'struct');
-% dataprep = prepcta(p1, output = 'struct');
-% guicta(struct = dataprep);
+    %% Visualize CTA scanning results.
+    
+    %% Examples:
+    %% 1. Load cta measurements, calculate auto-spectra and visualize (struct notation):
+    % data = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931', output = 'struct');
+    % dataprep = prepcta(p1, output = 'struct');
+    % guicta(struct = dataprep);
 
-%% 2. Load cta measurements, calculate auto-spectra and visualize (array notation):
-% [scan, data, raw] = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931');
-% [spec, f, vel, x, y, z] = prepcta(raw, scan = scan);
-% guicta(spec = spec, f = f, vel = vel);
+    %% 2. Load cta measurements, calculate auto-spectra and visualize (array notation):
+    % [scan, data, raw] = loadcta('C:\Users\morle\Desktop\swept_plate\01_02_24\240201_175931');
+    % [spec, f, vel, x, y, z] = prepcta(raw, scan = scan);
+    % guicta(spec = spec, f = f, vel = vel);
 
     arguments
         kwargs.struct {mustBeA(kwargs.struct, {'struct'})} = struct([]) % structude reterned by loadcta()

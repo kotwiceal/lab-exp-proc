@@ -1,12 +1,13 @@
 function getdata = guimaskweight(data, kwargs)
-%% Interactive weighting of multifram two-dimensional data.
-%% The function returns following results:
-%   getdata:        [function_handle]       - function returning results at the last polygon displacements
-%% Examles:
-%% 1. Extract weighted multi frame two-dimensional data by specified polygonal window:
-% % window is unique for each data along 3 dimensional axis
-% prepresfunc = guimaskweight(data.vmnavgsub, clim = [-0.1, 0.1], mask = [0, 230; 0, 200; 321, 60; 321, 100]);
-% prepres = prepresfunc();
+    %% Interactive weighting of multifram two-dimensional data.
+    %% The function returns following results:
+    %   getdata:        [function_handle]       - function returning results at the last polygon displacements
+    
+    %% Examles:
+    %% 1. Extract weighted multi frame two-dimensional data by specified polygonal window:
+    % % window is unique for each data along 3 dimensional axis
+    % prepresfunc = guimaskweight(data.vmnavgsub, clim = [-0.1, 0.1], mask = [0, 230; 0, 200; 321, 60; 321, 100]);
+    % prepres = prepresfunc();
 
     arguments
         data double % two-dimensional multiframe data

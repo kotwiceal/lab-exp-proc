@@ -1,68 +1,68 @@
 function getdata = guicfi(kwargs)
-%% Interactive cross-flow instability amplitude analysis.
-%% The function takes following arguments:
-%   data:               [struct]            - stucture of PIV data reterned by import_vc7 function
-%   number:             [1×1 double]        - count of selection regions
+    %% Interactive cross-flow instability amplitude analysis.
+    %% The function takes following arguments:
+    %   data:               [struct]            - stucture of PIV data reterned by import_vc7 function
+    %   number:             [1×1 double]        - count of selection regions
 
-%   fillmissmeth:       [char array]        - method of filling missing data
-%   prefilter:          [char array]        - prefiltering velocity field
-%   prefiltker:         [1×2 double]        - kernel of prefilter
+    %   fillmissmeth:       [char array]        - method of filling missing data
+    %   prefilter:          [char array]        - prefiltering velocity field
+    %   prefiltker:         [1×2 double]        - kernel of prefilter
 
-%   normspec:           [char array]        - spectra norm
-%   shift:              [1×1 logical]       - shift a zero frequency to middle domain
-%   center:             [char array]        - sustract trend of data
-%   winfun:             [char array]        - window funtion at Fourier transform
-%   intlim:             [1×4 double]        - range of spectra integration
-%   postfitler:         [char array]        - portfiltering of processed amplitude profiles
-%   postfiltkernel:     [1×2 double]        - kernel of postfilter
-%
-%   yi:                 [1×1 double]        - vectical node index
-%   xi:                 [1×1 double]        - longitudinal node index
-%   mask:               [1×4 double]        - edge size to rectangle selection
-%   interaction:        [char array]        - region selection behaviour
-%   aspect:             [char array]        - axis ratio
-%   climvel:            [1×2 double]        - color limit of velocity field
-%   climspec:           [1×2 double]        - color limit of spectra field
-%   cscalespec:         [char array]        - color axis scale of spectra field
-%   scaleampinc:        [char array]        - y-axis scale of increment curves plot
-%   display:            [char array]        - display stady and/or travel modes plots
-%   docked:             [1×1 logical]       - docked figure
-%   colormap:           [char array]        - colormap of 2D field
-%   normvel:            [1×1 logical]       - to norm velocity profiles
-%% Examples
-%% process amplitude profiles of steady and travel modes by custom integration limits in two frames
-% guicfi(data = data, mask = [200, 100, 100, 200], number = 2, intlim = [30, 30, 50, 50]);
+    %   normspec:           [char array]        - spectra norm
+    %   shift:              [1×1 logical]       - shift a zero frequency to middle domain
+    %   center:             [char array]        - sustract trend of data
+    %   winfun:             [char array]        - window funtion at Fourier transform
+    %   intlim:             [1×4 double]        - range of spectra integration
+    %   postfitler:         [char array]        - portfiltering of processed amplitude profiles
+    %   postfiltkernel:     [1×2 double]        - kernel of postfilter
+    %
+    %   yi:                 [1×1 double]        - vectical node index
+    %   xi:                 [1×1 double]        - longitudinal node index
+    %   mask:               [1×4 double]        - edge size to rectangle selection
+    %   interaction:        [char array]        - region selection behaviour
+    %   aspect:             [char array]        - axis ratio
+    %   climvel:            [1×2 double]        - color limit of velocity field
+    %   climspec:           [1×2 double]        - color limit of spectra field
+    %   cscalespec:         [char array]        - color axis scale of spectra field
+    %   scaleampinc:        [char array]        - y-axis scale of increment curves plot
+    %   display:            [char array]        - display stady and/or travel modes plots
+    %   docked:             [1×1 logical]       - docked figure
+    %   colormap:           [char array]        - colormap of 2D field
+    %   normvel:            [1×1 logical]       - to norm velocity profiles
+    %% Examples
+    %% process amplitude profiles of steady and travel modes by custom integration limits in two frames
+    % guicfi(data = data, mask = [200, 100, 100, 200], number = 2, intlim = [30, 30, 50, 50]);
 
-%% 2. test
-% [x, z] = meshgrid(linspace(0,1,3e2),linspace(0,1,3e2));
-% amp = betapdf(linspace(0,1,20), 2, 5); amp = amp/max(amp);
-% vm = sin(x*40+z*50).*shiftdim(amp, -1).*ones([size(x), numel(amp), 10]);
-% vm = permute(vm, [1, 2, 4, 3]);
-% clf; hold on; view([-30, 30]) ;
-% for i = 1:size(vm, 4)
-%     surf(x, z, vm(:,:,1,i) + i, 'LineStyle', 'None', 'FaceAlpha', 0.8)
-% end
-% colormap turbo;
-% guicfi(vm = vm, yi = 10, lowfilt = 'none', winfun = 'hann', normspec = 'psd')
-%% 3. Test 
-% [x, z] = meshgrid(linspace(0,1,3e2),linspace(0,1,3e2));
-% amp = ones(1, 20);
-% vm = sin(x*40+z*50).*shiftdim(amp, -1).*ones([size(x), numel(amp), 100])+shiftdim(linspace(0, 20, numel(amp)), -1).*(0.8*x+0.1*z);
-% vm = permute(vm, [1, 2, 4, 3]);
-% guicfi(vm = vm, yi = 5, lowfilt = 'average', winfun = 'hann', normspec = 'psd', center = 'poly11', number = 2, mask = [50, 50, 100, 50])
-%% 4. Test separeting steady and travel modes:
-% [x, z] = meshgrid(linspace(0,1,3e2),linspace(0,1,3e2));
-% n = 200;
-% amp = [1, 2, 3];
-% std = sin(x*40+z*50).*shiftdim(amp, -1).*ones([size(x), numel(amp), n]);
-% trv = sin(x*30+z*40).*shiftdim(1, -1).*ones([size(x), numel(amp), n]).*shiftdim(randi([0, 1], 1, n), -2);
-% 
-% vel = std+trv;
-% vel = vel+shiftdim(linspace(0, 20, numel(amp)), -1).*(0.8*x+0.1*z);
-% vel = permute(vel, [1, 2, 4, 3]);
-% 
-% guicfi(vm = vel, yi = 1, lowfilt = 'average', winfun = 'hann', normspec = 'psd', center = 'poly11', number = 1, mask = [50, 50, 100, 200], ...
-%     intlim = [51, 100, 10, 20])
+    %% 2. test
+    % [x, z] = meshgrid(linspace(0,1,3e2),linspace(0,1,3e2));
+    % amp = betapdf(linspace(0,1,20), 2, 5); amp = amp/max(amp);
+    % vm = sin(x*40+z*50).*shiftdim(amp, -1).*ones([size(x), numel(amp), 10]);
+    % vm = permute(vm, [1, 2, 4, 3]);
+    % clf; hold on; view([-30, 30]) ;
+    % for i = 1:size(vm, 4)
+    %     surf(x, z, vm(:,:,1,i) + i, 'LineStyle', 'None', 'FaceAlpha', 0.8)
+    % end
+    % colormap turbo;
+    % guicfi(vm = vm, yi = 10, lowfilt = 'none', winfun = 'hann', normspec = 'psd')
+    %% 3. Test 
+    % [x, z] = meshgrid(linspace(0,1,3e2),linspace(0,1,3e2));
+    % amp = ones(1, 20);
+    % vm = sin(x*40+z*50).*shiftdim(amp, -1).*ones([size(x), numel(amp), 100])+shiftdim(linspace(0, 20, numel(amp)), -1).*(0.8*x+0.1*z);
+    % vm = permute(vm, [1, 2, 4, 3]);
+    % guicfi(vm = vm, yi = 5, lowfilt = 'average', winfun = 'hann', normspec = 'psd', center = 'poly11', number = 2, mask = [50, 50, 100, 50])
+    %% 4. Test separeting steady and travel modes:
+    % [x, z] = meshgrid(linspace(0,1,3e2),linspace(0,1,3e2));
+    % n = 200;
+    % amp = [1, 2, 3];
+    % std = sin(x*40+z*50).*shiftdim(amp, -1).*ones([size(x), numel(amp), n]);
+    % trv = sin(x*30+z*40).*shiftdim(1, -1).*ones([size(x), numel(amp), n]).*shiftdim(randi([0, 1], 1, n), -2);
+    % 
+    % vel = std+trv;
+    % vel = vel+shiftdim(linspace(0, 20, numel(amp)), -1).*(0.8*x+0.1*z);
+    % vel = permute(vel, [1, 2, 4, 3]);
+    % 
+    % guicfi(vm = vel, yi = 1, lowfilt = 'average', winfun = 'hann', normspec = 'psd', center = 'poly11', number = 1, mask = [50, 50, 100, 200], ...
+    %     intlim = [51, 100, 10, 20])
 
     arguments
         %% data parameters

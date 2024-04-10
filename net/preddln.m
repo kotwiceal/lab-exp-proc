@@ -1,5 +1,5 @@
-function varargout = predimsegmcnn(network, data)
-    %% Predict the train convolutional neural network performed image segmentation.
+function varargout = preddln(network, data)
+    %% Predict the train deep neural network.
 
     arguments
         network {mustBeA(network, {'dlnetwork'})}

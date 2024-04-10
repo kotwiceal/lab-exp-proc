@@ -1,7 +1,5 @@
 function rois = guiselectregion(axroi, kwargs)
-%% Interactive data selection.
-%% The function returns following results:
-%   rois:           [object]                        - ROI cell objects
+    %% Interactive data selection.
 
     arguments
         axroi matlab.graphics.axis.Axes % axis object of canvas that selection data events are being occured
