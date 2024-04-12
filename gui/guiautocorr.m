@@ -48,7 +48,7 @@ function getdata = guiautocorr(data, kwargs)
         case 'node'
             select = @(roiobj) guigetdata(roiobj, data, shape = 'cut', permute = [2, 1]);
             selectx = @(roiobj) guigetdata(roiobj, x, shape = 'cut', permute = [2, 1]);
-            selecty = @(roiobj) guigetdata(roiobj, y, shape = 'cut',permute = [2, 1]);
+            selecty = @(roiobj) guigetdata(roiobj, y, shape = 'cut', permute = [2, 1]);
         case 'spatial'
             select = @(roiobj) guigetdata(roiobj, data, shape = 'cut', x = x, z = y);
             selectx = @(roiobj) guigetdata(roiobj, x, shape = 'cut', x = x, z = y);
@@ -88,12 +88,9 @@ function getdata = guiautocorr(data, kwargs)
         switch kwargs.display
             case '2d'
                 contourf(ax, xc, yc, frame, 100, 'LineStyle', 'None'); 
-                % contourf(ax, frame, 100, 'LineStyle', 'None'); 
             case '3d'
                 surf(ax, xc, yc, frame, 'LineStyle', 'None');
-                % surf(ax, frame, 'LineStyle', 'None');
         end
-        size(xcorr)
         switch disptype
             case 'node'
                 xlabel(ax, 'x_{n}'); ylabel(ax, 'y_{n}');

@@ -54,7 +54,7 @@ function varargout = guihist(varargin, kwargs)
         % type of region selection
         kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'rect', 'poly'})} = 'rect'
         % edge size to rectangle selection or n-row verxex to polygon selection 
-        kwargs.mask double = []
+        kwargs.mask {mustBeA(kwargs.mask, {'double', 'cell'})} = []
         % region selection behaviour: 'translate', 'all'   
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
         kwargs.number (1,1) double {mustBeInteger} = 1 % number of selection regions
@@ -193,6 +193,11 @@ function varargout = guihist(varargin, kwargs)
             end
             result.rawnd = temporary{i};
         catch
+        end
+
+        if ~isempty(kwargs.filename)
+            savefig(gcf, strcat(kwargs.filename, '.fig'))
+            exportgraphics(gcf, strcat(kwargs.filename, kwargs.extension), Resolution = 600)
         end
     end
 

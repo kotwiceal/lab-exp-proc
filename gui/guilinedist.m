@@ -99,7 +99,7 @@ function getdata = guilinedist(data, kwargs)
                 case 'node'
                     select = @(roiobj) guigetdata(roiobj, data, shape = 'cut', permute = [2, 1]);
                     selectx = @(roiobj) guigetdata(roiobj, x, shape = 'cut', permute = [2, 1]);
-                    selectz = @(roiobj) guigetdata(roiobj, y, shape = 'cut',permute = [2, 1]);
+                    selectz = @(roiobj) guigetdata(roiobj, y, shape = 'cut', permute = [2, 1]);
                 case 'spatial'
                     select = @(roiobj) guigetdata(roiobj, data, shape = 'cut', x = x, z = y);
                     selectx = @(roiobj) guigetdata(roiobj, x, shape = 'cut', x = x, z = y);

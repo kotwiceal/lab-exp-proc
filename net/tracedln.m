@@ -32,7 +32,7 @@ function tracedln(input, data, kwargs)
     if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
     tiledlayout('flow'); 
     nexttile; imagesc(data); axis image; colorbar;
-    nexttile; montage(response); axis on; axis image; colormap turbo; 
+    nexttile; montage(response); axis on; axis image; colorbar; colormap turbo; 
     title(num2str(size(response)), 'FontWeight','normal'); 
     if ~isempty(kwargs.clim); clim(kwargs.clim); end
 

@@ -1,28 +1,50 @@
-function varargout = prepdln(input, output, kwargs)
+function varargout = prepdln(varargin, kwargs)
     %% Create dataset to train deep neural network.
 
-    arguments
-        input {mustBeA(input, {'double'})}
-        output {mustBeA(output, {'double', 'categorical'})}
-        kwargs.IterationDimension (1,:) double = [3, 3]
-        kwargs.wrapper (1,:) cell = {@double, @categorical}
-        kwargs.suffle (1,1) logical = true
-        kwargs.partition (1,:) cell = {}
+    arguments (Repeating)
+        varargin {mustBeA(varargin, {'double', 'categorical'})}
     end
 
-    sz = size(input); n = sz(kwargs.IterationDimension(1));
-    if isempty(kwargs.partition); kwargs.partition{1} = 1:n; end
+    arguments
+        kwargs.IterationDimension (1,:) double = []
+        kwargs.wrapper (1,:) cell = {}
+        kwargs.suffle (1,1) logical = true
+        kwargs.partition (1,:) cell = {}
+        kwargs.transform (1,:) cell = {}
+    end
 
-    input = arrayDatastore(kwargs.wrapper{1}(input), IterationDimension = kwargs.IterationDimension(1));
-    output = arrayDatastore(kwargs.wrapper{2}(output), IterationDimension = kwargs.IterationDimension(2));
+    if isempty(kwargs.IterationDimension)
+        for i = 1:numel(varargin)
+            kwargs.IterationDimension(i) = ndims(varargin{i});
+        end
+    else
+        assert(isequal(numel(kwargs.IterationDimension), numel(varargin)), "IterationDimension vectro must be have same size to data arguments")
+    end
 
-    totalDataStore = combine(input, output);
+    sz = zeros(1, numel(varargin)); for i = 1:numel(varargin); sz(i) = size(varargin{i}, kwargs.IterationDimension(i)); end
+
+    if numel(unique(sz)) ~= 1; error(strcat("count of iteration ", jsonencode(sz)), " along given dimensional ", ...
+            jsonencode(kwargs.IterationDimension), " must be same"); end
+    
+    if isempty(kwargs.partition); kwargs.partition{1} = 1:sz(1); end
+
+    if isempty(kwargs.wrapper); kwargs.wrapper = repmat({[]}, 1, numel(varargin)); else
+        assert(isequal(numel(kwargs.wrapper), numel(varargin)), "wrapper vectro must be have same size to data arguments"); end
+
+    if isempty(kwargs.transform); kwargs.transform = repmat({[]}, 1, numel(varargin)); else
+        assert(isequal(numel(kwargs.transform), numel(varargin)), "transform vectro must be have same size to data arguments"); end
+
+    for i = 1:numel(varargin)
+        if isempty(kwargs.wrapper{1}); data = varargin{i}; else; data = kwargs.wrapper{1}(varargin{i}); end
+        varargin{i} = arrayDatastore(data, IterationDimension = kwargs.IterationDimension(i));
+        if ~isempty(kwargs.transform{i}); varargin{i} = transform(varargin{i}, @(x)kwargs.transform{i}(x)); end
+    end
+
+    totalDataStore = combine(varargin{:});
     if kwargs.suffle; totalDataStore = shuffle(totalDataStore); end
 
     for i = 1:numel(kwargs.partition)
-        if ~isempty(kwargs.partition{i})
-            varargout{i} = subset(totalDataStore, kwargs.partition{i}); 
-        end
+        varargout{i} = subset(totalDataStore, kwargs.partition{i}); 
     end
     
 end

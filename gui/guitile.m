@@ -22,7 +22,7 @@ function getdata = guitile(data, kwargs)
         kwargs.colormap (1,:) char = 'turbo' % colormap
         kwargs.colorbar (1,1) logical = true % show colorbar
         kwargs.fontsize (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.fontsize, 1)} = 10 % axis font size
-        kwargs.aspect (1,:) {mustBeA(kwargs.aspect, {'char', 'cell'}), mustBeMember(kwargs.aspect, {'equal', 'auto', 'manual', 'image', 'square'})} = 'equal' % axis ratio
+        kwargs.aspect (1,:) {mustBeA(kwargs.aspect, {'char', 'cell'}), mustBeMember(kwargs.aspect, {'equal', 'auto', 'manual', 'image', 'square'})} = 'image' % axis ratio
         % legend location
         kwargs.location (1,:) char {mustBeMember(kwargs.location, {'north','south','east','west','northeast','northwest','southeast','southwest','northoutside','southoutside','eastoutside','westoutside','northeastoutside','northwestoutside','southeastoutside','southwestoutside','best','bestoutside','layout','none'})} = 'best'
         kwargs.title = [] % figure global title
@@ -59,10 +59,10 @@ function getdata = guitile(data, kwargs)
         if isempty(kwargs.x{i}) && isempty(kwargs.y{i})
             if ismatrix(data{i})
                 pltfunc = cat(1, pltfunc, {@() imagesc(data{i})});
-                selecthandle = cat(1, selecthandle, {@(roiobj) guigetdata(roiobj, data{i}, shape = 'raw')});
+                selecthandle = cat(1, selecthandle, {@(roiobj) guigetdata(roiobj, data{i}, shape = 'raw', permute = [2, 1])});
                 [kwargs.x{i}, kwargs.y{i}] = meshgrid(1:size(data{i}, 2), 1:size(data{i}, 1));
-                selecthandlex = cat(1, selecthandlex, {@(roiobj) guigetdata(roiobj, kwargs.x{i}, shape = 'raw')});
-                selecthandley = cat(1, selecthandley, {@(roiobj) guigetdata(roiobj, kwargs.y{i}, shape = 'raw')});
+                selecthandlex = cat(1, selecthandlex, {@(roiobj) guigetdata(roiobj, kwargs.x{i}, shape = 'raw', permute = [2, 1])});
+                selecthandley = cat(1, selecthandley, {@(roiobj) guigetdata(roiobj, kwargs.y{i}, shape = 'raw', permute = [2, 1])});
             else
                 kwargs.x{i} = zeros(size(data{i})); kwargs.y{i} = zeros(size(data{i}));
                 for j = 1:size(data{i}, 3)
@@ -109,7 +109,7 @@ function getdata = guitile(data, kwargs)
         end
     end
 
-    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout('flow');
+    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout('flow'); colormap(kwargs.colormap);
     if isa(kwargs.xlabel, 'char'); kwargs.xlabel = repmat({kwargs.xlabel}, 1, numel(pltfunc)); end
     if isa(kwargs.ylabel, 'char'); kwargs.ylabel = repmat({kwargs.ylabel}, 1, numel(pltfunc)); end
     if isa(kwargs.aspect, 'char'); kwargs.aspect = repmat({kwargs.aspect}, 1, numel(pltfunc)); end
