@@ -43,6 +43,17 @@ function varargout = prepdln(varargin, kwargs)
     totalDataStore = combine(varargin{:});
     if kwargs.suffle; totalDataStore = shuffle(totalDataStore); end
 
+    % create data partitions
+    varargout = cell(1, numel(kwargs.partition));
+    
+    if numel(cell2mat(kwargs.partition)) == numel(kwargs.partition)
+        partition = cell2mat(kwargs.partition);
+        index = 1:sz(1);
+        n = floor(partition*sz(1));
+        n(end) = n(end) + sz(1) - sum(n);
+        kwargs.partition = mat2cell(index, 1, n);
+    end
+    
     for i = 1:numel(kwargs.partition)
         varargout{i} = subset(totalDataStore, kwargs.partition{i}); 
     end
