@@ -27,7 +27,6 @@ function varargout = prepcta(input, kwargs)
         % transform scan unit
         kwargs.unit (1,:) char {mustBeMember(kwargs.unit, {'mm', 'count'})} = 'mm'
         kwargs.fit = [] % fitobj to reverse a correction of vectical scanning component
-        kwargs.output (1,:) char {mustBeMember(kwargs.output, {'struct', 'array'})} = 'struct'
         kwargs.steps (1,:) double = [50, 400, 800] % single step displacement of step motor in um
         kwargs.parproc (1,1) logical = false % perfor parallel processing
     end
@@ -58,71 +57,34 @@ function varargout = prepcta(input, kwargs)
     end
 
     % calculate spectra correction factors
-    acf = 1/mean(win); % amplitude correction factor;
-    ecf = 1/rms(win); % energy correction factor;
+    acf = 1/mean(win); % amplitude correction factor
+    ecf = 1/rms(win); % energy correction factor
 
-    sz = size(raw);
+    sz = size(raw); ws = ceil(kwargs.winsize/2+1);
 
     % calculate spectrogram
-    if kwargs.parproc
-        s0 = spectrogram(raw(:, 1, 1), win, kwargs.overlap , [], kwargs.fs);
-        s1 = spectrogram(raw(:, 2, 1), win, kwargs.overlap , [], kwargs.fs);
-        s2 = spectrogram(raw(:, 3, 1), win, kwargs.overlap , [], kwargs.fs);
-
-        s00 = zeros(size(s0, 1), prod(sz(3:end)));
-        s11 = zeros(size(s0, 1), prod(sz(3:end)));
-        s01 = zeros(size(s0, 1), prod(sz(3:end)));
-        s22 = zeros(size(s0, 1), prod(sz(3:end)));
-        s02 = zeros(size(s0, 1), prod(sz(3:end)));
-
-        s00(:, 1) = squeeze(mean(s0.*conj(s0), 2));
-        s11(:, 1) = squeeze(mean(s1.*conj(s1), 2));
-        s01(:, 1) = squeeze(mean(s0.*conj(s1), 2));
-        s22(:, 1) = squeeze(mean(s2.*conj(s2), 2)); 
-        s02(:, 1) = squeeze(mean(s0.*conj(s2), 2)); 
-
-        parfor i = 2:size(raw, 3)
-            s0 = spectrogram(raw(:, 1, i), win, kwargs.overlap , [], kwargs.fs);
-            s1 = spectrogram(raw(:, 2, i), win, kwargs.overlap , [], kwargs.fs);
-            s2 = spectrogram(raw(:, 3, i), win, kwargs.overlap , [], kwargs.fs);
-            % calculate auto/cross spetra
-            s00(:, i) = squeeze(mean(s0.*conj(s0), 2));
-            s11(:, i) = squeeze(mean(s1.*conj(s1), 2));
-            s01(:, i) = squeeze(mean(s0.*conj(s1), 2)); 
-            s22(:, i) = squeeze(mean(s2.*conj(s2), 2));
-            s02(:, i) = squeeze(mean(s0.*conj(s2), 2)); 
-        end
-    else
-        s0 = spectrogram(raw(:, 1, 1), win, kwargs.overlap , [], kwargs.fs);
-        s1 = spectrogram(raw(:, 2, 1), win, kwargs.overlap , [], kwargs.fs);
-        s2 = spectrogram(raw(:, 3, 1), win, kwargs.overlap , [], kwargs.fs);
-
-        s00 = zeros(size(s0, 1), prod(sz(3:end)));
-        s11 = zeros(size(s0, 1), prod(sz(3:end)));
-        s01 = zeros(size(s0, 1), prod(sz(3:end)));
-        s22 = zeros(size(s0, 1), prod(sz(3:end)));
-        s02 = zeros(size(s0, 1), prod(sz(3:end)));
-
-        s00(:, 1) = squeeze(mean(s0.*conj(s0), 2));
-        s11(:, 1) = squeeze(mean(s1.*conj(s1), 2));
-        s01(:, 1) = squeeze(mean(s0.*conj(s1), 2));
-        s22(:, 1) = squeeze(mean(s2.*conj(s2), 2)); 
-        s02(:, 1) = squeeze(mean(s0.*conj(s2), 2)); 
-
-        for i = 2:size(raw, 3)
-            s0 = spectrogram(raw(:, 1, i), win, kwargs.overlap , [], kwargs.fs);
-            s1 = spectrogram(raw(:, 2, i), win, kwargs.overlap , [], kwargs.fs);
-            s2 = spectrogram(raw(:, 3, i), win, kwargs.overlap , [], kwargs.fs);
-            % calculate auto/cross spetra
-            s00(:, i) = squeeze(mean(s0.*conj(s0), 2));
-            s11(:, i) = squeeze(mean(s1.*conj(s1), 2));
-            s01(:, i) = squeeze(mean(s0.*conj(s1), 2)); 
-            s22(:, i) = squeeze(mean(s2.*conj(s2), 2));
-            s02(:, i) = squeeze(mean(s0.*conj(s2), 2)); 
+    sij = cell(sz(2), sz(2));
+    for i = 1:numel(sz(2))
+        for j = i:numel(sz(2))
+            sij{i,j} = zeros(ws, prod(sz(3:end)));
         end
     end
 
-    clear s0 s1 s2;
+    % calculate auto/cross spetra
+    for k = 1:prod(sz(3:end))
+        si = cell(1, sz(2));
+        for i = 1:sz(2)
+            si{i} = spectrogram(raw(:, i, k), win, kwargs.overlap , [], kwargs.fs);
+        end
+
+        for i = 1:sz(2)
+            for j = i:sz(2)
+                sij{i,j}(:,k) = squeeze(mean(si{i}.*conj(si{j}), 2));
+            end
+        end
+    end
+
+    clear si;
 
     % frequency grid
     [~, f, ~] = spectrogram(raw(:, 1, 1), win, kwargs.overlap , [], kwargs.fs);
@@ -130,23 +92,22 @@ function varargout = prepcta(input, kwargs)
 
     % to substract correrlated signal part 
     if kwargs.corvibr
-        s00 = s00 - abs(s01).^2./s11;
+        sij{1,1} = sij{1,1} - abs(sij{1,2}).^2./sij{2,2};
     end
 
     % norm spectra
     switch kwargs.norm
         case 'psd'
-            s00 = s00/size(s00,1)^2/df*2;
-            s11 = s11/size(s11,1)^2/df*2;
-            s22 = s22/size(s22,1)^2/df*2;
-            s01 = s01/size(s01,1)^2/df*2;
-            s02 = s02/size(s02,1)^2/df*2;
+            nrm = 1/ws^2/df*2;
         case 'psd-corrected'
-            s00 = s00/size(s00,1)^2/df*2*ecf;
-            s11 = s11/size(s11,1)^2/df*2*ecf;
-            s22 = s22/size(s22,1)^2/df*2*ecf;
-            s01 = s01/size(s01,1)^2/df*2*ecf;
-            s02 = s02/size(s02,1)^2/df*2*ecf;
+            nrm = 1/ws^2/df*2*ecf;
+        otherwise
+            nrm = 1;
+    end
+    for i = 1:sz(2)
+        for j = i:sz(2)
+            sij{i,j} = sij{i,j}/nrm;
+        end
     end
 
     % extract scanning points
@@ -166,11 +127,11 @@ function varargout = prepcta(input, kwargs)
 
     % reshape spectra, scanning points and velocity
     if ~isempty(kwargs.reshape)
-        s00 = reshape(s00, [size(s00, 1), kwargs.reshape]);
-        s11 = reshape(s11, [size(s11, 1), kwargs.reshape]);
-        s22 = reshape(s22, [size(s22, 1), kwargs.reshape]);
-        s01 = reshape(s01, [size(s01, 1), kwargs.reshape]);
-        s02 = reshape(s01, [size(s02, 1), kwargs.reshape]);
+        for i = 1:sz(2)
+            for j = i:sz(2)
+                sij{i,j} = reshape(sij{i,j}, [ws, kwargs.reshape]);
+            end
+        end
         if ~isempty(kwargs.scan)
             x = reshape(x, kwargs.reshape);
             z = reshape(z, kwargs.reshape);
@@ -182,11 +143,11 @@ function varargout = prepcta(input, kwargs)
     end
 
     if ~isempty(kwargs.permute)
-        s00 = permute(s00, [1, kwargs.permute+1]);
-        s11 = permute(s11, [1, kwargs.permute+1]);
-        s22 = permute(s22, [1, kwargs.permute+1]);
-        s01 = permute(s01, [1, kwargs.permute+1]);
-        s02 = permute(s02, [1, kwargs.permute+1]);
+        for i = 1:sz(2)
+            for j = i:sz(2)
+                sij{i,j} = permute(sij{i,j}, [1, kwargs.permute+1]);
+            end
+        end
         if ~isempty(kwargs.scan)
             vm = permute(vm, kwargs.permute);
             x = permute(x, kwargs.permute);
@@ -204,33 +165,16 @@ function varargout = prepcta(input, kwargs)
             z = z/kwargs.steps(3);
     end
 
-    % select output type
-    switch kwargs.output
-        case 'struct'
-            result.spec = s00;
-            result.specs.s00 = s00;
-            result.specs.s11 = s11;
-            result.specs.s22 = s22;
-            result.specs.s01 = s01;
-            result.specs.s02 = s02;
-            result.f = f;
-            if ~isempty(kwargs.scan)
-                result.vm = vm;
-                result.x = x;
-                result.y = y;
-                result.z = z;
-            end
-            if kwargs.raw; result.raw = raw; end
-            varargout{1} = result;
-        case 'array'
-            varargout{1} = s00;
-            varargout{2} = f;
-            if ~isempty(kwargs.scan)
-                varargout{3} = vm;
-                varargout{4} = x;
-                varargout{5} = y;
-                varargout{6} = z;
-            end
-            if kwargs.raw; varargout{7} = raw; end
+    % output
+    result.sij = sij;
+    result.f = f;
+    if ~isempty(kwargs.scan)
+        result.vm = vm;
+        result.x = x;
+        result.y = y;
+        result.z = z;
     end
+    if kwargs.raw; result.raw = raw; end
+    varargout{1} = result;
+
 end

@@ -35,8 +35,11 @@ function varargout = prepdln(varargin, kwargs)
         assert(isequal(numel(kwargs.transform), numel(varargin)), "transform vectro must be have same size to data arguments"); end
 
     for i = 1:numel(varargin)
-        if isempty(kwargs.wrapper{1}); data = varargin{i}; else; data = kwargs.wrapper{1}(varargin{i}); end
-        varargin{i} = arrayDatastore(data, IterationDimension = kwargs.IterationDimension(i));
+        if isempty(kwargs.wrapper{i})
+            varargin{i} = arrayDatastore(varargin{i}, IterationDimension = kwargs.IterationDimension(i));
+        else
+            varargin{i} = arrayDatastore(kwargs.wrapper{i}(varargin{i}), IterationDimension = kwargs.IterationDimension(i));
+        end
         if ~isempty(kwargs.transform{i}); varargin{i} = transform(varargin{i}, @(x)kwargs.transform{i}(x)); end
     end
 

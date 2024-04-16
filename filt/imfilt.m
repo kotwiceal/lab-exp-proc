@@ -11,9 +11,9 @@ function data = imfilt(data, kwargs)
 
     switch kwargs.filt
         case 'average'
-            data = imfilter(data, fspecial(kwargs.filt, kwargs.filtker));
+            data = imfilter(data, fspecial(kwargs.filt, kwargs.filtker), kwargs.padval);
         case 'gaussian'
-            data = imfilter(data, fspecial(kwargs.filt, kwargs.filtker));
+            data = imfilter(data, fspecial(kwargs.filt, kwargs.filtker), kwargs.padval);
         case 'median'
             data = nonlinfilt(data, method = @(x) median(x(:), 'omitmissing'), kernel = kwargs.filtker, padval = kwargs.padval);
         case 'wiener'

@@ -50,8 +50,8 @@ function getdata = guitile(data, kwargs)
     end
 
     if isa(data, 'double'); data = {data}; end
-    if isa(kwargs.x, 'double') && isempty(kwargs.x); kwargs.x = repmat({kwargs.x}, 1, numel(data)); end
-    if isa(kwargs.y, 'double') && isempty(kwargs.y); kwargs.y = repmat({kwargs.y}, 1, numel(data)); end
+    if isa(kwargs.x, 'double'); kwargs.x = repmat({kwargs.x}, 1, numel(data)); end
+    if isa(kwargs.y, 'double'); kwargs.y = repmat({kwargs.y}, 1, numel(data)); end
 
     % define plot/select function
     pltfunc = {}; selecthandle = {}; selecthandlex = {}; selecthandley = {};

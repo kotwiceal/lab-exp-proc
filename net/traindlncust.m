@@ -13,6 +13,8 @@ function varargout = traindlncust(data, layers, kwargs)
         kwargs.learnRate {mustBeA(kwargs.learnRate, {'cell', 'function_handle'})} = {}
         kwargs.decay (1,1) double = 0.01
         kwargs.momentum (1,1) double = 0.9
+        %% regularization settings
+        kwargs.regul {mustBeA(kwargs.regul, {'double', 'function_handle'})} = []
         %% evaluation settings
         kwargs.MaxEpochs (1,1) double {mustBeInteger(kwargs.MaxEpochs), mustBeGreaterThanOrEqual(kwargs.MaxEpochs, 1)} = 10
         kwargs.ValidationData {mustBeA(kwargs.ValidationData, {'double', 'matlab.io.datastore.CombinedDatastore'})} = []
@@ -25,11 +27,13 @@ function varargout = traindlncust(data, layers, kwargs)
         %% monitor settings
         kwargs.monitorqueue parallel.pool.DataQueue = parallel.pool.DataQueue
         kwargs.monitorfnc {mustBeA(kwargs.monitorfnc, {'cell', 'function_handle'})} = {}
+        kwargs.MonitorFrequency (1,1) double = 1
     end
 
-    function [loss, gradients, state, Y] = losseval(net, X, T, lossfnc)
-        [Y,state] = forward(net, X);
+    function [loss, gradients, state, Y] = losseval(net, X, T, lossfnc, regul)
+        [Y, state] = forward(net, X);
         loss = lossfnc(Y, T);
+        loss = regul(loss, Y, T);
         gradients = dlgradient(loss, net.Learnables);
     end
 
@@ -63,7 +67,7 @@ function varargout = traindlncust(data, layers, kwargs)
 
         % counters
         epoch = 0; iteration = 0; validinc = -kwargs.ValidationFrequency;
-        velocity = [];
+        velocity = []; monitorinc = -kwargs.MonitorFrequency;
         
         % loop over epochs
         while epoch < kwargs.MaxEpochs
@@ -77,8 +81,7 @@ function varargout = traindlncust(data, layers, kwargs)
                 % read mini-batch of data
                 [X, T] = next(mbq);
                 
-                % Evaluate the model gradients, state, and loss using dlfeval and the
-                % modelLoss function and update the network state.
+                % evaluate the model gradients, state, and loss
                 [loss, gradients, state, Y] = dlfeval(@kwargs.losseval, net, X, T);
                 net.State = state;
 
@@ -96,20 +99,28 @@ function varargout = traindlncust(data, layers, kwargs)
                 packet.lossind = cat(1, packet.lossind, iteration);
                 packet.loss = cat(1, packet.loss, loss);
 
-                if kwargs.monitorqueue.QueueLength < 1
+                % send data to monitor
+                if kwargs.monitorqueue.QueueLength < 1 && (iteration - monitorinc >= kwargs.MonitorFrequency)
+                    monitorinc = iteration;
                     pause(0.5)
-                    packet.x = extractdata(X);
-                    packet.y = extractdata(Y);
-                    packet.t = extractdata(T);
-                    packet.i = iteration;
+                    packet.x = extractdata(X); packet.y = extractdata(Y);
+                    packet.t = extractdata(T); packet.i = iteration;
                     send(kwargs.monitorqueue, packet);
                 end
     
+                % update learn rate
                 learnRate = kwargs.learnRate(iteration);
 
                 % update the network parameters using the SGDM optimizer
                 [net, velocity] = sgdmupdate(net, gradients, velocity, learnRate, kwargs.momentum);
             end
+        end
+
+        if kwargs.monitorqueue.QueueLength < 1
+            pause(0.5)
+            packet.x = extractdata(X); packet.y = extractdata(Y);
+            packet.t = extractdata(T); packet.i = iteration;
+            send(kwargs.monitorqueue, packet);
         end
     end
 
@@ -126,8 +137,11 @@ function varargout = traindlncust(data, layers, kwargs)
     % define loss method
     if isempty(kwargs.lossfnc); kwargs.lossfnc = @mse; end
 
+    % redefine rugulariation method
+    if isempty(kwargs.regul); kwargs.regul = @(x,y,t) x; end
+
     % define loss handle
-    kwargs.losseval = @(n,x,t) losseval(n,x,t,kwargs.lossfnc);
+    kwargs.losseval = @(n,x,t) losseval(n,x,t,kwargs.lossfnc,kwargs.regul);
 
     % define validation handle
     kwargs.validlosseval = @(n,d) validlosseval(n,d,kwargs.lossfnc);

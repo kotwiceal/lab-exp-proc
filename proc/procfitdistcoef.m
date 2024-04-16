@@ -56,10 +56,10 @@ function fitdistcoef =  procfitdistcoef(data, kwargs)
         kwargs.kernel = [kwargs.kernel, szd(3)];
         kwargs.stride = [kwargs.stride, szd(3)];
     end
-    
+
     fitdistcoef = nonlinfilt(data, method = @(x) nlkernel(x), kernel = kwargs.kernel, stride = kwargs.stride, padval = kwargs.padval);
 
-    fitdistcoef = imfilt(fitdistcoef, filt = kwargs.postfilt, filtker = kwargs.postfiltker);
+    fitdistcoef = imfilt(fitdistcoef, filt = kwargs.postfilt, filtker = kwargs.postfiltker, padval = kwargs.padval);
 
     fitdistcoef = imdresize(fitdistcoef, szd(1:2));
 

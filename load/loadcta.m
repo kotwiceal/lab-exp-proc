@@ -90,8 +90,6 @@ function varargout = loadcta(folder, kwargs)
                             fclose(id);
                         end
                     end
-                    temporary = temporary(kwargs.numch+2:end,:);
-                    % raw = permute(reshape(temporary, [kwargs.numch, size(temporary,1)/kwargs.numch, numel(filenames.raw)]), [2, 1, 3]);
                     raw = permute(reshape(temporary, kwargs.numch, [], numel(filenames.raw)), [2, 1, 3]);
                     raw = raw(3:end,:,:);
             end
