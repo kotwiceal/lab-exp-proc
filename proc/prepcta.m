@@ -62,15 +62,13 @@ function varargout = prepcta(input, kwargs)
 
     sz = size(raw); ws = ceil(kwargs.winsize/2+1);
 
-    % calculate spectrogram
-    sij = cell(sz(2), sz(2));
+    % calculate auto/cross spetra
+    spec = cell(sz(2), sz(2));
     for i = 1:numel(sz(2))
         for j = i:numel(sz(2))
-            sij{i,j} = zeros(ws, prod(sz(3:end)));
+            spec{i,j} = zeros(ws, prod(sz(3:end)));
         end
     end
-
-    % calculate auto/cross spetra
     for k = 1:prod(sz(3:end))
         si = cell(1, sz(2));
         for i = 1:sz(2)
@@ -79,7 +77,7 @@ function varargout = prepcta(input, kwargs)
 
         for i = 1:sz(2)
             for j = i:sz(2)
-                sij{i,j}(:,k) = squeeze(mean(si{i}.*conj(si{j}), 2));
+                spec{i,j}(:,k) = squeeze(mean(si{i}.*conj(si{j}), 2));
             end
         end
     end
@@ -92,7 +90,7 @@ function varargout = prepcta(input, kwargs)
 
     % to substract correrlated signal part 
     if kwargs.corvibr
-        sij{1,1} = sij{1,1} - abs(sij{1,2}).^2./sij{2,2};
+        spec{1,1} = spec{1,1} - abs(spec{1,2}).^2./spec{2,2};
     end
 
     % norm spectra
@@ -106,7 +104,7 @@ function varargout = prepcta(input, kwargs)
     end
     for i = 1:sz(2)
         for j = i:sz(2)
-            sij{i,j} = sij{i,j}/nrm;
+            spec{i,j} = spec{i,j}*nrm;
         end
     end
 
@@ -129,7 +127,7 @@ function varargout = prepcta(input, kwargs)
     if ~isempty(kwargs.reshape)
         for i = 1:sz(2)
             for j = i:sz(2)
-                sij{i,j} = reshape(sij{i,j}, [ws, kwargs.reshape]);
+                spec{i,j} = reshape(spec{i,j}, [ws, kwargs.reshape]);
             end
         end
         if ~isempty(kwargs.scan)
@@ -145,7 +143,7 @@ function varargout = prepcta(input, kwargs)
     if ~isempty(kwargs.permute)
         for i = 1:sz(2)
             for j = i:sz(2)
-                sij{i,j} = permute(sij{i,j}, [1, kwargs.permute+1]);
+                spec{i,j} = permute(spec{i,j}, [1, kwargs.permute+1]);
             end
         end
         if ~isempty(kwargs.scan)
@@ -165,9 +163,13 @@ function varargout = prepcta(input, kwargs)
             z = z/kwargs.steps(3);
     end
 
+    % handle a frequency to index
+    freq2ind = @(ind) f>=ind(1)&f<=ind(2);
+
     % output
-    result.sij = sij;
+    result.spec = spec;
     result.f = f;
+    result.intspec = @(spec, freq) reshape(sqrt(abs(df*sum(spec(freq2ind(freq), :)))), size(spec, 2:ndims(spec)));
     if ~isempty(kwargs.scan)
         result.vm = vm;
         result.x = x;

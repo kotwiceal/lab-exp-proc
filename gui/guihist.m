@@ -183,7 +183,10 @@ function varargout = guihist(varargin, kwargs)
                 end
         end
         for i = 1:length(rois)       
-            [~, counts_raw, edges_raw, ~, ~, ~] = fithistfunc(rois{i});
+            [~, counts_raw, edges_raw, coef, ~, ~] = fithistfunc(rois{i});
+            if kwargs.distname ~= "none"
+                result.param{i} = distparam(coef, distname = kwargs.distname, disp = false);
+            end
             result.dist{i} = [edges_raw, counts_raw];
         end
         try

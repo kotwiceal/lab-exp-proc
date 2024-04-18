@@ -215,6 +215,7 @@ function result = procinterm(data, kwargs)
     % morphological postprocessing
     if ~isempty(binarized)
         if kwargs.dilate1d; binarized = nonlinfilt(binarized, method = @(x) sum(x(:))>0, kernel = kwargs.dilate1dker); end
+        if kwargs.dilate; binarized = immorph(binarized, method = 'dilate', strelker = kwargs.dilateker); end
         if kwargs.imerode; binarized = immorph(binarized, method = 'erode', strelker = kwargs.erodeker); end
         if kwargs.imclose; binarized = immorph(binarized, method = 'close', strelker = kwargs.closeker); end
         if kwargs.fill; binarized = immorph(binarized, method = 'fill'); end

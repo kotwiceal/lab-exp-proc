@@ -1,4 +1,4 @@
-function getdata = guipointdist(field, marker, kwargs)
+function varargout = guipointdist(data, marker, kwargs)
     %% Interactive visualization 1D data by given marker on 2D field.
     
     %% Examples:
@@ -12,37 +12,37 @@ function getdata = guipointdist(field, marker, kwargs)
     % guipointdist(data = intlotspec, point = spec, displayname = {'dbd', 'ref.'}, aspect = 'image', mask = [5, 7], x = x, y = y)
 
     arguments
-        field {mustBeA(field, {'double', 'cell'})} % matrix/pase-wise array
+        data {mustBeA(data, {'double', 'cell'})} % matrix/pase-wise array
         marker {mustBeA(marker, {'double', 'cell'})} % marker data
         kwargs.mx {mustBeA(kwargs.mx, {'double', 'cell'})} = [] % marker data coordinate
         kwargs.x {mustBeA(kwargs.x, {'double', 'cell'})} = [] % longitudinal coordinate matrix/pase-wise array
         kwargs.y {mustBeA(kwargs.y, {'double', 'cell'})} = [] % tranversal coordinate matrix/pase-wise array
         %% roi parameters
-        kwargs.axtarget (1,:) double = 1 % order of targer ROI axis
+        kwargs.axtarget (1,:) double = [] % order of targer ROI axis
         kwargs.mask {mustBeA(kwargs.mask, {'double', 'cell'})} = [] % predefined position of ROI markers
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all' % interaction behaviour of ROI instances
         kwargs.number (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.number, 1)} = 1 % number of ROI instances
         %% axis parameters
-        kwargs.xlim (1,:) double = [] % x-axis limit
-        kwargs.ylim (1,:) double = [] % y-axis limit
-        kwargs.xlabel (1,:) char = [] % x-axis label of field subplot
-        kwargs.ylabel (1,:) char = [] % y-axis label of field subplot
-        kwargs.clabel (1,:) char = [] % color-axis label of field subplot
+        kwargs.xlim (:,:) {mustBeA(kwargs.xlim, {'double', 'cell'})} = [] % x-axis limit
+        kwargs.ylim (:,:) {mustBeA(kwargs.ylim, {'double', 'cell'})} = [] % y-axis limit
+        kwargs.xlabel (1,:) {mustBeA(kwargs.xlabel, {'char', 'cell'})} = {} % x-axis label of field subplot
+        kwargs.ylabel (1,:) {mustBeA(kwargs.ylabel, {'char', 'cell'})} = {} % y-axis label of field subplot
+        kwargs.clabel (1,:) {mustBeA(kwargs.clabel, {'char', 'cell'})} = {} % color-axis label of field subplot
+        kwargs.clim (:,:) {mustBeA(kwargs.clim, {'double', 'cell'})} = [] % color-axis limit
+        kwargs.displayname (1,:) {mustBeA(kwargs.displayname, {'char', 'cell'})} = {} % list of labels
+        kwargs.mdisplayname string = [] % list of labels
         kwargs.mxlabel (1,:) char = [] % x-axis label of marker subplot
         kwargs.mylabel (1,:) char = [] % y-axis label of marker subplot
         kwargs.mxlim (1,:) double = [] % x-axis limit of marker subplot
         kwargs.mylim (1,:) double = [] % y-axis limit of marker subplot
         kwargs.xscale (1,:) char {mustBeMember(kwargs.xscale, {'linear', 'log'})} = 'log'
         kwargs.yscale (1,:) char {mustBeMember(kwargs.yscale, {'linear', 'log'})} = 'log'
-        kwargs.clim (:,:) double = [] % color-axis limit
-        kwargs.displayname string = [] % list of labels
-        kwargs.mdisplayname string = [] % list of labels
         kwargs.legend logical = false % show legend
         kwargs.docked logical = false % docker figure
         kwargs.colormap (1,:) char = 'turbo' % colormap
-        kwargs.colorbar logical = true % show colorbar
-        kwargs.fontsize (1,1) double = 10 % axis font size
-        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto', 'manual', 'image', 'square'})} = 'equal' % axis ratio
+        kwargs.colorbar (1,1) logical = true % show colorbar
+        kwargs.fontsize (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.fontsize, 1)} = 10 % axis font size
+        kwargs.aspect (1,:) {mustBeA(kwargs.aspect, {'char', 'cell'}), mustBeMember(kwargs.aspect, {'equal', 'auto', 'manual', 'image', 'square'})} = 'image' % axis ratio
         % legend location
         kwargs.location (1,:) char {mustBeMember(kwargs.location, {'north','south','east','west','northeast','northwest','southeast','southwest','northoutside','southoutside','eastoutside','westoutside','northeastoutside','northwestoutside','southeastoutside','southwestoutside','best','bestoutside','layout','none'})} = 'best'
         kwargs.title = [] % figure global title
@@ -50,23 +50,25 @@ function getdata = guipointdist(field, marker, kwargs)
         kwargs.extension (1,:) char = '.png' % extention of storing figure
     end
 
-    xi = ones(1, kwargs.number); yi = ones(1, kwargs.number); ax = cell(1, size(field, 3));
+    xi = ones(1, kwargs.number); yi = ones(1, kwargs.number); PreviousPosition = {}; rois = {};
 
-    if isa(field, 'double'); field = {field}; end
+    if isa(data, 'double'); data = {data}; end
     if isa(marker, 'double'); marker = {marker}; end
-    if isa(kwargs.x, 'double'); kwargs.x = {kwargs.x}; end
-    if isa(kwargs.y, 'double'); kwargs.y = {kwargs.y}; end
-    if isempty(kwargs.mx)
-        for i = 1:numel(marker)
-            kwargs.mx{i} = 1:size(marker{i}, 1); 
-        end
-    end
-    if isa(kwargs.mx, 'double'); kwargs.mx = {kwargs.mx}; end
-    if isa(kwargs.mask, 'double'); kwargs.mask = {kwargs.mask}; end
-    if numel(kwargs.mask) == 1
-        temp = kwargs.mask{1};
-        for i = 1:numel(field)
-            kwargs.mask{i} = temp;
+    if numel(data) ~= numel(marker); error('data and marker must be cell array same size'); end
+    if isa(kwargs.x, 'double'); kwargs.x = repmat({kwargs.x}, 1, numel(data)); end
+    if isa(kwargs.y, 'double'); kwargs.y = repmat({kwargs.y}, 1, numel(data)); end
+    if isempty(kwargs.mx); for i = 1:numel(marker); kwargs.mx{i} = 1:size(marker{i}, 1); end; end
+    if isa(kwargs.mx, 'double'); kwargs.mx = repmat({kwargs.mx}, 1, numel(data)); end
+    if numel(data) ~= numel(kwargs.mx); error('data and mx must be cell array same size'); end
+    if isa(kwargs.mask, 'double'); kwargs.mask = repmat({kwargs.mask}, 1, numel(data)); end
+    if numel(data) ~= numel(kwargs.mask); error('data and mask must be cell array same size'); end
+    
+    function reuslt = getdatafunc()
+        reuslt = struct();
+        % store figure
+        if ~isempty(kwargs.filename)
+            savefig(gcf, strcat(kwargs.filename, '.fig'))
+            exportgraphics(gcf, strcat(kwargs.filename, kwargs.extension), Resolution = 600)
         end
     end
 
@@ -75,10 +77,12 @@ function getdata = guipointdist(field, marker, kwargs)
         for j = 1:numel(rois)
             for i = 1:numel(rois{j})
                 if rois{j}{i}.Position ~= rois{j}{i}.UserData.PreviousPosition
+                % if rois{j}{i}.Position ~= PreviousPosition{i}{j}
                     [~, indt] = min(abs(kwargs.x{j}-rois{j}{i}.Position(1)).*abs(kwargs.y{j}-rois{j}{i}.Position(2)), [], 'all');
-                    [yi(i), xi(i)] = ind2sub(size(field{j}, [1, 2]), indt);
-                    rois{j}{i}.Position = [kwargs.x{j}(yi(i),xi(i)), kwargs.y{j}(yi(i),xi(i))];
+                    [yi(i,j), xi(i,j)] = ind2sub(size(data{j}, [1, 2]), indt);
+                    rois{j}{i}.Position = [kwargs.x{j}(yi(i,j),xi(i,j)), kwargs.y{j}(yi(i,j),xi(i,j))];
                     rois{j}{i}.UserData.PreviousPosition = rois{j}{i}.Position;
+                    % PreviousPosition{i}{j} = rois{j}{i}.Position;
                 end
             end
         end
@@ -90,7 +94,7 @@ function getdata = guipointdist(field, marker, kwargs)
         set(axevent, XScale = kwargs.xscale, YScale = kwargs.yscale, FontSize = kwargs.fontsize);
         for i = 1:numel(rois)
             for j = 1:numel(rois{i})
-                plot(axevent, kwargs.mx{i}, squeeze(marker{i}(:,yi(j),xi(j),:)))
+                plot(axevent, kwargs.mx{i}, squeeze(marker{i}(:,yi(j,i),xi(j,i),:)))
             end
         end
         if ~isempty(kwargs.mxlabel); xlabel(axevent, kwargs.mxlabel); end
@@ -100,68 +104,127 @@ function getdata = guipointdist(field, marker, kwargs)
         if ~isempty(kwargs.displayname); legend(axevent, kwargs.mdisplayname, Location = kwargs.location); end
     end
 
-    % initialize figure
-    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout('flow');
-    if ~isvector(kwargs.clim);  cl = kwargs.clim; else; cl = repmat(kwargs.clim, size(field{1}, 3), 1); end
-    pltfunc = cell(1, numel(field));
-    for i = 1:numel(kwargs.x)
-        isnode = isempty(kwargs.x{i}) && isempty(kwargs.y{i});
-        if isnode
-            pltfunc{i} = @(data) imagesc(data);
-            [kwargs.x{i}, kwargs.y{i}] = meshgrid(1:size(field{i}, 2), 1:size(field{i}, 1));
-        else
-            pltfunc{i} = @(data) contourf(kwargs.x{i}, kwargs.y{i}, data, 100, 'LineStyle', 'None');
-        end
-    end
-
-    function reuslt = getdatafunc()
-        reuslt = struct();
-        % store figure
-        if ~isempty(kwargs.filename)
-            savefig(gcf, strcat(kwargs.filename, '.fig'))
-            exportgraphics(gcf, strcat(kwargs.filename, kwargs.extension), Resolution = 600)
-        end
-    end
-
-    k = 0;
-    % plot 2D data
-    for j = 1:numel(field)
-        for i = 1:size(field{j}, 3)
-            k = k + 1;
-            ax{k} = nexttile; pltfunc{j}(field{j}(:,:,i));
-            colormap(kwargs.colormap);
-            if ~isempty(cl); clim(cl(i,:)); end
-            if ~isempty(kwargs.displayname); title(kwargs.displayname(k), 'FontWeight', 'Normal'); end
-            if kwargs.colorbar
-                clb = colorbar();
-                if ~isempty(kwargs.clabel)
-                    ylabel(clb, kwargs.clabel);
+    function pltfunc = initplothandl(data)
+        % define plot/select function
+        pltfunc = {};
+        for i = 1:numel(data)
+            if isempty(kwargs.x{i}) && isempty(kwargs.y{i})
+                if ismatrix(data{i})
+                    pltfunc = cat(1, pltfunc, {@(ax) imagesc(ax, data{i})});
+                    [kwargs.x{i}, kwargs.y{i}] = meshgrid(1:size(data{i}, 2), 1:size(data{i}, 1));
+                else
+                    kwargs.x{i} = zeros(size(data{i})); kwargs.y{i} = zeros(size(data{i}));
+                    for j = 1:size(data{i}, 3)
+                        pltfunc = cat(1, pltfunc, {@(ax) imagesc(ax, data{i}(:,:,j))});
+                        [kwargs.x{i}(:,:,j), kwargs.y{i}(:,:,j)] = meshgrid(1:size(data{i}, 2), 1:size(data{i}, 1));
+                    end
+                end
+            else
+                if ismatrix(kwargs.x{i}) && ismatrix(kwargs.y{i}) && ismatrix(data{i})
+                    pltfunc = cat(1, pltfunc, {@(ax) contourf(ax, kwargs.x{i}, kwargs.y{i}, data{i}, 100, 'LineStyle', 'None')});
+                else
+                    if ismatrix(kwargs.x{i}) && ismatrix(kwargs.y{i}) && ~ismatrix(data{i})
+                        sz = [size(kwargs.x{i}), size(kwargs.y{i})];
+                        if numel(unique(sz)) == ndims(kwargs.x{i})
+                            for j = 1:size(data{i}, 3)
+                                pltfunc = cat(1, pltfunc, {@(ax) contourf(ax, kwargs.x{i}, kwargs.y{i}, data{i}(:,:,j), 100, 'LineStyle', 'None')});
+                            end
+                        else
+                            error('x and y must be have same size')
+                        end
+                    end
+    
+                    if ~ismatrix(kwargs.x{i}) && ~ismatrix(kwargs.y{i}) && ~ismatrix(data{i})
+                        sz = [size(kwargs.x{i}), size(kwargs.y{i}), size(data{i})];
+                        if numel(unique(sz)) == ndims(kwargs.x{i})
+                            for j = 1:size(data{i}, 3)
+                                pltfunc = cat(1, pltfunc, {@(ax) contourf(ax, kwargs.x{i}(:,:,j), kwargs.y{i}(:,:,j), data{i}(:,:,j), 100, 'LineStyle', 'None')});
+                            end
+                        else
+                            error('x and y must be have same size')
+                        end
+                    end
                 end
             end
-            axis(kwargs.aspect); set(gca, FontSize = kwargs.fontsize);
-            if ~isempty(kwargs.xlabel); xlabel(kwargs.xlabel); end
-            if ~isempty(kwargs.ylabel); ylabel(kwargs.ylabel); end
         end
     end
+
+    function plotdata()
+        for i = 1:numel(pltfunc)
+            pltfunc{i}(ax{i}); 
+            set(ax{i}, FontSize = kwargs.fontsize);
+            if ~isempty(kwargs.aspect); axis(ax{i}, kwargs.aspect{i}); end
+            if ~isempty(kwargs.xlim{i}); xlim(ax{i}, kwargs.xlim{i}); end
+            if ~isempty(kwargs.ylim{i}); ylim(ax{i}, kwargs.ylim{i}); end
+            if ~isempty(kwargs.clim{i}); clim(ax{i}, kwargs.clim{i}); end
+            if ~isempty(kwargs.xlabel); xlabel(ax{i}, kwargs.xlabel{i}); end
+            if ~isempty(kwargs.ylabel); ylabel(ax{i}, kwargs.ylabel{i}); end
+            if ~isempty(kwargs.displayname); title(ax{i}, kwargs.displayname{i}, 'FontWeight', 'Normal'); end
+            if kwargs.colorbar; clb = colorbar(ax{i}); if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel{i}); end; end
+        end
+    end
+
+    function update(data)
+        pltfunc = initplothandl(data);
+        plotdata();
+        initrois();
+    end
+
+    function initrois()
+        % initialize ROI instances
+        if isempty(kwargs.axtarget)
+            kwargs.axtarget(1) = 1;
+            for i = 1:numel(data)-1
+                kwargs.axtarget(i+1) = kwargs.axtarget(i) + size(data{i}, 3);
+            end
+        end
+        rois = {};
+        for i = 1:numel(kwargs.axtarget)
+            temp = guiselectregion(ax{kwargs.axtarget(i)}, moving = @eventmoving, moved = @eventmoved, shape = 'point', ...
+                mask = kwargs.mask{i}, interaction = kwargs.interaction, number = kwargs.number);
+            rois = cat(2, rois, {temp});
+        end
+    
+        for i = 1:numel(rois)
+            for j = 1:numel(rois{i})
+                rois{i}{j}.UserData.PreviousPosition = [nan, nan]; 
+                % PreviousPosition{i}{j} = [nan, nan]; 
+            end
+        end
+        eventmoving(); eventmoved();
+    end
+
+    % create plot handles
+    pltfunc = initplothandl(data);
+
+    % create figure and redefine appearance paremeter
+    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout('flow'); colormap(kwargs.colormap);
+    if isa(kwargs.xlabel, 'char'); kwargs.xlabel = repmat({kwargs.xlabel}, 1, numel(pltfunc)); end
+    if isa(kwargs.ylabel, 'char'); kwargs.ylabel = repmat({kwargs.ylabel}, 1, numel(pltfunc)); end
+    if isa(kwargs.aspect, 'char'); kwargs.aspect = repmat({kwargs.aspect}, 1, numel(pltfunc)); end
+    if isa(kwargs.clabel, 'char'); kwargs.clabel = repmat({kwargs.clabel}, 1, numel(pltfunc)); end
+    if isa(kwargs.xlim, 'double'); kwargs.xlim = repmat({kwargs.xlim}, 1, numel(pltfunc)); end
+    if isa(kwargs.ylim, 'double'); kwargs.ylim = repmat({kwargs.ylim}, 1, numel(pltfunc)); end
+    if isa(kwargs.clim, 'double'); kwargs.clim = repmat({kwargs.clim}, 1, numel(pltfunc)); end
     if ~isempty(kwargs.title); sgtitle(kwargs.title); end
 
-    % initialize ROI instances
+    % create axis
+    ax = cell(1, numel(pltfunc));
+    for i = 1:numel(pltfunc)
+        ax{i} = nexttile; 
+    end
+    
+    % create aux axis
     axevent = nexttile; hold(axevent, 'on'); box(axevent, 'on'); grid(axevent, 'on');
-    rois = {};
-    for i = kwargs.axtarget
-        temp = guiselectregion(ax{i}, moving = @eventmoving, moved = @eventmoved, shape = 'point', ...
-            mask = kwargs.mask{i}, interaction = kwargs.interaction, number = kwargs.number);
-        rois = cat(2, rois, {temp});
-    end
 
-    for i = 1:numel(rois)
-        for j = 1:numel(rois{i})
-            rois{i}{j}.UserData.PreviousPosition = [nan, nan]; 
-        end
-    end
-    eventmoving(); eventmoved();
+    % plot data
+    plotdata();
 
-    getdata = @getdatafunc;
+    initrois();
+
+    varargout{1} = @getdatafunc;
+    varargout{2} = axevent;
+    varargout{3} = @update;
 
     % store figure
     if ~isempty(kwargs.filename)

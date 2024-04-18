@@ -15,6 +15,7 @@ function fitdistcoef =  procfitdistcoef(data, kwargs)
         kwargs.binedge (1,:) double = [] % bins count or edge grid
         % type of statistics fit
         kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'gamma2', 'beta2', 'beta2l', 'gumbel2'})} = 'gumbel2'
+        kwargs.fitdistcoefinit double = [] % initial fitdistcoef
         %% processing parameters
         kwargs.kernel (1,:) double = [30, 30] % size of processing window
         kwargs.stride (1,:) double = [5, 5] % strides of processing window
@@ -49,15 +50,43 @@ function fitdistcoef =  procfitdistcoef(data, kwargs)
             var1 = kwargs.var1, amp1 = kwargs.amp1, mean2 = kwargs.mean2, mode2 = kwargs.mode2, var2 = kwargs.var2, amp2 = kwargs.amp2);
     end
 
-    nlkernel = @(x) fitdistfilt(x, method = 'fitdistcoef', norm = kwargs.norm, binedge = kwargs.binedge, ...
-        distname = kwargs.distname, x0 = kwargs.x0, lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
+    if isempty(kwargs.fitdistcoefinit)
+        if ~isvector(data)
+            kwargs.kernel = [kwargs.kernel, szd(3)];
+            kwargs.stride = [kwargs.stride, szd(3)];
+        end
+    
+        nlkernel = @(x) fitdistfilt(x, method = 'fitdistcoef', norm = kwargs.norm, binedge = kwargs.binedge, ...
+            distname = kwargs.distname, x0 = kwargs.x0, lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
 
-    if ~isvector(data)
-        kwargs.kernel = [kwargs.kernel, szd(3)];
-        kwargs.stride = [kwargs.stride, szd(3)];
+        fitdistcoef = nonlinfilt(data, method = @(x) nlkernel(x), kernel = kwargs.kernel, stride = kwargs.stride, padval = kwargs.padval);
+    else
+        szd = size(data);
+        szf = size(kwargs.fitdistcoefinit);
+
+        if ~isvector(data)
+            kernel = kwargs.kernel; stride = kwargs.stride;
+            kwargs.kernel = cell(1, 2); kwargs.stride = cell(1, 2); kwargs.offset = cell(1, 2);
+            kwargs.kernel{1} = [kernel, szd(3)];
+            kwargs.stride{1} = [stride, szd(3)];
+            kwargs.offset{1} = [0, 0, 0];
+            kwargs.kernel{2} = [kernel, szf(3)];
+            kwargs.stride{2} = [stride, szf(3)];
+            kwargs.offset{2} = [0, 0, 0];
+
+            x0 = @(y) squeeze(median(y, [1, 2], 'omitmissing'));
+        else
+            x0 = @(y) median(y, 1, 'omitmissing');
+        end
+
+        nlkernel = @(x, y) fitdistfilt(x, method = 'fitdistcoef', norm = kwargs.norm, binedge = kwargs.binedge, ...
+            distname = kwargs.distname, x0 = x0(y), ...
+            lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
+
+        fitdistcoef = nonlinfilt(data, kwargs.fitdistcoefinit, method = @(x, y) nlkernel(x, y), ...
+            kernel = kwargs.kernel, stride = kwargs.stride, offset = kwargs.offset, padval = kwargs.padval);
     end
 
-    fitdistcoef = nonlinfilt(data, method = @(x) nlkernel(x), kernel = kwargs.kernel, stride = kwargs.stride, padval = kwargs.padval);
 
     fitdistcoef = imfilt(fitdistcoef, filt = kwargs.postfilt, filtker = kwargs.postfiltker, padval = kwargs.padval);
 
