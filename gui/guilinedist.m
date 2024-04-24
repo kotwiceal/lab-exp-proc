@@ -37,11 +37,15 @@ function getdata = guilinedist(data, kwargs)
         kwargs.xlim (1,:) double = [] % x-axis limit
         kwargs.ylim (1,:) double = [] % y-axis limit
         kwargs.clim (1,:) double = [] % colorbar limit
+        kwargs.xlimdist (1,:) double = [] % x-axis limit
+        kwargs.ylimdist (1,:) double = [] % y-axis limit
         kwargs.ylabel (1,:) char = 'intermittency' % y-axis label
         kwargs.displayname (1,:) string = [] % list of labeled curves
         kwargs.legend (1,1) logical = false % show legend flag
         kwargs.docked (1,1) logical = false % docked figure flag
         kwargs.colormap (1,:) char = 'turbo' % colormap name
+        kwargs.colorbar (1,1) logical = false
+        kwargs.clabel (1,:) char = []
         % axis aspect ratio
         kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto', 'square', 'image'})} = 'equal'
         % legend location name
@@ -52,6 +56,7 @@ function getdata = guilinedist(data, kwargs)
         kwargs.showrotframe (1,1) logical = true % supporing figure to show rotated frames
         % aspect ratio of line-distribution subplot 
         kwargs.aspectdist (1,:) char {mustBeMember(kwargs.aspectdist , {'equal', 'square', 'auto'})} = 'auto'
+        kwargs.fontsize (1,1) double = 14
     end
 
     warning off
@@ -142,14 +147,14 @@ function getdata = guilinedist(data, kwargs)
                 end
         end
         if ~isempty(kwargs.ylabel); ylabel(ax, kwargs.ylabel); end
-        if ~isempty(kwargs.xlim); xlim(ax, kwargs.xlim); end
-        if ~isempty(kwargs.ylim); ylim(ax, kwargs.ylim); end
+        if ~isempty(kwargs.xlimdist); xlim(ax, kwargs.xlimdist); end
+        if ~isempty(kwargs.ylimdist); ylim(ax, kwargs.ylimdist); end
         if kwargs.legend; legend(ax, 'Location', kwargs.location); end
         axis(ax, kwargs.aspectdist)
     end
 
     function eventline(~, ~)
-        cla(ax); hold(ax, 'on'); box(ax, 'on'); grid(ax, 'on');
+        cla(ax); hold(ax, 'on'); box(ax, 'on'); grid(ax, 'on');  set(ax, FontSize = kwargs.fontsize);
         for i = 1:length(rois)
             mask(:,:,i) = rois{i}.Position;
             xi = linspace(rois{i}.Position(1,1), rois{i}.Position(2,1));
@@ -188,7 +193,7 @@ function getdata = guilinedist(data, kwargs)
     end
 
     function eventrect(~, ~)
-        cla(ax); hold(ax, 'on'); box(ax, 'on'); grid(ax, 'on');
+        cla(ax); hold(ax, 'on'); box(ax, 'on'); grid(ax, 'on'); set(ax, FontSize = kwargs.fontsize);
         for i = 1:length(rois)
             mask(:,:,i) = rois{i}.Position;
             frame = select(rois{i});
@@ -270,6 +275,7 @@ function getdata = guilinedist(data, kwargs)
 
     if isempty(kwargs.frame); kwargs.frame = 1:prod(sz(3:end)); end
     if ndims(kwargs.clim) == 3;  cl = kwargs.clim; else; cl = repmat(kwargs.clim, 1, 1, prod(sz(3:end))); end
+    if isa(kwargs.clabel, 'char'); kwargs.clabel = repmat({kwargs.clabel}, 1, numel(kwargs.frame)); end
 
     if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
     tiledlayout('flow');
@@ -279,6 +285,10 @@ function getdata = guilinedist(data, kwargs)
                 nexttile; imagesc(data(:,:,i)); xlabel('x_{n}'); ylabel('z_{n}'); colormap(kwargs.colormap); axis(kwargs.aspect);
                 if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                 if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
+                set(gca, FontSize = kwargs.fontsize);
+                if kwargs.colorbar; clb = colorbar(); if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel{i}); end; end
+                if ~isempty(kwargs.xlim); xlim(kwargs.xlim); end
+                if ~isempty(kwargs.ylim); ylim(kwargs.ylim); end
             end
         case 'spatial'
             if ismatrix(kwargs.x) && ismatrix(kwargs.y)
@@ -288,6 +298,10 @@ function getdata = guilinedist(data, kwargs)
                     if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                     axis(kwargs.aspect);
                     if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
+                    set(gca, FontSize = kwargs.fontsize);
+                    if kwargs.colorbar; clb = colorbar(); if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel{i}); end; end
+                    if ~isempty(kwargs.xlim); xlim(kwargs.xlim); end
+                    if ~isempty(kwargs.ylim); ylim(kwargs.ylim); end
                 end
             else
                 for i = kwargs.frame
@@ -296,10 +310,13 @@ function getdata = guilinedist(data, kwargs)
                     if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                     axis(kwargs.aspect);
                     if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
+                    set(gca, FontSize = kwargs.fontsize);
+                    if kwargs.colorbar; clb = colorbar(); if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel{i}); end; end
+                    if ~isempty(kwargs.xlim); xlim(kwargs.xlim); end
+                    if ~isempty(kwargs.ylim); ylim(kwargs.ylim); end
                 end
             end
     end
-    xlim([min(x(:)), max(x(:))]); ylim([min(y(:)), max(y(:))]);
 
     axroi = gca; nexttile; ax = gca; hold(ax, 'on'); box(ax, 'on'); grid(ax, 'on');
 

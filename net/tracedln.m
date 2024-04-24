@@ -2,7 +2,7 @@ function tracedln(input, data, kwargs)
     % Trace layers output of deep neural network.
 
     arguments
-        input {mustBeA(input, {'dlnetwork', 'nnet.cnn.layer.Layer'})}
+        input (:,:) {mustBeA(input, {'dlnetwork', 'nnet.cnn.layer.Layer'})}
         data {mustBeA(data, {'double', 'matlab.io.datastore.ArrayDatastore'})}
         kwargs.verbose (1,1) logical = true
         kwargs.clim (1,:) = []

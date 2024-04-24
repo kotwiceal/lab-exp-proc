@@ -1,32 +1,25 @@
 function animrec(data, kwargs)
-%% Animation recorder of 2D multi-frame data
-%% The function takes following arguments:
-%   data:               [n×m×k double]      - three dimensional data
-%   x:                  [n×m double]        - longitudinal spatial coordinate
-%   z:                  [n×m double]        - transversal spatial coordinate
-%   filename:           [1×l1 char]         - filename of storing animation
-%   xlabel:             [1×l2 char]         - x-axis label
-%   ylabel:             [1×l3 char]         - y-axis label
-%   axis:               [1×l4 char]         - axis aspect raio
-%   axis:               [1×2 double]        - color axis limit
-%   colormap:           [1×l5 char]         - colomap name
-%% Examples:
-%% 1. Record animation of set 2D multi-frame
-% animrec(rand(120, 140, 10), filename = 'test.gif', clim = [-1, 1], axis = 'equal')
+    %% Animation recorder of 2D multi-frame data.
+
+    %% Examples:
+    %% 1. Record animation of set 2D multi-frame
+    % animrec(rand(120, 140, 10), filename = 'test.gif', clim = [-1, 1], axis = 'equal')
 
     arguments
-        data (:,:,:) double
-        kwargs.x double = []
-        kwargs.z double = []
-        kwargs.filename = ''
-        kwargs.mask (:,:) double = []
-        kwargs.roi logical = false
-        kwargs.xlabel (1,:) char = []
-        kwargs.ylabel (1,:) char = []
-        kwargs.axis (1,:) char = 'image'
+        data (:,:,:) double % data
+        kwargs.x double = [] % longitudinal spatial coordinate
+        kwargs.z double = [] % transversal spatial coordinate
+        kwargs.filename = '' % filename of storing animation
+        kwargs.mask (:,:) double = [] % roi mask
+        kwargs.roi (1,1) logical = false % cut data by roi
+        kwargs.xlabel (1,:) char = [] % x-axis label
+        kwargs.ylabel (1,:) char = [] % y-axis label
+        kwargs.aspect (1,:) {mustBeA(kwargs.aspect, {'char', 'cell'}), mustBeMember(kwargs.aspect, {'equal', 'auto', 'manual', 'image', 'square'})} = 'image' % axis ratio
         kwargs.fontsize (1,1) double = 14
-        kwargs.clim (1,2) double = [1e-4, 5e-3]
-        kwargs.colormap (1,:) char = 'turbo'
+        kwargs.clim (1,2) double = [1e-4, 5e-3] % color axis limit
+        kwargs.colormap (1,:) char = 'turbo' % colomap name
+        kwargs.colorbar (1,1) logical = false % show colorbar
+        kwargs.clabel (1,:) {mustBeA(kwargs.clabel, {'char', 'cell'})} = {} % color-axis label
     end
 
     function plotframe(index)
@@ -39,7 +32,7 @@ function animrec(data, kwargs)
                 xlabel(ax, kwargs.xlabel); ylabel(ax, kwargs.ylabel); 
             end
         else
-            hold(ax, 'on'); grid(ax, 'on'); box(ax, 'on');
+            hold(ax, 'on');
             surf(ax, kwargs.x, kwargs.z, data(:,:,index), 'LineStyle', 'None');
             xlim(ax, [min(kwargs.x(:)), max(kwargs.x(:))]);
             ylim(ax, [min(kwargs.z(:)), max(kwargs.z(:))]);
@@ -48,10 +41,12 @@ function animrec(data, kwargs)
             else
                 xlabel(ax, kwargs.xlabel); ylabel(ax, kwargs.ylabel); 
             end
+            box(ax, 'on');
         end
-        axis(ax, kwargs.axis);
+        axis(ax, kwargs.aspect);
         xlabel(ax, kwargs.xlabel); ylabel(ax, kwargs.ylabel); clim(ax, kwargs.clim);
         colormap(ax, kwargs.colormap);
+        if kwargs.colorbar; clb = colorbar(); if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel); end; end
     end
 
     function eventroiselmoving(~, ~)
@@ -79,7 +74,7 @@ function animrec(data, kwargs)
     end
     exportgraphics(ax, kwargs.filename);
 
-    for i = 1:size(data, 3)
+    for i = 2:size(data, 3)
         plotframe(i);
         exportgraphics(ax, kwargs.filename, Append = true);
     end

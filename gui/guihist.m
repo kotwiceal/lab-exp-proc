@@ -61,6 +61,7 @@ function varargout = guihist(varargin, kwargs)
         kwargs.xlabel (1,:) char = [] % x-axis label of data subplot
         kwargs.ylabel (1,:) char = [] % y-axis label of data subplot
         kwargs.zlabel (1,:) char = [] % z-axis label of data subplot
+        kwargs.clabel (1,:) {mustBeA(kwargs.clabel, {'char', 'cell'})} = {} % color-axis label of field subplot
         kwargs.legend logical = false % show legend
         kwargs.xlim double = [] % x-axis limit
         kwargs.ylim double = [] % y-axis limit
@@ -70,10 +71,12 @@ function varargout = guihist(varargin, kwargs)
         kwargs.cdf logical = false % plot cdf of statistics
         kwargs.cumsum logical = false % plot cumulative sum of statistics
         kwargs.docked logical = false % docked figure
-        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto', 'image'})} = 'auto'
+        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto', 'image', 'square'})} = 'auto'
+        kwargs.aspecthist (1,:) char {mustBeMember(kwargs.aspecthist, {'equal', 'auto', 'image', 'square'})} = 'auto'
         kwargs.title (1,:) char = [] % to show global title
         kwargs.filename (1,:) char = [] % to store figure
         kwargs.extension (1,:) char = '.png' % image extension of stored figure
+        kwargs.fontsize (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.fontsize, 1)} = 10 % axis font size
         %% optimization parameters
         % type of statistics fit
         kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'none', 'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'none'
@@ -140,6 +143,14 @@ function varargout = guihist(varargin, kwargs)
             end
     end
 
+    % auto build non-linear constrain function
+    temporary = isempty(cat(1, kwargs.mean1, kwargs.mode1, kwargs.var1, kwargs.amp1, kwargs.mean2, ...
+        kwargs.mode2, kwargs.var2, kwargs.amp2));
+    if isempty(kwargs.nonlcon) && ~temporary
+        kwargs.nonlcon = @(x) nonlconfitdist(x, distname = kwargs.distname, mean1 = kwargs.mean1, mode1 = kwargs.mode1, ...
+            var1 = kwargs.var1, amp1 = kwargs.amp1, mean2 = kwargs.mean2, mode2 = kwargs.mode2, var2 = kwargs.var2, amp2 = kwargs.amp2);
+    end
+
     fithistfunc = @(roi) fithist(data = select(roi), ...
         distname = kwargs.distname, ...
         objnorm = kwargs.objnorm, ...
@@ -153,14 +164,6 @@ function varargout = guihist(varargin, kwargs)
         binedge = kwargs.binedge, ...
         pow = kwargs.pow, ...
         verbose = kwargs.verbose);
-
-    % auto build non-linear constrain function
-    temporary = isempty(cat(1, kwargs.mean1, kwargs.mode1, kwargs.var1, kwargs.amp1, kwargs.mean2, ...
-        kwargs.mode2, kwargs.var2, kwargs.amp2));
-    if isempty(kwargs.nonlcon) && ~temporary
-        kwargs.nonlcon = @(x) nonlconfitdist(x, distname = kwargs.distname, mean1 = kwargs.mean1, mode1 = kwargs.mode1, ...
-            var1 = kwargs.var1, amp1 = kwargs.amp1, mean2 = kwargs.mean2, mode2 = kwargs.mode2, var2 = kwargs.var2, amp2 = kwargs.amp2);
-    end
 
     function result = getdatafunc()
         result = struct();
@@ -286,9 +289,11 @@ function varargout = guihist(varargin, kwargs)
         %% show statistic of fitted data
         cla(ax{1}); hold(ax{1}, 'on'); box(ax{1}, 'on'); grid(ax{1}, 'on');
         xlabel(ax{1}, 'edges'); ylabel(ax{1}, kwargs.norm);
+        axis(ax{1}, kwargs.aspecthist); set(ax{1}, FontSize = kwargs.fontsize);
 
         if kwargs.cdf
             cla(ax{2}); hold(ax{2}, 'on'); box(ax{2}, 'on'); grid(ax{2}, 'on');
+            set(ax{2}, FontSize = kwargs.fontsize);
             xlabel(ax{2}, 'edges'); ylabel(ax{2}, 'cdf');
             ylim(ax{2}, [-0.1, 1.1])
         end
@@ -447,11 +452,13 @@ function varargout = guihist(varargin, kwargs)
                 ylim([min(kwargs.z(:)), max(kwargs.z(:))]);
                 axis(axroi, kwargs.aspect);
         end
-        colorbar(axroi); colormap(axroi, kwargs.colormap);
+        clb = colorbar(axroi); colormap(axroi, kwargs.colormap);
+        if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel); end
         if ~isempty(kwargs.clim)
             clim(axroi, kwargs.clim);
         end
     end
+    set(gca, FontSize = kwargs.fontsize);
     if ~isempty(kwargs.xlabel); xlabel(axroi, kwargs.xlabel); end
     if ~isempty(kwargs.ylabel); ylabel(axroi, kwargs.ylabel); end
 

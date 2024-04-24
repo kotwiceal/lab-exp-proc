@@ -94,7 +94,7 @@ function varargout = fithist(kwargs)
     % initialize optimization problem
     options = optimoptions('fmincon', 'Algorithm', 'interior-point', ...
         'MaxFunctionEvaluations', 1e4, 'MaxIterations', 3e3, ...
-        'DiffMaxChange', 1e-4, 'Display', 'Off');
+        'DiffMaxChange', 1e-4, 'Display', 'Off', 'HonorBounds', true);
     problem = struct(options = options, solver = 'fmincon');
 
     if ~isempty(kwargs.Aineq); problem.Aineq = kwargs.Aineq; end
