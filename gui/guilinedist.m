@@ -15,7 +15,7 @@ function getdata = guilinedist(data, kwargs)
     %     mask = [250, 140, 5, 40], docked = true, shape = 'rect');
     
     arguments
-        data (:,:,:) double
+        data double
         kwargs.x double = [] % spatial coordinate
         kwargs.y double = [] % spatial coordinate
         % type projection of distribution

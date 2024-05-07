@@ -13,7 +13,7 @@ function getdata = guimaskweight(data, kwargs)
         data double % two-dimensional multiframe data
         kwargs.tukey double = 1 % tukey window function parmeter
         %% roi and axis parameters
-        kwargs.mask (:,:) double = [] % four-vertex polygon
+        kwargs.mask double = [] % four-vertex polygon
         kwargs.docked logical = true % docked figure flag
         kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal' % axis aspect ratio
         kwargs.clim double = [] % colorbar limit

@@ -43,7 +43,7 @@ function varargout = prepdln(varargin, kwargs)
         if ~isempty(kwargs.transform{i}); varargin{i} = transform(varargin{i}, @(x)kwargs.transform{i}(x)); end
     end
 
-    totalDataStore = combine(varargin{:});
+    if numel(varargin) == 1; totalDataStore = varargin{1}; else; totalDataStore = combine(varargin{:}); end
     if kwargs.suffle; totalDataStore = shuffle(totalDataStore); end
 
     % create data partitions

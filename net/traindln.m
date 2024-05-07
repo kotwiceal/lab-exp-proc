@@ -15,8 +15,11 @@ function [net, info] = traindln(data, layers, kwargs)
         kwargs.Plots (1,:) char {mustBeMember(kwargs.Plots, {'none', 'training-progress'})} = 'training-progress'
         kwargs.Metrics {mustBeA(kwargs.Metrics, {'double', 'cell', 'char', 'string', 'function_handle'})} = []
         kwargs.OutputFcn {mustBeA(kwargs.OutputFcn, {'cell', 'function_handle'})} = {}
+        kwargs.AverageType (1,:) char {mustBeMember(kwargs.AverageType, {'micro', 'macro'})} = 'macro'
         kwargs.filename (1,:) char = []
     end
+
+    if isempty(kwargs.Metrics); kwargs.Metrics = accuracyMetric(AverageType = kwargs.AverageType); end
 
     options = trainingOptions(kwargs.solverName, InitialLearnRate = kwargs.InitialLearnRate, ...
         MaxEpochs = kwargs.MaxEpochs, MiniBatchSize = kwargs.MiniBatchSize, ValidationData = kwargs.ValidationData,...
