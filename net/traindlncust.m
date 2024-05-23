@@ -9,8 +9,8 @@ function varargout = traindlncust(data, layers, kwargs)
         kwargs.lossfnc {mustBeA(kwargs.lossfnc, {'double', 'function_handle'})} = []
         %% learn rate settings
         kwargs.InitialLearnRate (1,:) double = 1e-2
-        kwargs.learnRate {mustBeA(kwargs.learnRate, {'double', 'function_handle'})} = {}
-        kwargs.decay (1,1) double = 0.01
+        kwargs.learnRate {mustBeA(kwargs.learnRate, {'double', 'function_handle'})} = []
+        kwargs.decay (1,1) double = 0.1
         kwargs.momentum (1,1) double = 0.9
         %% regularization settings
         kwargs.regul {mustBeA(kwargs.regul, {'double', 'function_handle'})} = []
@@ -25,12 +25,12 @@ function varargout = traindlncust(data, layers, kwargs)
         kwargs.MiniBatchFormat (1,:) {mustBeA(kwargs.MiniBatchFormat, {'string', 'char', 'cell'})} = ["SSBC", "BC"]
         %% monitor settings
         kwargs.monitorqueue parallel.pool.DataQueue = parallel.pool.DataQueue
-        kwargs.monitorhandler {mustBeA(kwargs.monitorhandler, {'cell', 'function_handle'})} = {}
+        kwargs.monitorhandler {mustBeA(kwargs.monitorhandler, {'double', 'function_handle'})} = []
         kwargs.MonitorFrequency (1,1) double = 1
     end
 
-    function [loss, gradients, Y] = losseval(net, X, T)
-        Y = forward(net, X);
+    function [loss, gradients, Y, state] = losseval(net, X, T)
+        [Y, state] = forward(net, X);
         loss = kwargs.lossfnc(Y, T);
         loss = kwargs.regul(loss, Y, T);
         gradients = dlgradient(loss, net.Learnables);
@@ -42,7 +42,8 @@ function varargout = traindlncust(data, layers, kwargs)
         while hasdata(mnq)
             [X, T] = next(mnq);
             Y = predict(net, X);
-            score = cat(2, score, kwargs.regul(kwargs.lossfnc(Y, T), Y, T));
+            score = kwargs.lossfnc(Y, T);
+            score = cat(2, score, kwargs.regul(score, Y, T));
             targ = cat(2, targ, gather(extractdata(T)));
             pred = cat(2, pred, gather(extractdata(Y)));
         end
@@ -61,7 +62,7 @@ function varargout = traindlncust(data, layers, kwargs)
         loss = struct(value = [], iteration = []);
         
         % support
-        velocity = [];
+        velocity = []; learnRate = [];
 
         % loop over epochs
         while epoch < kwargs.MaxEpochs
@@ -75,7 +76,8 @@ function varargout = traindlncust(data, layers, kwargs)
                 [X, T] = next(mbq);
                 
                 % evaluate the model gradients, state, and loss
-                [trainloss, gradients, Y] = dlfeval(@kwargs.losseval, net, X, T);
+                [trainloss, gradients, Y, state] = dlfeval(@kwargs.losseval, net, X, T);
+                net.State = state;
 
                 % accumuate train loss
                 loss.value = cat(1, loss.value, trainloss); loss.iteration = cat(1, loss.iteration, iteration);
@@ -92,21 +94,21 @@ function varargout = traindlncust(data, layers, kwargs)
                         score.value = cat(1, score.value, predvalid.score); score.iteration = cat(1, score.iteration, iteration);
                     end
                 end
+
+                % update learn rate
+                learnRate = cat(1, learnRate, kwargs.learnRate(iteration));
                 
                 % send data to monitor
                 if kwargs.monitorqueue.QueueLength < 1 && (iteration - monitorcnt >= kwargs.MonitorFrequency)
                     monitorcnt = iteration; pause(0.5);
                     % gather data
                     X = gather(extractdata(X)); Y = gather(extractdata(Y)); T = gather(extractdata(T));
-                    packet = struct(loss = loss, score = score, X = X, T = T, Y = Y);
+                    packet = struct(loss = loss, score = score, X = X, T = T, Y = Y, learnRate = learnRate, net = net);
                     send(kwargs.monitorqueue, packet);
                 end
     
-                % update learn rate
-                learnRate = kwargs.learnRate(iteration);
-
                 % update the network parameters using the SGDM optimizer
-                [net, velocity] = sgdmupdate(net, gradients, velocity, learnRate, kwargs.momentum);
+                [net, velocity] = sgdmupdate(net, gradients, velocity, learnRate(end), kwargs.momentum);
             end
         end
 
@@ -114,7 +116,7 @@ function varargout = traindlncust(data, layers, kwargs)
             pause(0.5); 
             % gather data
             X = gather(extractdata(X)); Y = gather(extractdata(Y)); T = gather(extractdata(T));
-            packet = struct(loss = loss, score = score, X = X, T = T, Y = Y);
+            packet = struct(loss = loss, score = score, X = X, T = T, Y = Y, learnRate = learnRate, net = net);
             send(kwargs.monitorqueue, packet);
         end
     end
@@ -158,9 +160,8 @@ function varargout = traindlncust(data, layers, kwargs)
     % prediction of test data
     if ~isempty(kwargs.TestingData)
         testmnq = minibatchqueue(kwargs.TestingData, MiniBatchSize = kwargs.MiniBatchSize, MiniBatchFormat = kwargs.MiniBatchFormat);
-        predtest = kwargs.predict(net, testmnq);
-        varargout{2} = predtest;
-        if ~isempty(kwargs.testhandler); kwargs.testhandler(predtest); end
+        result.test = kwargs.predict(net, testmnq);
+        if ~isempty(kwargs.testhandler); kwargs.testhandler(result.test); end
     end
 
     varargout{1} = result;

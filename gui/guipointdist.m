@@ -65,6 +65,13 @@ function varargout = guipointdist(data, marker, kwargs)
     
     function reuslt = getdatafunc()
         reuslt = struct();
+        temp = {};
+        for i = 1:numel(rois)
+            for j = 1:numel(rois{i})
+                temp{i,j} = squeeze(marker{i}(:,yi(j,i),xi(j,i),:));
+            end
+        end
+        reuslt.data = temp;
         % store figure
         if ~isempty(kwargs.filename)
             savefig(gcf, strcat(kwargs.filename, '.fig'))

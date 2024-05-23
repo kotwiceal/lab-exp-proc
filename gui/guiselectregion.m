@@ -3,7 +3,7 @@ function rois = guiselectregion(axroi, kwargs)
 
     arguments
         axroi matlab.graphics.axis.Axes % axis object of canvas that selection data events are being occured
-        kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'point', 'line', 'rect', 'poly', 'cube'})} = 'rect' % type of region selection
+        kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'point', 'line', 'rect', 'polygon', 'cube', 'polyline'})} = 'rect' % type of region selection
         kwargs.mask {mustBeA(kwargs.mask, {'double', 'cell'})} = [] % two row vertex to line selection; edge size to rectangle selection; n-row verxex to polygon selection 
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all' % region selection behaviour
         kwargs.number (1,1) double {mustBeInteger} = 1 % count of selection regions
@@ -22,10 +22,12 @@ function rois = guiselectregion(axroi, kwargs)
             roimethod = @drawline;
         case 'rect'
             roimethod = @drawrectangle;
-        case 'poly'
+        case 'polygon'
             roimethod = @drawpolygon;
         case 'cube'
             roimethod = @drawcuboid;
+        case 'polyline'
+            roimethod = @drawpolyline;
     end
 
     roimethods = cell(1, kwargs.number);

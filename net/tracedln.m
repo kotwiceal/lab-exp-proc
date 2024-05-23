@@ -7,6 +7,7 @@ function tracedln(input, data, kwargs)
         kwargs.verbose (1,1) logical = true
         kwargs.clim (1,:) = []
         kwargs.docked (1,1) logical = true
+        kwargs.MiniBatchFormat (1,:) {mustBeA(kwargs.MiniBatchFormat, {'string', 'char', 'cell'})} = "SSBC"
     end
 
     if isa(input, 'nnet.cnn.layer.Layer')
@@ -19,7 +20,7 @@ function tracedln(input, data, kwargs)
 
     if isa(data, 'matlab.io.datastore.ArrayDatastore')
         data = read(data);
-        data = dlarray(data{1}, 'SSCB');
+        data = dlarray(data{1}, kwargs.MiniBatchFormat);
     end
 
     response = predict(network, data);
