@@ -20,14 +20,15 @@ function varargout = loadcta(folder, kwargs)
     % data = loadcta('\turb_jet_noise\test2', subfolders = true, output = 'struct')
     
         arguments
-            folder char
-            kwargs.subfolders logical = false
-            kwargs.datadelimiter char = '\t'
-            kwargs.scandelimiter char = '\t'
-            kwargs.rawdelimiter char = '\t'
-            kwargs.dataseparator char = '.'
-            kwargs.scanseparator char = ','
-            kwargs.rawseparator char = ','
+            folder (1,:) char
+            kwargs.subfolders (1,1) logical = false
+            kwargs.datadelimiter (1,:) char = '\t'
+            kwargs.scandelimiter (1,:) char = '\t'
+            kwargs.rawdelimiter (1,:) char = '\t'
+            kwargs.dataseparator (1,:) char = '.'
+            kwargs.scanseparator (1,:) char = ','
+            kwargs.rawseparator (1,:) char = ','
+            kwargs.rawextension (1,:) char = '.dat'
             kwargs.rawtype (1,:) char {mustBeMember(kwargs.rawtype, {'ascii', 'bin'})} = 'bin'
             kwargs.numch (1,1) double = 2
             kwargs.output (1,:) char {mustBeMember(kwargs.output, {'struct', 'array'})} = 'struct'
@@ -37,11 +38,11 @@ function varargout = loadcta(folder, kwargs)
     
         warning on
     
-        scan = []; data = []; raw = []; cal = [];
+        scan = []; data = []; raw = [];
     
         % get filenames
-        filenames.dat = getfilenames(folder, extension = 'dat', subfolders = kwargs.subfolders);
-        filenames.txt = getfilenames(folder, extension = 'txt', subfolders = kwargs.subfolders);
+        filenames.dat = getfilenames(folder, extension = '.dat', subfolders = kwargs.subfolders);
+        filenames.txt = getfilenames(folder, extension = '.txt', subfolders = kwargs.subfolders);
         filenames.raw = filenames.dat(contains(filenames.dat, 'raw'));
         filenames.data = filenames.dat(~contains(filenames.dat, 'raw'));
         filenames.scan = filenames.txt(contains(filenames.txt, 'scan'));

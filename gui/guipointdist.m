@@ -84,12 +84,10 @@ function varargout = guipointdist(data, marker, kwargs)
         for j = 1:numel(rois)
             for i = 1:numel(rois{j})
                 if rois{j}{i}.Position ~= rois{j}{i}.UserData.PreviousPosition
-                % if rois{j}{i}.Position ~= PreviousPosition{i}{j}
                     [~, indt] = min(abs(kwargs.x{j}-rois{j}{i}.Position(1)).*abs(kwargs.y{j}-rois{j}{i}.Position(2)), [], 'all');
                     [yi(i,j), xi(i,j)] = ind2sub(size(data{j}, [1, 2]), indt);
                     rois{j}{i}.Position = [kwargs.x{j}(yi(i,j),xi(i,j)), kwargs.y{j}(yi(i,j),xi(i,j))];
                     rois{j}{i}.UserData.PreviousPosition = rois{j}{i}.Position;
-                    % PreviousPosition{i}{j} = rois{j}{i}.Position;
                 end
             end
         end

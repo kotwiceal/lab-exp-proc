@@ -62,7 +62,7 @@ function varargout = prepcta(input, kwargs)
 
     sz = size(raw); ws = ceil(kwargs.winsize/2+1);
 
-    % calculate auto/cross spetra
+    % calculate auto/cross spectra
     spec = cell(sz(2), sz(2));
     for i = 1:numel(sz(2))
         for j = i:numel(sz(2))
@@ -156,11 +156,13 @@ function varargout = prepcta(input, kwargs)
     end
 
     % transform units
-    switch kwargs.unit
-        case 'mm'
-            x = x/kwargs.steps(1);
-            y = y/kwargs.steps(2);
-            z = z/kwargs.steps(3);
+    if ~isempty(kwargs.scan)
+        switch kwargs.unit
+            case 'mm'
+                x = x/kwargs.steps(1);
+                y = y/kwargs.steps(2);
+                z = z/kwargs.steps(3);
+        end
     end
 
     % handle a frequency to index
@@ -169,7 +171,12 @@ function varargout = prepcta(input, kwargs)
     % output
     result.spec = spec;
     result.f = f;
-    result.intspec = @(spec, freq) reshape(sqrt(abs(df*sum(spec(freq2ind(freq), :)))), size(spec, 2:ndims(spec)));
+    if ismatrix(spec{1,1})
+        handler = @(spec, freq) sqrt(abs(df*sum(spec(freq2ind(freq), :))));
+    else
+        handler = @(spec, freq) reshape(sqrt(abs(df*sum(spec(freq2ind(freq), :)))), size(spec, 2:ndims(spec)));
+    end
+    result.intspec = handler;
     if ~isempty(kwargs.scan)
         result.vm = vm;
         result.x = x;

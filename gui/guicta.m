@@ -47,7 +47,7 @@ function varargout = guicta(kwargs)
     if isa(kwargs.f, 'double'); kwargs.f = repmat({kwargs.f}, 1, numel(kwargs.spec)); end
     df = kwargs.f{1}(2)-kwargs.f{1}(1);
     freq2ind = @(ind) kwargs.f{1}>=ind(1)&kwargs.f{1}<=ind(2);
-    if isempty(kwargs.intspec); kwargs.intspec = @(spec, freq) reshape(sqrt(abs(df*sum(spec(freq2ind(freq), :)))), size(spec, 2:ndims(spec))); end
+    if isempty(kwargs.intspec); kwargs.intspec = @(spec, freq) reshape(sqrt(abs(df*sum(spec(freq2ind(freq), :)))), [], size(kwargs.spec, 2:ndims(kwargs.spec))); end
     
     % initiate amplitude cell array
     if isempty(kwargs.amp)
