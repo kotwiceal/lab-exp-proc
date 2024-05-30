@@ -16,7 +16,7 @@ function varargout = prepcta(input, kwargs)
         kwargs.raw (1,1) logical = false
         % window function
         kwargs.wintype (1,:) char {mustBeMember(kwargs.wintype, {'uniform', 'hanning', 'hamming'})} = 'hanning'
-        kwargs.winsize double = 4096 % window function width
+        kwargs.winlen double = 4096 % window function width
         kwargs.overlap double = 3072 % window function overlap
         kwargs.fs (1,1) double = 25e3 % frequency sampling
         % spectra norm
@@ -44,68 +44,13 @@ function varargout = prepcta(input, kwargs)
         if isfield(input, 'ft'); kwargs.fit = input.ft; end
     end
 
-    s0 = []; s1 = [];
-
-    % build window function
-    switch kwargs.wintype
-        case 'uniform'
-            win = ones(1, kwargs.winsize);
-        case 'hanning'
-            win = hann(kwargs.winsize);
-        case 'hamming'
-            win = hamming(kwargs.winsize);
-    end
-
-    % calculate spectra correction factors
-    acf = 1/mean(win); % amplitude correction factor
-    ecf = 1/rms(win); % energy correction factor
-
-    sz = size(raw); ws = ceil(kwargs.winsize/2+1);
-
-    % calculate auto/cross spectra
-    spec = cell(sz(2), sz(2));
-    for i = 1:numel(sz(2))
-        for j = i:numel(sz(2))
-            spec{i,j} = zeros(ws, prod(sz(3:end)));
-        end
-    end
-    for k = 1:prod(sz(3:end))
-        si = cell(1, sz(2));
-        for i = 1:sz(2)
-            si{i} = spectrogram(raw(:, i, k), win, kwargs.overlap , [], kwargs.fs);
-        end
-
-        for i = 1:sz(2)
-            for j = i:sz(2)
-                spec{i,j}(:,k) = squeeze(mean(si{i}.*conj(si{j}), 2));
-            end
-        end
-    end
-
-    clear si;
-
-    % frequency grid
-    [~, f, ~] = spectrogram(raw(:, 1, 1), win, kwargs.overlap , [], kwargs.fs);
-    df = f(2)-f(1);
+    % calculate auto/scross spectra
+    [spec, f] = procspec(raw, wintype = kwargs.wintype, winlen = kwargs.winlen, ...
+    overlap = kwargs.overlap, fs = kwargs.fs, norm = kwargs.norm);
 
     % to substract correrlated signal part 
     if kwargs.corvibr
         spec{1,1} = spec{1,1} - abs(spec{1,2}).^2./spec{2,2};
-    end
-
-    % norm spectra
-    switch kwargs.norm
-        case 'psd'
-            nrm = 1/ws^2/df*2;
-        case 'psd-corrected'
-            nrm = 1/ws^2/df*2*ecf;
-        otherwise
-            nrm = 1;
-    end
-    for i = 1:sz(2)
-        for j = i:sz(2)
-            spec{i,j} = spec{i,j}*nrm;
-        end
     end
 
     % extract scanning points
