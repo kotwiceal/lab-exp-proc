@@ -32,9 +32,9 @@ function pathes = getfilenames(folder, kwargs)
         temporary{i, 1} = dir_obj(i).folder;
     end
     temporary = unique(temporary);
+    if pathes == ""; pathes = []; end
     try
         pathes = reshape(pathes, [], numel(temporary));
     catch
-        disp('getfilenames: reshape error, filenames array will be flatten')
     end
 end

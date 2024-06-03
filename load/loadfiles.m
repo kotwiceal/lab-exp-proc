@@ -1,4 +1,4 @@
-function data = loadfiles(input, kwargs)
+function [data, filenames] = loadfiles(input, kwargs)
     %% Read text/binary files set.
 
     arguments
@@ -8,15 +8,14 @@ function data = loadfiles(input, kwargs)
         kwargs.Delimiter (1,:) char = '\t'
         kwargs.DecimalSeparator (1,:) char = '.'
         kwargs.extension (1,:) char = '.txt'
-        kwargs.origin (:,:) double = [1, 1]
+        kwargs.rows (1,:) {mustBeA(kwargs.rows, {'double', 'cell'})} = 1
+        kwargs.cols (1,:) {mustBeA(kwargs.cols, {'double', 'cell'})} = 1
         kwargs.format (1,:) char {mustBeMember(kwargs.format, {'ascii', 'binary'})} = 'ascii'
         kwargs.precision (1,:) char = 'int16'
         kwargs.machinefmt (1,:) char = 'b'
         kwargs.VariableNamingRule (1,:) char {mustBeMember(kwargs.VariableNamingRule, {'modify', 'preserve'})} = 'preserve'
     end
     
-    data = [];
-
     if isa(input, 'char'); input = string(input); end
 
     if isfolder(input)
@@ -25,36 +24,56 @@ function data = loadfiles(input, kwargs)
     else
         kwargs.filenames = input;
     end
+
+    data = cell(1, numel(kwargs.filenames)); sz = size(kwargs.filenames);
+
+    if isa(kwargs.rows, 'double')
+        kwargs.rows = repmat({kwargs.rows}, 1, numel(kwargs.filenames));
+    end
     
+    if isa(kwargs.cols, 'double')
+        kwargs.cols = repmat({kwargs.cols}, 1, numel(kwargs.filenames));
+    end
+
     switch kwargs.format
         case 'ascii'
             for i = 1:numel(kwargs.filenames)
                 temporary = readtable(kwargs.filenames(i), 'Delimiter', kwargs.Delimiter, 'DecimalSeparator', kwargs.DecimalSeparator, ...
                     'VariableNamingRule', kwargs.VariableNamingRule);
-                if isvector(kwargs.origin)
-                    temporary = table2array(temporary(kwargs.origin(1):end, kwargs.origin(2):end));
-                else
-                    if isnan(kwargs.origin(1,2)); kwargs.origin(1,2) = size(temporary,1)-kwargs.origin(1,1); end
-                    if isnan(kwargs.origin(2,2)); kwargs.origin(2,2) = size(temporary,2)-kwargs.origin(2,1); end
-                    temporary = table2array(temporary(kwargs.origin(1,1):kwargs.origin(1,2), kwargs.origin(2,1):kwargs.origin(2,2)));
+
+                if isscalar(kwargs.rows{i})
+                    kwargs.rows{i} = [kwargs.rows{i}(1,1), size(temporary, 1)-kwargs.rows{i}(1,1)+1];
                 end
-                data = cat(ndims(temporary) + 1, data, temporary); 
+
+                if isscalar(kwargs.cols{i})
+                    kwargs.cols{i} = [kwargs.cols{i}(1,1), size(temporary, 2)-kwargs.cols{i}(1,1)+1];
+                end
+                
+                temporary = table2array(temporary(kwargs.rows{i}(1,1):kwargs.rows{i}(1,2), ...
+                    kwargs.cols{i}(1,1):kwargs.cols{i}(1,2)));
+
+                data{i} = temporary; 
             end
         case 'binary'
-            id = fopen(kwargs.filenames(1), 'r');
-            test = fread(id, kwargs.precision, kwargs.machinefmt);
-            fclose(id);
-
-            temporary = zeros(numel(test), numel(kwargs.filenames));
-            temporary(:, 1) = test;
-
-            for i = 2:numel(kwargs.filenames) 
+            for i = 1:numel(kwargs.filenames) 
                 id = fopen(kwargs.filenames(i), 'r');
-                temporary(:, i) = fread(id, kwargs.precision, kwargs.machinefmt);
+                temporary = fread(id, kwargs.precision, kwargs.machinefmt);
                 fclose(id);
+                data{i} = temporary;
             end
-
-            data = temporary;
     end
+
+    szd = zeros(numel(data), 2);
+    for i = 1:numel(data)
+        szd(i,:) = size(data{i});
+    end
+
+    if numel(unique(szd(:))) == 2
+        data = reshape(cell2mat(data), [szd(1,:), numel(data)]);
+    else
+        data = reshape(data, sz);
+    end
+
+    filenames = kwargs.filenames;
 
 end
