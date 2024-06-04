@@ -15,9 +15,9 @@ function saveallfig(kwargs)
     figlist = findobj(allchild(0), 'flat', 'Type', 'figure');
     for iFig = 1:numel(figlist)
       fighandle = figlist(iFig);
-      figname = num2str(get(fighandle, 'Number'));
+      figname = strrep(string(datetime), ':', '-');
       set(0, 'CurrentFigure', fighandle);
-      savefig(fullfile(kwargs.folder, [figname, '.fig']));
-      exportgraphics(fighandle, fullfile(kwargs.folder, [figname, kwargs.extension]), Resolution = kwargs.resolution)
+      savefig(fullfile(kwargs.folder, strcat(figname, '.fig')));
+      exportgraphics(fighandle, fullfile(kwargs.folder, strcat(figname, kwargs.extension)), Resolution = kwargs.resolution)
     end
 end

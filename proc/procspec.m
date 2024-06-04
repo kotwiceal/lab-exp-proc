@@ -44,7 +44,7 @@ function [spec, f] = procspec(data, kwargs)
 
         % calc auto/cross term
         for i = 1:sz(2)
-            for j = i:sz(2)
+            for j = 1:sz(2)
                 spec{i,j}(:,k) = squeeze(mean(si{i}.*conj(si{j}), 2));
             end
         end
@@ -66,14 +66,14 @@ function [spec, f] = procspec(data, kwargs)
             nrm = 1;
     end
     for i = 1:sz(2)
-        for j = i:sz(2)
+        for j = 1:sz(2)
             spec{i,j} = spec{i,j}*nrm;
         end
     end
 
     % reshape spectra
     for i = 1:sz(2)
-        for j = i:sz(2)
+        for j = 1:sz(2)
             spec{i,j} = reshape(spec{i,j}, [size(spec{i,j}, 1), sz(3:end)]);
         end
     end
