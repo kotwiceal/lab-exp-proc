@@ -91,6 +91,7 @@ function result = prepinterm(data, kwargs)
             result = nonlinfilt(v, kernel = kernel, method = @(x) diffilt*x(:), padval = kwargs.padval);
             if ~isempty(kwargs.pow); result = result.^kwargs.pow; end
     end
+    clear u w Vm;
 
     % postprocessing
     result = imfilt(result, filt = kwargs.postfilt, filtker = kwargs.postfiltker);

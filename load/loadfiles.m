@@ -68,7 +68,7 @@ function [data, filenames] = loadfiles(input, kwargs)
         szd(i,:) = size(data{i});
     end
 
-    if numel(unique(szd(:))) == 2
+    if size(unique(szd, 'rows'), 1) == 1
         data = reshape(cell2mat(data), [szd(1,:), numel(data)]);
     else
         data = reshape(data, sz);

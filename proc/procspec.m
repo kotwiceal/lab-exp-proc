@@ -10,6 +10,7 @@ function [spec, f] = procspec(data, kwargs)
         kwargs.fs (1,1) double = 25e3 % frequency sampling
         % spectra norm
         kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'none', 'psd', 'psd-corrected'})} = 'psd-corrected'
+        kwargs.ans (1,:) char {mustBeMember(kwargs.ans, {'double', 'cell'})} = 'cell'
     end
 
     % build window function
@@ -76,5 +77,16 @@ function [spec, f] = procspec(data, kwargs)
         for j = 1:sz(2)
             spec{i,j} = reshape(spec{i,j}, [size(spec{i,j}, 1), sz(3:end)]);
         end
+    end
+
+    switch kwargs.ans
+        case 'double'
+            temp = [];
+            for i = 1:size(spec, 1)
+                for j = 1:size(spec, 2)
+                    temp(i,j,:) = spec{i,j};
+                end
+            end
+            spec = temp;
     end
 end

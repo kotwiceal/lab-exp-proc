@@ -2,7 +2,7 @@ function varargout = prepdln(varargin, kwargs)
     %% Create dataset to train deep neural network.
 
     arguments (Repeating)
-        varargin {mustBeA(varargin, {'double', 'categorical'})}
+        varargin {mustBeA(varargin, {'double', 'categorical', 'logical'})}
     end
 
     arguments

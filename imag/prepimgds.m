@@ -14,6 +14,7 @@ function prepimgds(varargin, kwargs)
         kwargs.folder (1,:) {mustBeA(kwargs.folder, {'char', 'string'})} = '' % storing path
         kwargs.extension (1,:) char = '.png' % extension of storing images
         kwargs.rescale (1,:) cell = {} % rescale data
+        kwargs.colormap (1,:) char = 'turbo'
     end
 
     % validate data size
@@ -39,7 +40,7 @@ function prepimgds(varargin, kwargs)
     for i = 1:sz(4)
         filename = fullfile(kwargs.folder, strcat(num2str(i), kwargs.extension));
         img = reshape(data(:,:,:,i), sz(1), []);
-        img = ind2rgb(round(img), turbo);
+        img = ind2rgb(round(img), colormap(kwargs.colormap));
         imwrite(img, filename);
     end
 

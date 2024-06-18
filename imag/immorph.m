@@ -5,12 +5,13 @@ function result = immorph(data, kwargs)
         data double % multidimensional data
         % morphological method
         kwargs.method (1,:) char {mustBeMember(kwargs.method , {'none', 'fill', 'erode', 'dilate', 'close', 'open'})} = 'erode'
-        kwargs.strel (1,:) char {mustBeMember(kwargs.strel, {'disk'})} = 'disk' % structure element
+        kwargs.strel (1,:) char {mustBeMember(kwargs.strel, {'disk', 'line'})} = 'disk' % structure element
         kwargs.strelker (1,:) double = 4 % kernel of structure element
         kwargs.parproc (1,1) logical = false % perform parallel processing
     end
 
-    strl = strel(kwargs.strel, kwargs.strelker);
+    arg = cat(2, {kwargs.strel}, num2cell(kwargs.strelker));
+    strl = strel(arg{:});
 
     switch kwargs.method 
         case 'fill'
