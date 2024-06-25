@@ -5,15 +5,16 @@ function varargout = traindlncust(data, layers, kwargs)
         %% main paramters
         data {mustBeA(data, {'matlab.io.datastore.CombinedDatastore'})}
         layers (:,:) {mustBeA(layers, {'nnet.cnn.layer.Layer', 'dlnetwork'})}
-        %% train settings
+        %% evalutation settings
         kwargs.lossfnc {mustBeA(kwargs.lossfnc, {'double', 'function_handle'})} = []
-        %% learn rate settings
+        kwargs.regulfnc {mustBeA(kwargs.regulfnc, {'double', 'function_handle'})} = []
+        kwargs.accuracyfnc {mustBeA(kwargs.accuracyfnc, {'double', 'function_handle'})} = []
+        kwargs.errorfnc {mustBeA(kwargs.errorfnc, {'double', 'function_handle'})} = []
+        %% SGDM settings
         kwargs.InitialLearnRate (1,:) double = 1e-2
         kwargs.learnRate {mustBeA(kwargs.learnRate, {'double', 'function_handle'})} = []
         kwargs.decay (1,1) double = 0.1
         kwargs.momentum (1,1) double = 0.9
-        %% regularization settings
-        kwargs.regul {mustBeA(kwargs.regul, {'double', 'function_handle'})} = []
         %% evaluation settings
         kwargs.MaxEpochs (1,1) double {mustBeInteger(kwargs.MaxEpochs), mustBeGreaterThanOrEqual(kwargs.MaxEpochs, 1)} = 10
         kwargs.ValidationData {mustBeA(kwargs.ValidationData, {'double', 'matlab.io.datastore.CombinedDatastore'})} = []
@@ -29,26 +30,44 @@ function varargout = traindlncust(data, layers, kwargs)
         kwargs.MonitorFrequency (1,1) double = 1
     end
 
-    function [loss, gradients, Y, state] = losseval(net, X, T)
-        [Y, state] = forward(net, X);
-        loss = kwargs.lossfnc(Y, T);
-        loss = kwargs.regul(loss, Y, T);
-        gradients = dlgradient(loss, net.Learnables);
-        loss = gather(extractdata(loss));
+    function accuracy = accureval(y, t)
+        [~, y] = max(y, [], 1);
+        [~, t] = max(t, [], 1);
+        accuracy = sum((t-y)==0,'all')/numel(t);
     end
 
-    function result = predeval(net, mnq)
-        targ = {}; score = []; pred = {};
-        while hasdata(mnq)
-            [X, T] = next(mnq);
-            Y = predict(net, X);
-            score = kwargs.lossfnc(Y, T);
-            score = cat(2, score, kwargs.regul(score, Y, T));
-            targ = cat(2, targ, gather(extractdata(T)));
-            pred = cat(2, pred, gather(extractdata(Y)));
+    function [metrics, gradients, Y, state] = losseval(net, X, T)
+        [Y, state] = forward(net, X);
+        loss = kwargs.lossfnc(Y, T);
+        if ~isempty(kwargs.regulfnc); loss = kwargs.regulfnc(loss, Y, T); end
+        gradients = dlgradient(loss, net.Learnables);
+        metrics.loss = loss;
+        if ~isempty(kwargs.accuracyfnc); metrics.accuracy = kwargs.accuracyfnc(Y, T); end
+        if ~isempty(kwargs.errorfnc); metrics.error = kwargs.errorfnc(Y, T); end
+    end
+
+    function [data, metrics] = predeval(net, mnq)
+        [X, T] = next(mnq);
+        Y = predict(net, X);
+        score = kwargs.lossfnc(Y, T);
+        if ~isempty(kwargs.regulfnc); score = kwargs.regulfnc(score, Y, T); end
+        data = struct(X = X, T = T, Y = Y);
+        metrics.score = score;
+        if ~isempty(kwargs.accuracyfnc); metrics.accuracy = kwargs.accuracyfnc(Y, T); end
+        if ~isempty(kwargs.errorfnc); metrics.error = kwargs.errorfnc(Y, T); end
+    end
+
+    function metrics = updateMetrics(metrics, metric, iteration)
+        fields = fieldnames(metric);
+        if isempty(metrics)
+            metrics = metric;
+            metrics.iteration = iteration;
+        else
+            for i = 1:numel(fields)
+                metrics.(fields{i}) = cat(1, metrics.(fields{i}), metric.(fields{i}));
+            end
+            metrics.iteration = cat(1, metrics.iteration, iteration);
         end
-        score = mean(score, 'all');
-        result = struct(T = {targ}, Y = {pred}, score = gather(extractdata(score)));
     end
 
     function net = trainloop(net, mbq, kwargs)
@@ -56,11 +75,10 @@ function varargout = traindlncust(data, layers, kwargs)
         epoch = 0; iteration = 0; 
         validcnt = -kwargs.ValidationFrequency;
         monitorcnt = -kwargs.MonitorFrequency;
-
-        % metrics
-        score = struct(value = [], iteration = []);
-        loss = struct(value = [], iteration = []);
         
+        % metrics
+        trainmetrics = []; validmetrics = [];
+
         % support
         velocity = []; learnRate = [];
 
@@ -75,23 +93,23 @@ function varargout = traindlncust(data, layers, kwargs)
                 % read mini-batch of data
                 [X, T] = next(mbq);
                 
-                % evaluate the model gradients, state, and loss
-                [trainloss, gradients, Y, state] = dlfeval(@kwargs.losseval, net, X, T);
+                % evaluate the model gradients and metrics
+                [metrics, gradients, Y, state] = dlfeval(@kwargs.losseval, net, X, T);
                 net.State = state;
 
-                % accumuate train loss
-                loss.value = cat(1, loss.value, trainloss); loss.iteration = cat(1, loss.iteration, iteration);
+                % accumuate metrics at training
+                trainmetrics = updateMetrics(trainmetrics, metrics, iteration);
 
-                % validation
+                % validate network
                 if ~isempty(kwargs.ValidationData)
                     if iteration - validcnt >= kwargs.ValidationFrequency
                         validcnt = iteration;
-                        % create validation mini-batch of data
-                        validmnq = minibatchqueue(kwargs.ValidationData, MiniBatchSize = kwargs.MiniBatchSize, MiniBatchFormat = kwargs.MiniBatchFormat);
+                        % reset validation mini-batch
+                        reset(kwargs.validmnq);
                         % predict model
-                        predvalid = kwargs.predict(net, validmnq);
-                        % accumuate validation score
-                        score.value = cat(1, score.value, predvalid.score); score.iteration = cat(1, score.iteration, iteration);
+                        [~, metrics] = kwargs.predict(net, kwargs.validmnq);
+                        % accumuate metrics at validation
+                        validmetrics = updateMetrics(validmetrics, metrics, iteration);
                     end
                 end
 
@@ -103,7 +121,8 @@ function varargout = traindlncust(data, layers, kwargs)
                     monitorcnt = iteration; pause(0.5);
                     % gather data
                     X = gather(extractdata(X)); Y = gather(extractdata(Y)); T = gather(extractdata(T));
-                    packet = struct(loss = loss, score = score, X = X, T = T, Y = Y, learnRate = learnRate, net = net);
+                    packet = struct(X = X, T = T, Y = Y, learnRate = learnRate, net = net, ...
+                        metrics = struct(train = trainmetrics, valid = validmetrics));
                     send(kwargs.monitorqueue, packet);
                 end
     
@@ -116,7 +135,9 @@ function varargout = traindlncust(data, layers, kwargs)
             pause(0.5); 
             % gather data
             X = gather(extractdata(X)); Y = gather(extractdata(Y)); T = gather(extractdata(T));
-            packet = struct(loss = loss, score = score, X = X, T = T, Y = Y, learnRate = learnRate, net = net);
+            packet = struct(X = X, T = T, Y = Y, ...
+                learnRate = learnRate, net = net, ...
+                metrics = struct(train = trainmetrics, valid = validmetrics));
             send(kwargs.monitorqueue, packet);
         end
     end
@@ -134,9 +155,6 @@ function varargout = traindlncust(data, layers, kwargs)
     % define loss method
     if isempty(kwargs.lossfnc); kwargs.lossfnc = @mse; end
 
-    % redefine rugulariation method
-    if isempty(kwargs.regul); kwargs.regul = @(x,y,t) x; end
-
     % define loss handle
     kwargs.losseval = @losseval;
 
@@ -150,6 +168,12 @@ function varargout = traindlncust(data, layers, kwargs)
     % create training mini-batch
     trainmbq = minibatchqueue(data, MiniBatchSize = kwargs.MiniBatchSize, MiniBatchFormat = kwargs.MiniBatchFormat);
 
+    % create validation mini-batch
+    if ~isempty(kwargs.ValidationData)
+        kwargs.validmnq = minibatchqueue(kwargs.ValidationData, MiniBatchSize = size(readall(kwargs.ValidationData.UnderlyingDatastores{1}), 1), ...
+            MiniBatchFormat = kwargs.MiniBatchFormat);
+    end
+
     % start train
     net = trainloop(net, trainmbq, kwargs);
         
@@ -160,7 +184,7 @@ function varargout = traindlncust(data, layers, kwargs)
     % prediction of test data
     if ~isempty(kwargs.TestingData)
         testmnq = minibatchqueue(kwargs.TestingData, MiniBatchSize = kwargs.MiniBatchSize, MiniBatchFormat = kwargs.MiniBatchFormat);
-        result.test = kwargs.predict(net, testmnq);
+        [result.test.data, result.test.metrics] = kwargs.predict(net, testmnq);
         if ~isempty(kwargs.testhandler); kwargs.testhandler(result.test); end
     end
 
