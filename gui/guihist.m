@@ -52,7 +52,7 @@ function varargout = guihist(varargin, kwargs)
         kwargs.pow (1,:) double = []
         %% roi and axis parameters
         % type of region selection
-        kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'rect', 'poly'})} = 'rect'
+        kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'rect', 'polygon'})} = 'rect'
         % edge size to rectangle selection or n-row verxex to polygon selection 
         kwargs.mask {mustBeA(kwargs.mask, {'double', 'cell'})} = []
         % region selection behaviour: 'translate', 'all'   

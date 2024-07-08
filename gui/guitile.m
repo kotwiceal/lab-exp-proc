@@ -10,6 +10,7 @@ function getdata = guitile(data, kwargs)
         kwargs.mask (:,:) {mustBeA(kwargs.mask, {'double', 'cell'})} = []
         kwargs.number (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.number, 1)} = 1
         %% axis parameters
+        kwargs.tile {mustBeA(kwargs.tile, {'double', 'char'})} = 'flow'
         kwargs.xlim (:,:) {mustBeA(kwargs.xlim, {'double', 'cell'})} = [] % x-axis limit
         kwargs.ylim (:,:) {mustBeA(kwargs.ylim, {'double', 'cell'})} = [] % y-axis limit
         kwargs.xlabel (1,:) {mustBeA(kwargs.xlabel, {'char', 'cell'})} = {} % x-axis label of field subplot
@@ -109,7 +110,9 @@ function getdata = guitile(data, kwargs)
         end
     end
 
-    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout('flow'); colormap(kwargs.colormap);
+    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
+    if isa(kwargs.tile, 'double'); kwargs.tile = num2cell(kwargs.tile); else; kwargs.tile = {kwargs.tile}; end
+    tiledlayout(kwargs.tile{:}); colormap(kwargs.colormap);
     if isa(kwargs.xlabel, 'char'); kwargs.xlabel = repmat({kwargs.xlabel}, 1, numel(pltfunc)); end
     if isa(kwargs.ylabel, 'char'); kwargs.ylabel = repmat({kwargs.ylabel}, 1, numel(pltfunc)); end
     if isa(kwargs.aspect, 'char'); kwargs.aspect = repmat({kwargs.aspect}, 1, numel(pltfunc)); end

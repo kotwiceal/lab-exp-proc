@@ -94,6 +94,6 @@ function result = prepinterm(data, kwargs)
     clear u w Vm;
 
     % postprocessing
-    result = imfilt(result, filt = kwargs.postfilt, filtker = kwargs.postfiltker);
+    result = imfilt(result, filt = kwargs.postfilt, filtker = kwargs.postfiltker, padval = kwargs.padval);
 
 end
