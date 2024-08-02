@@ -14,7 +14,7 @@ function getdata = guiautocorr(data, kwargs)
         data (:,:) double % matrix data
         kwargs.x (:,:) double = [] % longitudinal spatial coordinate
         kwargs.y (:,:) double = [] % transversal spatial coordinate
-        %% spectra processing parameters
+        %% data preparing parameters
         kwargs.norm (1,1) logical = false % norm auto-correlation
         kwargs.center (1,:) char {mustBeMember( kwargs.center, {'none', 'poly11', 'mean'})} = 'poly11' % center data
         %% roi and axis parameters

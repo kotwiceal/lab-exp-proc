@@ -4,9 +4,10 @@ function result = immorph(data, kwargs)
     arguments
         data double % multidimensional data
         % morphological method
-        kwargs.method (1,:) char {mustBeMember(kwargs.method , {'none', 'fill', 'erode', 'dilate', 'close', 'open'})} = 'erode'
+        kwargs.method (1,:) char {mustBeMember(kwargs.method , {'none', 'fill', 'erode', 'dilate', 'close', 'open', 'remclosedom'})} = 'erode'
         kwargs.strel (1,:) char {mustBeMember(kwargs.strel, {'disk', 'line'})} = 'disk' % structure element
         kwargs.strelker (1,:) double = 4 % kernel of structure element
+        kwargs.threshold (1,1) double = 1e3
         kwargs.parproc (1,1) logical = false % perform parallel processing
     end
 
@@ -24,6 +25,8 @@ function result = immorph(data, kwargs)
             method = @(img) imclose(img, strl);
         case 'open'
             method = @(img) imopen(img, strl);
+        case 'remclosedom'
+            method = @(img) remclosedom(img, kwargs.threshold);
     end
 
     sz = size(data); if ismatrix(data); sz(3) = 1; end
@@ -40,4 +43,14 @@ function result = immorph(data, kwargs)
     end
 
     result = reshape(result, sz);
+
+    function img = remclosedom(img, trh)
+        bnd = bwboundaries(img);
+        szi = size(img);
+        img = false(szi);
+        for j = 1:numel(bnd)
+            temp = poly2mask(bnd{j}(:,2), bnd{j}(:,1), szi(1), szi(2));
+            if bwarea(temp) > trh; img = img | temp; end
+        end
+    end
 end

@@ -2,11 +2,11 @@ function getdata = guitile(data, kwargs)
     %% Visualize multiframe data.
 
     arguments
-        data {mustBeA(data, {'double', 'cell'})} % matrix/pase-wise array
+        data {mustBeA(data, {'single', 'uint8', 'int8', 'uint16', 'int16', 'double', 'cell'})} % matrix/pase-wise array
         kwargs.x {mustBeA(kwargs.x, {'double', 'cell'})} = [] % longitudinal coordinate matrix/pase-wise array
         kwargs.y {mustBeA(kwargs.y, {'double', 'cell'})} = [] % tranversal coordinate matrix/pase-wise array
         %% roi parameters
-        kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'none', 'rect', 'poly'})} = 'none'
+        kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'none', 'rect', 'polyline', 'polygon'})} = 'none'
         kwargs.mask (:,:) {mustBeA(kwargs.mask, {'double', 'cell'})} = []
         kwargs.number (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.number, 1)} = 1
         %% axis parameters
@@ -22,6 +22,7 @@ function getdata = guitile(data, kwargs)
         kwargs.docked logical = false % docker figure
         kwargs.colormap (1,:) char = 'turbo' % colormap
         kwargs.colorbar (1,1) logical = true % show colorbar
+        kwargs.colorbarloc (1,:) char = 'eastoutside'
         kwargs.fontsize (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.fontsize, 1)} = 10 % axis font size
         kwargs.aspect (1,:) {mustBeA(kwargs.aspect, {'char', 'cell'}), mustBeMember(kwargs.aspect, {'equal', 'auto', 'manual', 'image', 'square'})} = 'image' % axis ratio
         % legend location
@@ -49,7 +50,8 @@ function getdata = guitile(data, kwargs)
             exportgraphics(gcf, strcat(kwargs.filename, kwargs.extension), Resolution = 600)
         end
     end
-
+    
+    if ~isa(data, 'double') && ~isa(data, 'cell'); data = double(data); end
     if isa(data, 'double'); data = {data}; end
     if isa(kwargs.x, 'double'); kwargs.x = repmat({kwargs.x}, 1, numel(data)); end
     if isa(kwargs.y, 'double'); kwargs.y = repmat({kwargs.y}, 1, numel(data)); end
@@ -133,7 +135,7 @@ function getdata = guitile(data, kwargs)
         if ~isempty(kwargs.xlabel); xlabel(kwargs.xlabel{i}); end
         if ~isempty(kwargs.ylabel); ylabel(kwargs.ylabel{i}); end
         if ~isempty(kwargs.displayname); title(kwargs.displayname{i}, 'FontWeight', 'Normal'); end
-        if kwargs.colorbar; clb = colorbar(); if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel{i}); end; end
+        if kwargs.colorbar; clb = colorbar(kwargs.colorbarloc); if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel{i}); end; end
     end
 
     rois = {}; 

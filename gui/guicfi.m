@@ -208,33 +208,39 @@ function getdata = guicfi(kwargs)
     function [specstead, spectrav, velavg, velavg1d, alpha, beta, ue] = specproc(vel)
         vel = permute(vel, [1, 2, 4, 5, 3]);
         szr = size(vel); % [transversal, longitudinal, vertical, selections, frames]
-        velavg = squeeze(mean(vel, 5)); % averaged velocity fields
-        velavg1d = squeeze(mean(velavg, [1, 2]));
+        velavg = squeeze(mean(vel, 5, 'omitmissing')); % averaged velocity fields
+        velavg1d = squeeze(mean(velavg, [1, 2], 'omitmissing'));
         ue = velavg1d(end,:);
         ts = tic;
         % data centering
         switch kwargs.center
             case 'poly11'
-                rawt = zeros(szr); rawmt = zeros(szr(1:end-1));
+                rawt = nan(szr); rawmt = nan(szr(1:end-1));
                 % instantaneous fields
                 [x1, z1] = meshgrid(1:szr(2), 1:szr(1));
                 x2 = []; z2 = []; vm2 = [];
                 parfor i = 1:prod(szr(3:end))
-                    [x2, z2, vm2] = prepareSurfaceData(x1, z1, vel(:,:,i));
-                    rawft = fit([x2, z2], vm2, 'poly11');
-                    rawt(:,:,i) = vel(:,:,i)- rawft(x1, z1); 
+                    try
+                        [x2, z2, vm2] = prepareSurfaceData(x1, z1, vel(:,:,i));
+                        rawft = fit([x2, z2], vm2, 'poly11');
+                        rawt(:,:,i) = vel(:,:,i)- rawft(x1, z1); 
+                    catch
+                    end
                 end
                 % average fields
                 parfor i = 1:prod(szr(3:end-1))
-                    [x2, z2, vm2] = prepareSurfaceData(x1, z1, velavg(:,:,i));
-                    rawft = fit([x2, z2], vm2, 'poly11');
-                    rawmt(:,:,i) = velavg(:,:,i)- rawft(x1, z1);
+                    try
+                        [x2, z2, vm2] = prepareSurfaceData(x1, z1, velavg(:,:,i));
+                        rawft = fit([x2, z2], vm2, 'poly11');
+                        rawmt(:,:,i) = velavg(:,:,i)- rawft(x1, z1);
+                    catch
+                    end
                 end
                 vel = reshape(rawt, szr);
                 velavg = reshape(rawmt, szr(1:end-1));
             case 'mean'
-                vel = vel-mean(vel, [1, 2]);
-                velavg = velavg-mean(velavg, [1, 2]);
+                vel = vel-mean(vel, [1, 2], 'omitmissing');
+                velavg = velavg-mean(velavg, [1, 2], 'omitmissing');
         end
         disp(strcat("guicfi: elapsed time is ", num2str(toc(ts)), " seconds."))
         % data multiplying by window function
@@ -362,8 +368,8 @@ function getdata = guicfi(kwargs)
 
         specsteadprobe = guigetdata(roispec{1}, specstead, shape = 'cut', x = alpha, z = beta, permute = prm);
         spectravprobe = guigetdata(roispec{1}, spectrav, shape = 'cut', x = alpha, z = beta, permute = prm);
-        amps = squeeze(sqrt(sum(specsteadprobe, [1, 2])));
-        ampt = squeeze(sqrt(sum(spectravprobe, [1, 2])));
+        amps = squeeze(sqrt(sum(specsteadprobe, [1, 2], 'omitmissing')));
+        ampt = squeeze(sqrt(sum(spectravprobe, [1, 2], 'omitmissing')));
 
         velavgs = smoothdata(velavg, 1, kwargs.velfilt, kwargs.velfiltker);
 

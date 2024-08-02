@@ -67,6 +67,7 @@ function varargout = guihist(varargin, kwargs)
         kwargs.ylim double = [] % y-axis limit
         kwargs.clim double = [] % color-axis limit
         kwargs.colormap (1,:) char = 'turbo' % colormap name
+        kwargs.colorbarloc (1,:) char = 'eastoutside'
         kwargs.markersize double = 3 % 
         kwargs.cdf logical = false % plot cdf of statistics
         kwargs.cumsum logical = false % plot cumulative sum of statistics
@@ -273,7 +274,7 @@ function varargout = guihist(varargin, kwargs)
                         end
                     end
                     [Xedges, Yedges] = meshgrid(Xedges(1:end-1), Yedges(1:end-1));
-                    surf(ax{1}, Xedges, Yedges, counts', 'LineStyle', 'None'); clb = colorbar(ax{1});
+                    surf(ax{1}, Xedges, Yedges, counts', 'LineStyle', 'None'); clb = colorbar(ax{1}, kwargs.colorbarloc);
                     xlabel(ax{1}, 'edges_1'); ylabel(ax{1}, 'edges_2'); ylabel(clb, kwargs.norm);
                     box(ax{1}, 'on'); grid(ax{1}, 'on');
             end
@@ -452,7 +453,7 @@ function varargout = guihist(varargin, kwargs)
                 ylim([min(kwargs.z(:)), max(kwargs.z(:))]);
                 axis(axroi, kwargs.aspect);
         end
-        clb = colorbar(axroi); colormap(axroi, kwargs.colormap);
+        clb = colorbar(axroi, kwargs.colorbarloc); colormap(axroi, kwargs.colormap);
         if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel); end
         if ~isempty(kwargs.clim)
             clim(axroi, kwargs.clim);
