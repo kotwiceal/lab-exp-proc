@@ -121,8 +121,7 @@ function getdata = guicfi(kwargs)
     positions = [];
     xn = 1:kwargs.number;
 
-    colors = {[0 0.4470 0.7410], [0.8500 0.3250 0.0980], [0.9290 0.6940 0.1250], [0.4940 0.1840 0.5560], ...
-        [0.4660 0.6740 0.1880], [0.3010 0.7450 0.9330], [0.6350 0.0780 0.1840]};
+    colors = colororder('gem');
 
     selectraw = []; selectx = [];
     raw = [];
@@ -428,10 +427,9 @@ function getdata = guicfi(kwargs)
         cla(ax); hold(ax, 'on'); grid(ax, 'on'); box(ax, 'on');
         yyaxis(ax, 'left'); set(ax, 'YColor', 'Black'); cla(ax); plt = [];
         for i = 1:size(amp_raw, 2)
-            j = rem(i, numel(colors));
-            if j == 0; j = 1; end
-            plot(ax, yn+kwargs.y0(i), amp_raw(:,j), '.-', 'Color', [colors{j}, 0.4]); 
-            plt(i) = plot(ax, yn+kwargs.y0(i), amp_smooth(:,j), '.-', 'Color', colors{j}, 'DisplayName', num2str(round(xn(i))));
+            if size(colors, 1) > 1; color = circshift(colors, 1-i); color = color(1,:); else; color = colors(1,:); end
+            plot(ax, yn+kwargs.y0(i), amp_raw(:,i), '.-', 'Color', [color, 0.4]); 
+            plt(i) = plot(ax, yn+kwargs.y0(i), amp_smooth(:,i), '.-', 'Color', color, 'DisplayName', num2str(round(xn(i))));
         end
         if isfield(kwargs.data, 'y')
             xlabel(ax, 'y, mm'); 
@@ -449,10 +447,9 @@ function getdata = guicfi(kwargs)
         if kwargs.showvelprof
             yyaxis(ax, 'right')
             for i = 1:size(velavg_raw, 2)
-                j = rem(i, numel(colors));
-                if j == 0; j = 1; end
-                plot(ax, yn+kwargs.y0(i), velavg_raw(:,j), '.-', 'Color', [colors{j}, 0.4]); 
-                plot(ax, yn+kwargs.y0(i), velavg_smooth(:,j), '.-', 'Color', colors{j});
+                if size(colors, 1) > 1; color = circshift(colors, 1-i); color = color(1,:); else; color = colors(1,:); end
+                plot(ax, yn+kwargs.y0(i), velavg_raw(:,i), '.-', 'Color', [color, 0.4]); 
+                plot(ax, yn+kwargs.y0(i), velavg_smooth(:,i), '.-', 'Color', color);
             end
         end
         if kwargs.normvel

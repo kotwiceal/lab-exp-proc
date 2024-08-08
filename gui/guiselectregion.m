@@ -45,7 +45,7 @@ function rois = guiselectregion(axroi, kwargs)
     if isa(kwargs.moved, 'function_handle'); kwargs.moved = repmat({kwargs.moved}, 1, kwargs.number); end
 
     for i = 1:kwargs.number
-        if size(colors, 1) > 1; color = circshift(colors, 1-i); end; color = colors(1,:);
+        if size(colors, 1) > 1; color = circshift(colors, 1-i); color = color(1,:); else; color = colors(1,:); end
         arg = {axroi, 'InteractionsAllowed', kwargs.interaction, 'Color', color};
         if ~isempty(kwargs.StripeColor); arg = cat(2, arg, {'StripeColor'}, {kwargs.StripeColor}); end
         if ~isempty(kwargs.mask{i}); arg = cat(2, arg, {'Position'}, {kwargs.mask{i}}); end
