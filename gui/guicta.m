@@ -139,7 +139,7 @@ function varargout = guicta(kwargs)
         %% plot spectra
         cla(axpoint); hold(axpoint, 'on'); box(axpoint, 'on'); grid(axpoint, 'on');
         set(axpoint, XScale = kwargs.xscale, YScale = kwargs.yscale, FontSize = kwargs.fontsize);
-        kwargs.specpoint = cell(1, numel(rois{i}));
+        kwargs.specpoint = cell(1, numel(rois));
         for i = 1:numel(rois)
             kwargs.specpoint{i} = cell(1, numel(rois{i}));
             for j = 1:numel(rois{i})

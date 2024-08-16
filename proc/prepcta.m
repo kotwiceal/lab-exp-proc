@@ -46,7 +46,8 @@ function varargout = prepcta(input, kwargs)
 
     % calculate auto/scross spectra
     [spec, f] = procspec(raw, wintype = kwargs.wintype, winlen = kwargs.winlen, ...
-    overlap = kwargs.overlap, fs = kwargs.fs, norm = kwargs.norm);
+        overlap = kwargs.overlap, fs = kwargs.fs, norm = kwargs.norm);
+    df = f(2)-f(1);
 
     % to substract correrlated signal part 
     if kwargs.corvibr
@@ -70,9 +71,9 @@ function varargout = prepcta(input, kwargs)
 
     % reshape spectra, scanning points and velocity
     if ~isempty(kwargs.reshape)
-        for i = 1:sz(2)
-            for j = i:sz(2)
-                spec{i,j} = reshape(spec{i,j}, [ws, kwargs.reshape]);
+        for i = 1:size(spec, 1)
+            for j = i:size(spec, 2)
+                spec{i,j} = reshape(spec{i,j}, [numel(f), kwargs.reshape]);
             end
         end
         if ~isempty(kwargs.scan)
@@ -86,8 +87,8 @@ function varargout = prepcta(input, kwargs)
     end
 
     if ~isempty(kwargs.permute)
-        for i = 1:sz(2)
-            for j = i:sz(2)
+        for i = 1:size(spec, 1)
+            for j = i:size(spec, 2)
                 spec{i,j} = permute(spec{i,j}, [1, kwargs.permute+1]);
             end
         end
