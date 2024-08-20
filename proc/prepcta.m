@@ -22,16 +22,18 @@ function varargout = prepcta(input, kwargs)
         % spectra norm
         kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'none', 'psd', 'psd-corrected'})} = 'psd-corrected'
         kwargs.corvibr (1,1) logical = true; % supress vibrations via cross-correlation correction
+        kwargs.corvibrind (1,:) double = [1, 2]
         kwargs.reshape double = [] % reshape data
         kwargs.permute double = [] % permute data
         % transform scan unit
         kwargs.unit (1,:) char {mustBeMember(kwargs.unit, {'mm', 'count'})} = 'mm'
-        kwargs.fit = [] % fitobj to reverse a correction of vectical scanning component
-        kwargs.steps (1,:) double = [50, 400, 800] % single step displacement of step motor in um
-        kwargs.parproc (1,1) logical = false % perfor parallel processing
+        kwargs.xfit = [] % fitobj transfrom to leading edge coordinate system
+        kwargs.yfit = [] % fitobj to reverse a correction of vectical scanning component
+        kwargs.zfit = [] % fitobj transfrom to leading edge coordinate system
+        kwargs.steps (1,:) double = [50, 800, 400] % single step displacement of step motor in um
     end
 
-    % choose input type
+    % parse inputs
     if isa(input, 'double')
         raw = input;
     else
@@ -40,8 +42,11 @@ function varargout = prepcta(input, kwargs)
         if isfield(input, 'fs'); kwargs.fs = input.fs; end
         if isfield(input, 'reshape'); kwargs.reshape = input.reshape; end
         if isfield(input, 'permute'); kwargs.permute = input.permute; end
-        if isfield(input, 'fit'); kwargs.fit = input.fit; end
-        if isfield(input, 'ft'); kwargs.fit = input.ft; end
+        if isfield(input, 'corvibrind'); kwargs.corvibrind = input.corvibrind; end
+
+        if isfield(input, 'xfit'); kwargs.xfit = input.xfit; end
+        if isfield(input, 'yfit'); kwargs.yfit = input.yfit; end
+        if isfield(input, 'zfit'); kwargs.zfit = input.zfit; end
     end
 
     % calculate auto/scross spectra
@@ -51,7 +56,8 @@ function varargout = prepcta(input, kwargs)
 
     % to substract correrlated signal part 
     if kwargs.corvibr
-        spec{1,1} = spec{1,1} - abs(spec{1,2}).^2./spec{2,2};
+        spec{kwargs.corvibrind(1),kwargs.corvibrind(1)} = spec{kwargs.corvibrind(1),kwargs.corvibrind(1)} ...
+            - abs(spec{kwargs.corvibrind(1),kwargs.corvibrind(2)}).^2./spec{kwargs.corvibrind(2),kwargs.corvibrind(2)};
     end
 
     % extract scanning points
@@ -62,9 +68,9 @@ function varargout = prepcta(input, kwargs)
         vm = kwargs.scan(:, 4);
     end
 
-    % return to uncorrected vertical positions
-    if ~isempty(kwargs.fit) && ~isempty(kwargs.scan)
-        y = y - round(kwargs.fit(x, z)); 
+    % tranform y-axis to uncorrected vertical positions
+    if ~isempty(kwargs.yfit) && ~isempty(kwargs.scan)
+        y = y - round(kwargs.yfit(x, z)); 
     end
 
     if kwargs.raw; raw = squeeze(raw(:,1,:)); end
@@ -72,7 +78,7 @@ function varargout = prepcta(input, kwargs)
     % reshape spectra, scanning points and velocity
     if ~isempty(kwargs.reshape)
         for i = 1:size(spec, 1)
-            for j = i:size(spec, 2)
+            for j = 1:size(spec, 2)
                 spec{i,j} = reshape(spec{i,j}, [numel(f), kwargs.reshape]);
             end
         end
@@ -105,16 +111,21 @@ function varargout = prepcta(input, kwargs)
     if ~isempty(kwargs.scan)
         switch kwargs.unit
             case 'mm'
-                x = x/kwargs.steps(1);
                 y = y/kwargs.steps(2);
-                z = z/kwargs.steps(3);
+
+                % transform to LE coordinate system
+                if ~isempty(kwargs.xfit); xtemp = kwargs.xfit(x,z); else; xtemp = x/kwargs.steps(1); end
+                if ~isempty(kwargs.zfit); ztemp = kwargs.zfit(x,z); else; ztemp = z/kwargs.steps(3); end
+                x = xtemp;
+                z = ztemp;
         end
     end
 
-    % handle a frequency to index
-    freq2ind = @(ind) f>=ind(1)&f<=ind(2);
 
-    % output
+    % handler to select mask index by given frequency range
+    freq2ind = @(x) f>=x(1)&f<=x(2);
+
+    % parse outputs
     result.spec = spec;
     result.f = f;
     if ismatrix(spec{1,1})

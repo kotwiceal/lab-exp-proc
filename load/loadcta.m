@@ -91,8 +91,8 @@ function varargout = loadcta(folder, kwargs)
                             fclose(id);
                         end
                     end
+                    temporary = temporary(5:end,:);
                     raw = permute(reshape(temporary, kwargs.numch, [], numel(filenames.raw)), [2, 1, 3]);
-                    raw = raw(3:end,:,:);
             end
         catch
             warning("raw loading failed")
