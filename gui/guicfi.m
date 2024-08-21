@@ -72,13 +72,14 @@ function getdata = guicfi(kwargs)
         kwargs.x (:,:) double = []
         kwargs.z (:,:) double = []
         %% preprocessing parameters
-        kwargs.fillmissmeth (1,:) char {mustBeMember(kwargs.fillmissmeth, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'none'
+        kwargs.fillmissing (1,:) char {mustBeMember(kwargs.fillmissing, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'none'
         kwargs.prefilter (1,:) char {mustBeMember(kwargs.prefilter, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'gaussian'
         kwargs.prefiltker double = [3, 3]
+        kwargs.mode (1,:) char {mustBeMember(kwargs.mode, {'spec', 'var'})} = 'spec'
         %% spectra processing parameters
         kwargs.normspec (1,:) char {mustBeMember(kwargs.normspec, {'none', 'psd'})} = 'psd'
         kwargs.shift logical = true
-        kwargs.center (1,:) char {mustBeMember( kwargs.center, {'poly11', 'mean'})} = 'poly11'
+        kwargs.center (1,:) char {mustBeMember( kwargs.center, {'poly11', 'mean', 'none'})} = 'poly11'
         kwargs.winfun char {mustBeMember(kwargs.winfun, {'none', 'hann', 'hamming', 'tukey'})} = 'hann'
         kwargs.intlim double = []
         %% amplitude processing parameters
@@ -88,6 +89,8 @@ function getdata = guicfi(kwargs)
         kwargs.u0 (1,1) double = 25
         kwargs.y0 double = []
         kwargs.yt double = []
+        kwargs.MinProminence (1,1) double = 1e-3
+        kwargs.findmax (1,:) char {mustBeMember(kwargs.findmax, {'max', 'islocalmax'})} = 'max'
         %% average velocity processing parameters
         kwargs.velfilt (1,:) char {mustBeMember(kwargs.velfilt, {'movmean', 'movmedian', 'gaussian', 'lowess', 'loess', 'rlowess', 'rloess', 'sgolay'})} = 'movmean'
         kwargs.velfiltker double = 3
@@ -114,7 +117,18 @@ function getdata = guicfi(kwargs)
 
     warning off;
 
-    x = []; z = []; yn = []; vm = []; sz = []; ds = []; vmm = [];
+    x = []; z = []; yn = []; vm = []; sz = []; ds = []; vmm = []; xns = []; 
+
+    switch kwargs.disptype
+        case 'node'
+            xlabspec = '\alpha_{n}';
+            ylabspec = '\beta_{n}';
+        case 'spatial'
+            xlabspec = '\alpha, mm^{-1}';
+            ylabspec = '\beta, mm^{-1}';
+    end
+
+
     alpha = [];
     beta = [];
     ue = [];
@@ -126,13 +140,14 @@ function getdata = guicfi(kwargs)
     selectraw = []; selectx = [];
     raw = [];
     specstead = []; spectrav = [];
-    velavg = []; velavgs = [];
+    velavg = []; velavgs = []; velavg1d = [];
     amps = []; ampss = []; ampt = []; ampts = [];
     ampsinc = []; amptinc = [];
     ampss_ft = []; ampts_ft = [];
 
     roispec = {};
 
+    %% prepare data
     function prepdata()
         % matrices parsing of spatial coordinates and velocity fields
         if isempty(kwargs.data)
@@ -151,16 +166,12 @@ function getdata = guicfi(kwargs)
                     z = kwargs.data.z;
                     ds = abs([x(1,1)-x(1,2), z(1,1)-z(2,1)]);
             end
-            if isfield(kwargs.data, 'y')
-                yn = kwargs.data.y;
-            else
-                yn = 1:size(vm, 4);
-            end
+            % define y-vector
+            if isfield(kwargs.data, 'y'); yn = kwargs.data.y; else; yn = 1:size(vm, 4); end
         end
-    
-        if isempty(kwargs.y0)
-            kwargs.y0 = zeros(1, kwargs.number);
-        end
+
+        % define offset for y-vector
+        if isempty(kwargs.y0); kwargs.y0 = zeros(1, kwargs.number); end
         
         vmm = squeeze(mean(vm, 3)); 
         sz = size(vm);
@@ -171,26 +182,10 @@ function getdata = guicfi(kwargs)
         end
     
         % fillmissing
-        if kwargs.fillmissmeth ~= "none"
-            for i = 1:prod(sz(3:end)); vm(:,:,i) = fillmissing2(vm(:,:,i), kwargs.fillmissmeth); end
-            vm = reshape(vm, sz);
-        end
+        vm = imfilt(vm, filt = 'fillmissing', method = kwargs.fillmissing);
     
         % prefiltering
-        switch kwargs.prefilter
-            case 'average'
-                kernel = fspecial(kwargs.prefilter, kwargs.prefiltker);
-                vm = imfilter(vm, kernel);
-            case 'gaussian'
-                kernel = fspecial(kwargs.prefilter, kwargs.prefiltker);
-                vm = imfilter(vm, kernel);
-            case 'median'
-                kernel = kwargs.prefiltker;
-                for i = 1:prod(sz(3:end)); vm(:, :, i) = medfilt2(vm(:, :, i), kernel); end
-            case 'wiener'
-                kernel = kwargs.prefiltker;
-                for i = 1:prod(sz(3:end)); vm(:, :, i) = wiener2(vm(:, :, i), kernel); end
-        end
+        vm = imfilt(vm, filt = kwargs.prefilter, filtker = kwargs.prefiltker);
     
         % choose select ROI method
         switch kwargs.disptype
@@ -203,26 +198,44 @@ function getdata = guicfi(kwargs)
         end
     end
 
-    %% process spectra of steady and travel modes
-    function [specstead, spectrav, velavg, velavg1d, alpha, beta, ue] = specproc(vel)
+    function getvel()
+        %% extract data from ROI regions
+        raw = []; % accumulate data
+        xn = [];
+        switch kwargs.disptype
+            case 'node'
+                for i = 1:length(rois)
+                    raw = cat(5, raw, selectraw(rois{i})); 
+                    xn = cat(1, xn, mean(selectx(rois{i}), [1, 2]));
+                end
+            case 'spatial'
+                s = round(rois{1}.Position(1,3:end)./ds);
+                for i = 1:length(rois)
+                    raw = cat(5, raw, selectraw(rois{i}, s)); 
+                    xn = cat(1, xn, mean(selectx(rois{i}, s), [1, 2]));
+                end
+        end
+    end
+
+    function [vel, velavg, velavg1d, ue] = prepvel(vel)
+        %% prepare velocity data
         vel = permute(vel, [1, 2, 4, 5, 3]);
         szr = size(vel); % [transversal, longitudinal, vertical, selections, frames]
         velavg = squeeze(mean(vel, 5, 'omitmissing')); % averaged velocity fields
         velavg1d = squeeze(mean(velavg, [1, 2], 'omitmissing'));
-        ue = velavg1d(end,:);
-        ts = tic;
+        ue = max(velavg1d, [], 1);
+        if kwargs.normvel; velavg1d = velavg1d ./ max(velavg1d, [], 1); end
         % data centering
         switch kwargs.center
             case 'poly11'
                 rawt = nan(szr); rawmt = nan(szr(1:end-1));
                 % instantaneous fields
                 [x1, z1] = meshgrid(1:szr(2), 1:szr(1));
-                x2 = []; z2 = []; vm2 = [];
                 parfor i = 1:prod(szr(3:end))
                     try
                         [x2, z2, vm2] = prepareSurfaceData(x1, z1, vel(:,:,i));
                         rawft = fit([x2, z2], vm2, 'poly11');
-                        rawt(:,:,i) = vel(:,:,i)- rawft(x1, z1); 
+                        rawt(:,:,i) = vel(:,:,i) - rawft(x1, z1); 
                     catch
                     end
                 end
@@ -231,7 +244,7 @@ function getdata = guicfi(kwargs)
                     try
                         [x2, z2, vm2] = prepareSurfaceData(x1, z1, velavg(:,:,i));
                         rawft = fit([x2, z2], vm2, 'poly11');
-                        rawmt(:,:,i) = velavg(:,:,i)- rawft(x1, z1);
+                        rawmt(:,:,i) = velavg(:,:,i) - rawft(x1, z1);
                     catch
                     end
                 end
@@ -241,22 +254,24 @@ function getdata = guicfi(kwargs)
                 vel = vel-mean(vel, [1, 2], 'omitmissing');
                 velavg = velavg-mean(velavg, [1, 2], 'omitmissing');
         end
-        disp(strcat("guicfi: elapsed time is ", num2str(toc(ts)), " seconds."))
+    end
+
+    function [specstead, spectrav, alpha, beta] = specproc(vel, velavg)
+        %% process spectra of steady and travel modes
+        szr = size(vel);
         % data multiplying by window function
         switch kwargs.winfun
             case 'hann'
                 win = hann(szr(1)).*hann(szr(2))';
-                vel = vel.*win;
-                velavg = velavg.*win;
-                ecf = 1/rms(win(:));
             case 'tukey'
                 win = tukeywin(szr(1), 1).*tukeywin(szr(2), 1)';
-                vel = vel.*win;
-                velavg = velavg.*win;
-                ecf = 1/rms(win(:));
             otherwise
-                ecf = 1;
+                win = ones(szr);
         end
+        ecf = 1/rms(win(:));
+        vel = vel.*win;
+        velavg = velavg.*win;
+
         % calculate spectra
         specstead = abs(fft2(velavg)).^2;
         spectrav = abs(fft2(vel)).^2;
@@ -304,74 +319,42 @@ function getdata = guicfi(kwargs)
         clb = colorbar(ax); colormap(ax, kwargs.colormap); 
         title(clb, kwargs.normspec);
         if ~isempty(kwargs.climspec); clim(ax, kwargs.climspec); end
-        set(ax, 'ColorScale', kwargs.cscalespec); title(ax, label, 'FontWeight', 'Normal');
-        switch kwargs.disptype
-            case 'node'
-                xlabel(ax, '\alpha_{n}'); ylabel(ax, '\beta_{n}');
-            case 'spatial'
-                xlabel(ax, '\alpha, mm^{-1}'); ylabel(ax, '\beta, mm^{-1}');
-        end
+        set(ax, ColorScale = kwargs.cscalespec); title(ax, label, FontWeight = 'Normal');
+        xlabel(ax, xlabspec); ylabel(ax, ylabspec);
     end
 
-    %% event function called when the velocity field selection rectangle is moved
     function eventroisel(~, ~)
-        % try
-            disp("guicfi: event ROI selection is running")
-            raw = []; % accumulate data
-            xn = [];
-            switch kwargs.disptype
-                case 'node'
-                    for i = 1:length(rois)
-                        raw = cat(5, raw, selectraw(rois{i})); 
-                        xn = cat(1, xn, mean(selectx(rois{i}), [1, 2]));
-                    end
-                case 'spatial'
-                    for i = 1:length(rois)
-                        s = round(rois{1}.Position(1,3:end)./ds);
-                        raw = cat(5, raw, selectraw(rois{i}, s)); 
-                        xn = cat(1, xn, mean(selectx(rois{i}, s), [1, 2]));
-                    end
-            end
+        %% event function called when the velocity field selection rectangle is moved
+        getvel();
 
-            if kwargs.showvelavg
-                plot_velavg(axvelavg, raw)
-            end
+        if kwargs.showvelavg; plot_velavg(axvelavg, raw); end
 
-            [specstead, spectrav, ~, velavg, alpha, beta, ue] = specproc(raw);
-            if kwargs.normvel; velavg = velavg ./ max(velavg, [], 1); end
-            switch kwargs.display
-                case 'steady'
-                    plot_spec(axspecs, specstead, 'steady', alpha, beta)
-                case 'travel'
-                    plot_spec(axspect, spectrav, 'travel', alpha, beta)
-                case 'steady-travel'
-                    plot_spec(axspecs, specstead, 'steady', alpha, beta)
-                    plot_spec(axspect, spectrav, 'travel', alpha, beta)
-            end
-            initspecsel();
-        % catch
-        %     disp("guicfi: event ROI selection is failed")
-        % end
+        [vel, velavg, velavg1d, ue] = prepvel(raw);
+
+        switch kwargs.mode
+            case 'spec'
+                [specstead, spectrav, alpha, beta] = specproc(vel, velavg);
+                switch kwargs.display
+                    case 'steady'
+                        plotspec(axspecs, specstead, 'steady')
+                    case 'travel'
+                        plotspec(axspect, spectrav, 'travel')
+                    case 'steady-travel'
+                        plotspec(axspecs, specstead, 'steady')
+                        plotspec(axspect, spectrav, 'travel')
+                end
+                initspecsel();
+            case 'var'
+                amps = squeeze(sqrt(mean(var(velavg, [], 1), 2, 'omitmissing')));
+                ampt = squeeze(sqrt(var(mean(var(vel, [], 1), 2, 'omitmissing'), [], 5)));
+                prepamp();
+        end
     end
 
-    %% event function called when the spectrum field selection rectangle is moved
-    function eventintspec(~, ~)
-        kwargs.intlim = roispec{1}.Position;
+    function prepamp()
 
-        switch kwargs.disptype
-            case 'node'
-                prm = [2, 1];
-            case 'spatial'
-                prm = [1, 2];
-        end
-
-        specsteadprobe = guigetdata(roispec{1}, specstead, shape = 'cut', x = alpha, z = beta, permute = prm);
-        spectravprobe = guigetdata(roispec{1}, spectrav, shape = 'cut', x = alpha, z = beta, permute = prm);
-        amps = squeeze(sqrt(sum(specsteadprobe, [1, 2], 'omitmissing')));
-        ampt = squeeze(sqrt(sum(spectravprobe, [1, 2], 'omitmissing')));
-
-        velavgs = smoothdata(velavg, 1, kwargs.velfilt, kwargs.velfiltker);
-
+        velavgs = smoothdata(velavg1d, 1, kwargs.velfilt, kwargs.velfiltker);
+    
         switch kwargs.normamp
             case 'u0'
                 amps = amps/kwargs.u0;
@@ -382,15 +365,32 @@ function getdata = guicfi(kwargs)
         end
 
         ampss = smoothdata(amps, 1, kwargs.ampfilt, kwargs.ampfiltker);
-        ampsinc = max(ampss, [], 1);
+
+        switch kwargs.findmax
+            case 'max'
+                ampsinc = max(ampss, [], 1);
+                xns = xn;
+            case 'islocalmax'
+                index = islocalmax(amps, 1, MinProminence = kwargs.MinProminence);
+                ampsinc = amps(index);
+                xns = xn(logical(sum(index,1)));
+        end
 
         ampts = smoothdata(ampt, 1, kwargs.ampfilt, kwargs.ampfiltker);
 
         for i = 1:kwargs.number
-            [yf, af] = prepareCurveData(yn+kwargs.y0(i), ampss(:,i));
-            ampss_ft{i} = fit(yf, af, 'linearinterp');
-            [yf, af] = prepareCurveData(yn+kwargs.y0(i), ampts(:,i));
-            ampts_ft{i} = fit(yf, af, 'linearinterp');
+            try
+                [yf, af] = prepareCurveData(yn+kwargs.y0(i), ampss(:,i));
+                ampss_ft{i} = fit(yf, af, 'linearinterp');
+            catch
+                ampss_ft{i} = @(x)0;
+            end
+            try
+                [yf, af] = prepareCurveData(yn+kwargs.y0(i), ampts(:,i));
+                ampts_ft{i} = fit(yf, af, 'linearinterp');
+            catch
+                ampts_ft{i} =@(x)0;
+            end
         end
 
         if isempty(kwargs.yt)
@@ -403,15 +403,36 @@ function getdata = guicfi(kwargs)
 
         switch kwargs.display
             case 'steady'
-                plot_amp(axamps, amps, ampss, velavg, velavgs, 'steady')
+                plot_amp(axamps, amps, ampss, velavg1d, velavgs, 'steady')
             case 'travel'
-                plot_amp(axampt, ampt, ampts, velavg, velavgs, 'travel')
+                plot_amp(axampt, ampt, ampts, velavg1d, velavgs, 'travel')
             case 'steady-travel'
-                plot_amp(axamps, amps, ampss, velavg, velavgs, 'steady')
-                plot_amp(axampt, ampt, ampts, velavg, velavgs, 'travel')
+                plot_amp(axamps, amps, ampss, velavg1d, velavgs, 'steady')
+                plot_amp(axampt, ampt, ampts, velavg1d, velavgs, 'travel')
         end
 
         plot_ampgrowth();
+    end
+
+    
+    function eventintspec(~, ~)
+        %% event function called when the spectrum field selection rectangle is moved
+        kwargs.intlim = roispec{1}.Position;
+
+        switch kwargs.disptype
+            case 'node'
+                prm = [2, 1];
+            case 'spatial'
+                prm = [1, 2];
+        end
+
+        specsteadprobe = guigetdata(roispec{1}, specstead, shape = 'cut', x = alpha, z = beta, permute = prm);
+        spectravprobe = guigetdata(roispec{1}, spectrav, shape = 'cut', x = alpha, z = beta, permute = prm);
+
+        amps = squeeze(sqrt(sum(specsteadprobe, [1, 2], 'omitmissing')));
+        ampt = squeeze(sqrt(sum(spectravprobe, [1, 2], 'omitmissing')));
+
+        prepamp();
     end
 
     function initspecsel()
@@ -481,7 +502,7 @@ function getdata = guicfi(kwargs)
     function plot_ampgrowth()
         cla(axampinc); hold(axampinc, 'on'); grid(axampinc, 'on'); box(axampinc, 'on');
         set(axampinc, 'YScale', kwargs.scaleampinc);
-        plot(axampinc, xn, ampsinc, '.-', 'DisplayName', 'steady');
+        plot(axampinc, xns, ampsinc, '.-', 'DisplayName', 'steady');
         plot(axampinc, xn, amptinc, '.-', 'DisplayName', 'travel');
         switch kwargs.disptype
             case 'node'
@@ -495,6 +516,7 @@ function getdata = guicfi(kwargs)
     end
 
     function eventroiselmoving(~, evt)
+        %% event to align rectangle selection box along line
         positions = [];
         for i = 1:numel(rois)
             positions = cat(1, positions, rois{i}.Position);
@@ -510,32 +532,6 @@ function getdata = guicfi(kwargs)
         end
     end
 
-    function init_tab_param(tab_struct, tab_obj)
-        labels = {};
-        values = {};
-        fn = fieldnames(tab_struct);
-        for i = 1:size(fn, 1)
-            label= char(fn{i});
-            value = tab_struct.(label);
-            if isa(value, 'categorical')
-                value = tab_struct.(label);
-            end
-            if isa(value, 'double')
-                value = char(jsonencode(tab_struct.(label)));
-            end
-            labels{i, 1} = label; 
-            values{i, 1} = value;
-        end
-        dtable = table(labels, values);
-        tab_obj.Data = dtable;
-        tab_obj.ColumnEditable = [false, true];
-    end
-
-    function savefigure(~, ~)
-        [file, path, ~] = uiputfile('*.png*', 'File Selection', 'figure.png');
-        exportgraphics(tile, fullfile(path, file), Resolution = 600)
-    end
-
     function data = getdatafunc()
         if isempty(positions)
             mask = kwargs.mask;
@@ -544,72 +540,14 @@ function getdata = guicfi(kwargs)
         end
         data = struct('alpha', alpha, 'beta', beta, 'specstead', specstead, 'spectrav', spectrav, ...
             'velavg', velavg, 'amps', amps, 'ampt', ampt, 'ampss', ampss, 'ampts', ampts, 'yn', yn, ...
-            'xn', xn, 'intlim', kwargs.intlim, 'ampsinc', ampsinc, 'amptinc', amptinc, 'y0', kwargs.y0, 'yt', kwargs.yt);
+            'xn', xn, 'intlim', kwargs.intlim, 'ampsinc', ampsinc, 'amptinc', amptinc, 'y0', kwargs.y0, 'yt', kwargs.yt, xns = xns);
         data.mask = mask;
-    end
-
-    function plotprepdata()
-        cla(axroi);
-        switch kwargs.disptype
-            case 'node'
-                imagesc(axroi, vmm(:,:,kwargs.yi));
-            case 'spatial'
-                contourf(axroi, x, z, vmm(:,:,kwargs.yi), 100, 'LineStyle', 'None');
-                box(axroi, 'on'); grid(axroi, 'on'); 
-        end
-        axis(axroi, kwargs.aspect);
-        colormap(axroi, kwargs.colormap);
-        if ~isempty(kwargs.climvel); clim(axroi, kwargs.climvel); end
-        switch kwargs.disptype
-            case 'node'
-                xlabel(axroi, 'x_n'); ylabel(axroi, 'z_n');
-            case 'spatial'
-                xlabel(axroi, 'x, mm'); ylabel(axroi, 'z, mm');
-        end
-    end
-
-    function preproccelleditcallback(~, ~)
-        prepdata();
-        plotprepdata();
     end
 
     prepdata()
 
-    switch kwargs.guitype
-        case 'figure'
-            if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
-            tile = tiledlayout('flow'); 
-        case 'uifigure'
-            fig = uifigure;
-            fig.WindowState = 'maximized';
-            gridApp = uigridlayout(fig);
-            gridApp.RowHeight = {'1x', 'fit', 'fit'}; gridApp.ColumnWidth = {'1x', 'fit'};
-
-            tablepreproc = uitable(gridApp);
-            tablepreproc.Layout.Row = 1;
-            tablepreproc.Layout.Column = 2;
-
-            preprocparam = struct('fillmissmeth', categorical({'none'}, {'none'; 'linear'; 'nearest'; 'natural'; 'cubic'; 'v4'}), ...
-                'prefilt',  categorical({'none'}, {'none'; 'average'; 'gaussian'; 'median'; 'wiener'}), 'prefiltker', kwargs.prefiltker);
-
-            init_tab_param(preprocparam, tablepreproc);
-
-            tablepreproc.CellEditCallback = @preproccelleditcallback;
-            
-            buttonProcess = uibutton(gridApp, Text = 'Process', ButtonPushedFcn = @eventroisel);
-            buttonProcess.Layout.Row = 2;
-            buttonProcess.Layout.Column = 2;
-        
-            buttonSaveFigure = uibutton(gridApp, Text = 'Save Figure', ButtonPushedFcn = @savefigure);
-            buttonSaveFigure.Layout.Row = 3;
-            buttonSaveFigure.Layout.Column = 2;
-            
-            p = uipanel(gridApp);
-            p.Layout.Row = [1, 3];
-            p.Layout.Column = 1;
-                
-            tile = tiledlayout(p, 'flow');
-    end
+    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
+    tile = tiledlayout('flow'); 
 
     axroi = nexttile(tile);
     switch kwargs.disptype
@@ -631,15 +569,25 @@ function getdata = guicfi(kwargs)
 
     switch kwargs.display
         case 'steady'
-            axspecs = nexttile(tile);
+            if kwargs.mode ~= "var"
+                axspecs = nexttile(tile);
+            end
             axamps = nexttile(tile);
         case 'travel'
-            axspect = nexttile(tile);
+            if kwargs.mode ~= "var"
+                axspect = nexttile(tile);
+            end
             axampt = nexttile(tile);
         case 'steady-travel'
+            if kwargs.mode ~= "var"
+            axspecs = nexttile(tile);
             axspecs = nexttile(tile);
             axamps = nexttile(tile);
-            axspect = nexttile(tile);
+                axspecs = nexttile(tile);
+            axamps = nexttile(tile);
+                axspect = nexttile(tile);
+            end
+            axamps = nexttile(tile);
             axampt = nexttile(tile);
     end
 
@@ -649,15 +597,9 @@ function getdata = guicfi(kwargs)
 
     axampinc = nexttile(tile);
 
-    switch kwargs.guitype
-        case 'figure'
-            rois = guiselectregion(axroi, moved = @eventroisel, moving = @eventroiselmoving, shape = 'rect', ...
-                mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);
-            eventroisel();
-        case 'uifigure'
-            rois = guiselectregion(axroi, moving = @eventroiselmoving, shape = 'rect', ...
-                mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);
-    end
+    rois = guiselectregion(axroi, moved = @eventroisel, moving = @eventroiselmoving, shape = 'rect', ...
+        mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);
+    eventroisel()
 
     getdata = @getdatafunc;
 
