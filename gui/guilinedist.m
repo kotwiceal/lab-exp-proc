@@ -30,7 +30,7 @@ function getdata = guilinedist(data, kwargs)
         kwargs.frame (1,:) double {mustBeInteger} = [] % position of interactive subplot
         % shape of selection tool
         kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'line', 'rect'})} = 'line'
-        kwargs.mask double = [] % two row vertex to line selection; edge size to rectangle selection
+        kwargs.mask {mustBeA(kwargs.mask, {'double', 'cell'})} = [] % two row vertex to line selection; edge size to rectangle selection
         % region selection behaviour
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
         kwargs.number (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.number, 1)} = 1 % count of selection regions
@@ -41,6 +41,7 @@ function getdata = guilinedist(data, kwargs)
         kwargs.ylimdist (1,:) double = [] % y-axis limit
         kwargs.ylabel (1,:) char = 'intermittency' % y-axis label
         kwargs.displayname (1,:) string = [] % list of labeled curves
+        kwargs.displaynameline (1,:) = [] % list of labeled curves
         kwargs.legend (1,1) logical = false % show legend flag
         kwargs.docked (1,1) logical = false % docked figure flag
         kwargs.colormap (1,:) char = 'turbo' % colormap name
@@ -112,7 +113,7 @@ function getdata = guilinedist(data, kwargs)
             end
     end
 
-    if isempty(kwargs.displayname); kwargs.legend = false; else; kwargs.legend = true; end
+    % if isempty(kwargs.displayname); kwargs.legend = false; else; kwargs.legend = true; end
 
     function customize_appearance()
         %% change figure appearance
@@ -149,14 +150,14 @@ function getdata = guilinedist(data, kwargs)
         if ~isempty(kwargs.ylabel); ylabel(ax, kwargs.ylabel); end
         if ~isempty(kwargs.xlimdist); xlim(ax, kwargs.xlimdist); end
         if ~isempty(kwargs.ylimdist); ylim(ax, kwargs.ylimdist); end
-        if kwargs.legend; legend(ax, 'Location', kwargs.location); end
+        if kwargs.legend; legend(ax, kwargs.displaynameline, 'Location', kwargs.location); end
         axis(ax, kwargs.aspectdist)
     end
 
     function eventline(~, ~)
         cla(ax); hold(ax, 'on'); box(ax, 'on'); grid(ax, 'on');  set(ax, FontSize = kwargs.fontsize);
         for i = 1:length(rois)
-            mask(:,:,i) = rois{i}.Position;
+            mask{i} = rois{i}.Position;
             xi = linspace(rois{i}.Position(1,1), rois{i}.Position(2,1));
             zi = linspace(rois{i}.Position(1,2), rois{i}.Position(2,2));
             X = []; raw = [];
@@ -185,7 +186,7 @@ function getdata = guilinedist(data, kwargs)
                 end
             else
                 for j = 1:prod(sz(3:end))
-                    plot(ax, X, raw(:, j), 'Color', rois{i}.UserData.color)
+                    plot(ax, X, raw(:, j), 'Color', rois{i}.Color)
                 end
             end
         end
@@ -232,7 +233,7 @@ function getdata = guilinedist(data, kwargs)
                 end
             else
                 for j = 1:prod(sz(3:end))
-                    plot(ax, X, raw(:, j), 'Color', rois{i}.UserData.color)
+                    plot(ax, X, raw(:, j), 'Color', rois{i}.Color)
                 end
             end
         end
@@ -270,7 +271,7 @@ function getdata = guilinedist(data, kwargs)
 
     function result = getdatafunc()
         raw = reshape(raw, [size(raw, 1), sz(3:end)]);
-        result = struct(x = xi, z = zi, raw = raw, mask = mask);
+        result = struct(x = xi, z = zi, raw = raw, mask = {mask});
     end
 
     if isempty(kwargs.frame); kwargs.frame = 1:prod(sz(3:end)); end

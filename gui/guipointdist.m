@@ -12,11 +12,12 @@ function varargout = guipointdist(data, marker, kwargs)
     % guipointdist(data = intlotspec, point = spec, displayname = {'dbd', 'ref.'}, aspect = 'image', mask = [5, 7], x = x, y = y)
 
     arguments
-        data {mustBeA(data, {'double', 'cell'})} % matrix/pase-wise array
-        marker {mustBeA(marker, {'double', 'cell'})} % marker data
-        kwargs.mx {mustBeA(kwargs.mx, {'double', 'cell'})} = [] % marker data coordinate
-        kwargs.x {mustBeA(kwargs.x, {'double', 'cell'})} = [] % longitudinal coordinate matrix/pase-wise array
-        kwargs.y {mustBeA(kwargs.y, {'double', 'cell'})} = [] % tranversal coordinate matrix/pase-wise array
+        data {mustBeA(data, {'numeric', 'cell'})} % matrix/pase-wise array
+        marker {mustBeA(marker, {'numeric', 'cell'})} % marker data
+        kwargs.mx {mustBeA(kwargs.mx, {'numeric', 'cell'})} = [] % marker data coordinate
+        kwargs.x {mustBeA(kwargs.x, {'numeric', 'cell'})} = [] % longitudinal coordinate matrix/pase-wise array
+        kwargs.y {mustBeA(kwargs.y, {'numeric', 'cell'})} = [] % tranversal coordinate matrix/pase-wise array
+        kwargs.mhandle (1,:) {mustBeA(kwargs.mhandle, {'double', 'function_handle'})} = []
         %% roi parameters
         kwargs.axtarget (1,:) double = [] % order of targer ROI axis
         kwargs.mask {mustBeA(kwargs.mask, {'double', 'cell'})} = [] % predefined position of ROI markers
@@ -50,19 +51,20 @@ function varargout = guipointdist(data, marker, kwargs)
         kwargs.extension (1,:) char = '.png' % extention of storing figure
     end
 
-    xi = ones(1, kwargs.number); yi = ones(1, kwargs.number); PreviousPosition = {}; rois = {};
+    xi = ones(1, kwargs.number); yi = ones(1, kwargs.number); rois = {};
 
-    if isa(data, 'double'); data = {data}; end
-    if isa(marker, 'double'); marker = {marker}; end
+    if ~isa(data, 'cell'); data = {data}; end
+    if ~isa(marker, 'cell'); marker = {marker}; end
     if numel(data) ~= numel(marker); error('data and marker must be cell array same size'); end
-    if isa(kwargs.x, 'double'); kwargs.x = repmat({kwargs.x}, 1, numel(data)); end
-    if isa(kwargs.y, 'double'); kwargs.y = repmat({kwargs.y}, 1, numel(data)); end
+    if ~isa(kwargs.x, 'cell'); kwargs.x = repmat({kwargs.x}, 1, numel(data)); end
+    if ~isa(kwargs.y, 'cell'); kwargs.y = repmat({kwargs.y}, 1, numel(data)); end
     if isempty(kwargs.mx); for i = 1:numel(marker); kwargs.mx{i} = 1:size(marker{i}, 1); end; end
-    if isa(kwargs.mx, 'double'); kwargs.mx = repmat({kwargs.mx}, 1, numel(data)); end
+    if ~isa(kwargs.mx, 'cell'); kwargs.mx = repmat({kwargs.mx}, 1, numel(data)); end
     if numel(data) ~= numel(kwargs.mx); error('data and mx must be cell array same size'); end
-    if isa(kwargs.mask, 'double'); kwargs.mask = repmat({kwargs.mask}, 1, numel(data)); end
+    if ~isa(kwargs.mask, 'cell'); kwargs.mask = repmat({kwargs.mask}, 1, numel(data)); end
     if numel(data) ~= numel(kwargs.mask); error('data and mask must be cell array same size'); end
-    
+    if isempty(kwargs.mhandle); kwargs.mhandle = @(x)x; end
+
     function reuslt = getdatafunc()
         reuslt = struct();
         temp = {};
@@ -80,7 +82,7 @@ function varargout = guipointdist(data, marker, kwargs)
     end
 
     function eventmoving(~, ~)
-        % binding to nodes
+        % snap to nodes
         for j = 1:numel(rois)
             for i = 1:numel(rois{j})
                 if rois{j}{i}.Position ~= rois{j}{i}.UserData.PreviousPosition
@@ -99,7 +101,8 @@ function varargout = guipointdist(data, marker, kwargs)
         set(axevent, XScale = kwargs.xscale, YScale = kwargs.yscale, FontSize = kwargs.fontsize);
         for i = 1:numel(rois)
             for j = 1:numel(rois{i})
-                plot(axevent, kwargs.mx{i}, squeeze(marker{i}(:,yi(j,i),xi(j,i),:)))
+                temp = kwargs.mhandle(squeeze(marker{i}(:,yi(j,i),xi(j,i),:)));
+                plot(axevent, kwargs.mx{i}, temp)
             end
         end
         if ~isempty(kwargs.mxlabel); xlabel(axevent, kwargs.mxlabel); end
@@ -193,7 +196,6 @@ function varargout = guipointdist(data, marker, kwargs)
         for i = 1:numel(rois)
             for j = 1:numel(rois{i})
                 rois{i}{j}.UserData.PreviousPosition = [nan, nan]; 
-                % PreviousPosition{i}{j} = [nan, nan]; 
             end
         end
         eventmoving(); eventmoved();

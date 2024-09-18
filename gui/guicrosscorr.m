@@ -1,21 +1,24 @@
 function getdata = guicrosscorr(varargin, kwargs)
     %% Visualize cross-correlation function of selected by rectangle ROI data.
 
-    arguments (Repeating)
-        varargin double % data
+    arguments (Input, Repeating)
+        varargin % data
     end
 
-    arguments
+    arguments (Input)
         kwargs.x (:,:) double = []
-
         kwargs.y (:,:) double = []
-        kwargs.index (1,2) = [1, 2]
+        kwargs.index (1,:) = [1, 2]
         %% data preparing parameters
-        kwargs.norm (1,1) logical = true % norm auto/scross-correlation
-        kwargs.center (1,:) char {mustBeMember( kwargs.center, {'none', 'poly11', 'mean'})} = 'mean' % center data
+        kwargs.center (1,:) char {mustBeMember(kwargs.center, {'none', 'poly11', 'mean'})} = 'mean' % center data
+        kwargs.method (1,:) char {mustBeMember(kwargs.method, {'xcorr2', 'normxcorr2', 'fft', 'normfft'})} = 'fft' % select method processing
+        kwargs.contex (1,:) char {mustBeMember(kwargs.contex, {'none', 'piv'})} = 'none'
+        kwargs.contexpiv (1,:) char {mustBeMember(kwargs.contexpiv, {'diff', 'montage', 'checkerboard', 'blend', 'falsecolor'})} = 'montage'
+        kwargs.msz (1,:) double = [];
         %% roi and axis parameters
         kwargs.mask (1,:) double = [] % location and size of rectangle selection
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all' % region selection behaviour
+        kwargs.oringcenter (1,1) logical = true
         kwargs.xlabel (1,:) char = [] % x-axis label of field subplot
         kwargs.ylabel (1,:) char = [] % y-axis label of field subplot
         kwargs.cxlabel (1,:) char = [] % x-axis label of field subplot
@@ -32,11 +35,11 @@ function getdata = guicrosscorr(varargin, kwargs)
         kwargs.extension (1,:) char = '.png' % extension of saved figure
     end
 
-    function result = getdatafunc()
-        result = struct(corrmat = {corrmat});
-    end
+    data = cell(1, numel(varargin)); corrmat = []; x = []; y = [];
 
-    corrmat = [];
+    for i = 1:nargin
+        varargin{i} = double(varargin{i});
+    end
 
     % define funtion handle to probe data
     select = cell(1, numel(varargin));
@@ -44,7 +47,63 @@ function getdata = guicrosscorr(varargin, kwargs)
         select{i} = @(roiobj) guigetdata(roiobj, varargin{i}, shape = 'cut', permute = [2, 1]);
     end
 
+    switch kwargs.method
+        case 'xcorr2'
+            method = @(x,y) mean(xcorr2(x,y),3);
+        case 'normxcorr2'
+            method = @(x,y) mean(normxcorr2(x,y),3);
+        case 'fft'
+            method = @(x,y) mean(real(fftshift(fftshift(ifft2(fft2(x).*conj(fft2(y))),1),2)),3);
+        case 'normfft'
+            method = @(x,y) mean(real(fftshift(fftshift( ifft2( fft2(x).*conj(fft2(y))./sqrt(abs(fft2(x)).^2.*abs(fft2(y)).^2) ), 1),2)),3);
+    end
+
+    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
+    tiledlayout('flow'); axroi = nexttile;
+    switch nargin
+        case 1
+            imagesc(mat2gray(varargin{1}, kwargs.clim)); axis(axroi, kwargs.aspect);
+        otherwise
+        imagesc(imfuse(mat2gray(varargin{1}(:,:,1), kwargs.clim), mat2gray(varargin{2}(:,:,1), kwargs.clim))); axis(axroi, kwargs.aspect);
+    end
+    if ~isempty(kwargs.xlabel); xlabel(kwargs.xlabel); end
+    if ~isempty(kwargs.ylabel); ylabel(kwargs.ylabel); end
+
+    nexttile; ax = gca;
+    rois = guiselectregion(axroi, moved = @moved, shape = 'rect', ...
+        mask = kwargs.mask, interaction = kwargs.interaction, number = 1);
+
+    moved();
+
+    if ~isempty(kwargs.title); sgtitle(kwargs.title); end
+
+    if ~isempty(kwargs.filename)
+        savefig(gcf, strcat(kwargs.filename, '.fig'))
+        exportgraphics(gcf, strcat(kwargs.filename, kwargs.extension), Resolution = 600)
+    end
+
+    getdata = @getdatafunc;
+
     function moved(~, ~)
+        prepdata()
+        proccorrmat()
+        plotcorrmat()
+        switch kwargs.contex
+            case 'piv'
+                vec = pivker(data{1}, data{2}, method = kwargs.method, msz=kwargs.msz);
+                [~, linind] = pivfindlocmax(corrmat(:,:,1,2),method='morph',msz=kwargs.msz);
+                disp(strcat("vec=",num2str(vec)));
+                switch kwargs.contexpiv
+                    case 'mongage'
+                        imagesc(ax, imfuse(corrmat(:,:,1,2), double(linind), kwargs.contexpiv));
+                    otherwise
+                        imagesc(ax, x, y, imfuse(corrmat(:,:,1,2), double(linind), kwargs.contexpiv));    
+                end
+                 axis(ax, 'image'); colormap(ax, kwargs.colormap);
+        end
+    end
+
+    function prepdata()
         data = cell(1, numel(varargin));
         for i = 1:numel(varargin)
             % extract data
@@ -62,27 +121,39 @@ function getdata = guicrosscorr(varargin, kwargs)
             end
             data{i} = temp;
         end
-        % process auto/cross-correlation
-        if kwargs.norm; method = @normxcorr2; else; method = @xcorr2; end
-        method = @(x, y) rescale(real(fftshift(fftshift(ifft2(fft2(x).*conj(fft2(y))),1),2)));
+    end
+
+    function proccorrmat()
+        %% process auto/cross-correlation
         corrmat = [];
         for i = 1:numel(varargin)
             for j = 1:numel(varargin)
                 corrmat(:,:,i,j) = method(data{i}, data{j});
             end
         end
-        % display
-        cla(ax); 
+    end
+
+    function plotcorrmat()
         switch kwargs.display
             case '2d'
+                x = [1, size(corrmat, 1)];
+                y = [1, size(corrmat, 2)];
+                if kwargs.oringcenter 
+                    x = x-size(corrmat,1)/2;
+                    y = y-size(corrmat,2)/2;
+                end
                 if isempty(kwargs.index)
-                    imagesc(ax, imtile(corrmat(:,:,:))); axis(ax, 'image');
+                    imagesc(ax, x, y, imtile(corrmat(:,:,:), GridSize = size(corrmat, 3:4))); axis(ax, 'image');
                 else
-                    imagesc(ax, corrmat(:,:,kwargs.index(1),kwargs.index(2)));
+                    imagesc(ax, x, y, corrmat(:,:,kwargs.index(1),kwargs.index(2)));
                 end
                 axis(ax, 'image');
             case '3d'
-                surf(ax, corrmat(:,:,kwargs.index(1),kwargs.index(2)), LineStyle = 'None');
+                if isempty(kwargs.index)
+                    surf(ax, imtile(corrmat(:,:,:), GridSize = size(corrmat, 3:4)), LineStyle = 'None');
+                else
+                    surf(ax, corrmat(:,:,kwargs.index(1),kwargs.index(2)), LineStyle = 'None');
+                end
                 axis(ax, 'square'); box(ax, 'on'); grid(ax, 'on');
         end
         colorbar(ax); colormap(ax, kwargs.colormap);
@@ -92,29 +163,8 @@ function getdata = guicrosscorr(varargin, kwargs)
         if ~isempty(kwargs.cylabel); ylabel(kwargs.cylabel); end
     end
 
-    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
-    tiledlayout('flow'); axroi = nexttile;
-    imagesc(imfuse(mat2gray(varargin{1}, kwargs.clim), mat2gray(varargin{2}, kwargs.clim))); axis(axroi, kwargs.aspect);
-    if ~isempty(kwargs.xlabel); xlabel(kwargs.xlabel); end
-    if ~isempty(kwargs.ylabel); ylabel(kwargs.ylabel); end
-
-    nexttile; ax = gca;
-    rois = guiselectregion(axroi, moving = @moving, moved = @moved, shape = 'rect', ...
-        mask = kwargs.mask, interaction = kwargs.interaction, number = 1);
-
-    moved();
-
-    if ~isempty(kwargs.title); sgtitle(kwargs.title); end
-
-    if ~isempty(kwargs.filename)
-        savefig(gcf, strcat(kwargs.filename, '.fig'))
-        exportgraphics(gcf, strcat(kwargs.filename, kwargs.extension), Resolution = 600)
-    end
-
-    getdata = @getdatafunc;
-
-    function moving(~,~)
-        % title(axroi, jsonencode(floor(rois{1}.Position([3, 4]))), FontWeight = 'Normal');
+    function result = getdatafunc()
+        result = struct(corrmat = {corrmat});
     end
 
 end

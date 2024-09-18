@@ -9,7 +9,10 @@ function getdata = guitile(data, kwargs)
         kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'none', 'rect', 'polyline', 'polygon'})} = 'none'
         kwargs.mask (:,:) {mustBeA(kwargs.mask, {'double', 'cell'})} = []
         kwargs.number (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.number, 1)} = 1
+        kwargs.getdatashape (1,:) char {mustBeMember(kwargs.getdatashape, {'raw', 'cut', 'flatten'})} = 'raw' % shape of output data
+        kwargs.tukey (1,:) double = 1 % tukey window function parameter
         %% axis parameters
+        kwargs.axtarget (1,:) double = []
         kwargs.tile {mustBeA(kwargs.tile, {'double', 'char'})} = 'flow'
         kwargs.xlim (:,:) {mustBeA(kwargs.xlim, {'double', 'cell'})} = [] % x-axis limit
         kwargs.ylim (:,:) {mustBeA(kwargs.ylim, {'double', 'cell'})} = [] % y-axis limit
@@ -35,12 +38,16 @@ function getdata = guitile(data, kwargs)
     function result = getdatafunc()
         result = struct(data = [], mask = [], x = [], y = []);
         if kwargs.shape ~= "none"
-            for i = 1:numel(rois)
-                for j = 1:numel(rois{i})
-                    result.data{i,j} = selecthandle{i}(rois{i}{j});
-                    result.mask{i,j} = rois{i}{j}.Position;
-                    result.x{i,j} = selecthandlex{i}(rois{i}{j});
-                    result.y{i,j} = selecthandley{i}(rois{i}{j});
+            for il = 1:numel(rois)
+                for jl = 1:numel(rois{il})
+                    if ~isempty(kwargs.tukey)
+                        bin = selectwin{il}(rois{il}{jl});
+                        result.win{il,jl} = genwin(bin, kwargs.tukey);
+                    end
+                    result.data{il,jl} = selecthandle{i}(rois{il}{jl});
+                    result.mask{il,jl} = rois{il}{jl}.Position;
+                    result.x{il,jl} = selecthandlex{il}(rois{il}{jl});
+                    result.y{il,jl} = selecthandley{il}(rois{il}{jl});
                 end
             end
         end
@@ -50,6 +57,14 @@ function getdata = guitile(data, kwargs)
             exportgraphics(gcf, strcat(kwargs.filename, kwargs.extension), Resolution = 600)
         end
     end
+
+    function win = genwin(binl, h)
+        win = zeros(size(binl));
+        for j = 1:size(win, 2)
+            index = binl(:, j) == 1; w = sum(index);
+            win(index, j) = tukeywin(w, h);
+        end
+    end
     
     if ~isa(data, 'double') && ~isa(data, 'cell'); data = double(data); end
     if isa(data, 'double'); data = {data}; end
@@ -57,38 +72,39 @@ function getdata = guitile(data, kwargs)
     if isa(kwargs.y, 'double'); kwargs.y = repmat({kwargs.y}, 1, numel(data)); end
 
     % define plot/select function
-    pltfunc = {}; selecthandle = {}; selecthandlex = {}; selecthandley = {};
+    pltfunc = {}; selecthandle = {}; selecthandlex = {}; selecthandley = {}; selectwin = {};
     for i = 1:numel(data)
         if isempty(kwargs.x{i}) && isempty(kwargs.y{i})
             if ismatrix(data{i})
                 pltfunc = cat(1, pltfunc, {@() imagesc(data{i})});
-                selecthandle = cat(1, selecthandle, {@(roiobj) guigetdata(roiobj, data{i}, shape = 'raw', permute = [2, 1])});
+                selecthandle = cat(1, selecthandle, {@(roiobj) guigetdata(roiobj, data{i}, shape = kwargs.getdatashape, permute = [2, 1])});
                 [kwargs.x{i}, kwargs.y{i}] = meshgrid(1:size(data{i}, 2), 1:size(data{i}, 1));
-                selecthandlex = cat(1, selecthandlex, {@(roiobj) guigetdata(roiobj, kwargs.x{i}, shape = 'raw', permute = [2, 1])});
-                selecthandley = cat(1, selecthandley, {@(roiobj) guigetdata(roiobj, kwargs.y{i}, shape = 'raw', permute = [2, 1])});
+                selecthandlex = cat(1, selecthandlex, {@(roiobj) guigetdata(roiobj, kwargs.x{i}, shape = kwargs.getdatashape, permute = [2, 1])});
+                selecthandley = cat(1, selecthandley, {@(roiobj) guigetdata(roiobj, kwargs.y{i}, shape = kwargs.getdatashape, permute = [2, 1])});
             else
                 kwargs.x{i} = zeros(size(data{i})); kwargs.y{i} = zeros(size(data{i}));
                 for j = 1:size(data{i}, 3)
                     pltfunc = cat(1, pltfunc, {@() imagesc(data{i}(:,:,j))});
-                    selecthandle = cat(1, selecthandle, {@(roiobj) guigetdata(roiobj, data{i}(:,:,j), shape = 'raw')});
+                    selecthandle = cat(1, selecthandle, {@(roiobj) guigetdata(roiobj, data{i}(:,:,j), shape = kwargs.getdatashape)});
                     [kwargs.x{i}(:,:,j), kwargs.y{i}(:,:,j)] = meshgrid(1:size(data{i}, 2), 1:size(data{i}, 1));
                 end
             end
+            selectwin = cat(1, selectwin, {@(roiobj) guigetdata(roiobj, ones(size(data{i}, [1, 2])), shape = kwargs.getdatashape, permute = [2, 1])});
         else
             if ismatrix(kwargs.x{i}) && ismatrix(kwargs.y{i}) && ismatrix(data{i})
                 pltfunc = cat(1, pltfunc, {@() contourf(kwargs.x{i}, kwargs.y{i}, data{i}, 100, 'LineStyle', 'None')});
-                selecthandle = cat(1, selecthandle, {@(roiobj) guigetdata(roiobj, data{i}, shape = 'raw', x = kwargs.x{i}, z = kwargs.y{i})});
-                selecthandlex = cat(1, selecthandlex, {@(roiobj) guigetdata(roiobj, kwargs.x{i}, shape = 'raw', x = kwargs.x{i}, z = kwargs.y{i})});
-                selecthandley = cat(1, selecthandley, {@(roiobj) guigetdata(roiobj, kwargs.y{i}, shape = 'raw', x = kwargs.x{i}, z = kwargs.y{i})});
+                selecthandle = cat(1, selecthandle, {@(roiobj) guigetdata(roiobj, data{i}, shape = kwargs.getdatashape, x = kwargs.x{i}, z = kwargs.y{i})});
+                selecthandlex = cat(1, selecthandlex, {@(roiobj) guigetdata(roiobj, kwargs.x{i}, shape = kwargs.getdatashape, x = kwargs.x{i}, z = kwargs.y{i})});
+                selecthandley = cat(1, selecthandley, {@(roiobj) guigetdata(roiobj, kwargs.y{i}, shape = kwargs.getdatashape, x = kwargs.x{i}, z = kwargs.y{i})});
             else
                 if ismatrix(kwargs.x{i}) && ismatrix(kwargs.y{i}) && ~ismatrix(data{i})
                     sz = [size(kwargs.x{i}), size(kwargs.y{i})];
                     if numel(unique(sz)) == ndims(kwargs.x{i})
                         for j = 1:size(data{i}, 3)
                             pltfunc = cat(1, pltfunc, {@() contourf(kwargs.x{i}, kwargs.y{i}, data{i}(:,:,j), 100, 'LineStyle', 'None')});
-                            selecthandle = cat(1, selecthandle, {@(roiobj) guigetdata(roiobj, data{i}(:,:,j), shape = 'raw', x = kwargs.x{i}, z = kwargs.y{i})});
-                            selecthandlex = cat(1, selecthandlex, {@(roiobj) guigetdata(roiobj, kwargs.x{i}, shape = 'raw', x = kwargs.x{i}, z = kwargs.y{i})});
-                            selecthandley = cat(1, selecthandley, {@(roiobj) guigetdata(roiobj, kwargs.y{i}, shape = 'raw', x = kwargs.x{i}, z = kwargs.y{i})});
+                            selecthandle = cat(1, selecthandle, {@(roiobj) guigetdata(roiobj, data{i}(:,:,j), shape = kwargs.getdatashape, x = kwargs.x{i}, z = kwargs.y{i})});
+                            selecthandlex = cat(1, selecthandlex, {@(roiobj) guigetdata(roiobj, kwargs.x{i}, shape = kwargs.getdatashape, x = kwargs.x{i}, z = kwargs.y{i})});
+                            selecthandley = cat(1, selecthandley, {@(roiobj) guigetdata(roiobj, kwargs.y{i}, shape = kwargs.getdatashape, x = kwargs.x{i}, z = kwargs.y{i})});
                         end
                     else
                         error('x and y must be have same size')
@@ -100,15 +116,15 @@ function getdata = guitile(data, kwargs)
                     if numel(unique(sz)) == ndims(kwargs.x{i})
                         for j = 1:size(data{i}, 3)
                             pltfunc = cat(1, pltfunc, {@() contourf(kwargs.x{i}(:,:,j), kwargs.y{i}(:,:,j), data{i}(:,:,j), 100, 'LineStyle', 'None')});
-                            selecthandle = cat(1, selecthandle, {@(roiobj) guigetdata(roiobj, data{i}(:,:,j), shape = 'raw', x = kwargs.x{i}(:,:,j), z = kwargs.y{i}(:,:,j))});
-                            selecthandlex = cat(1, selecthandlex, {@(roiobj) guigetdata(roiobj, kwargs.x{i}(:,:,j), shape = 'raw', x = kwargs.x{i}(:,:,j), z = kwargs.y{i}(:,:,j))});
-                            selecthandley = cat(1, selecthandley, {@(roiobj) guigetdata(roiobj, kwargs.y{i}(:,:,j), shape = 'raw', x = kwargs.x{i}(:,:,j), z = kwargs.y{i}(:,:,j))});
+                            selecthandle = cat(1, selecthandle, {@(roiobj) guigetdata(roiobj, data{i}(:,:,j), shape = kwargs.getdatashape, x = kwargs.x{i}(:,:,j), z = kwargs.y{i}(:,:,j))});
+                            selecthandlex = cat(1, selecthandlex, {@(roiobj) guigetdata(roiobj, kwargs.x{i}(:,:,j), shape = kwargs.getdatashape, x = kwargs.x{i}(:,:,j), z = kwargs.y{i}(:,:,j))});
                         end
                     else
                         error('x and y must be have same size')
                     end
                 end
             end
+            selectwin = cat(1, selectwin, {@(roiobj) guigetdata(roiobj, ones(size(data{i}, [1, 2])), shape = kwargs.getdatashape, x = kwargs.x{i}, z = kwargs.y{i})});
         end
     end
 
@@ -124,8 +140,11 @@ function getdata = guitile(data, kwargs)
     if isa(kwargs.clim, 'double'); kwargs.clim = repmat({kwargs.clim}, 1, numel(pltfunc)); end
 
     % plot 2D fields
+    if isempty(kwargs.axtarget)
+        kwargs.axtarget = 1:numel(pltfunc);
+    end
     ax = cell(1, numel(pltfunc));
-    for i = 1:numel(pltfunc)
+    for i = kwargs.axtarget
         ax{i} = nexttile; pltfunc{i}(); 
         set(gca, FontSize = kwargs.fontsize);
         if ~isempty(kwargs.aspect); axis(kwargs.aspect{i}); end
@@ -141,7 +160,7 @@ function getdata = guitile(data, kwargs)
     rois = {}; 
     if isa(kwargs.mask, 'double'); kwargs.mask = repmat({kwargs.mask}, 1, numel(ax)); end
     if kwargs.shape ~= "none"
-        for i = 1:numel(ax)
+        for i = kwargs.axtarget
             temp = guiselectregion(ax{i}, shape = kwargs.shape, ...
                 mask = kwargs.mask{i}, interaction = 'all', number = kwargs.number);
             rois = cat(2, rois, {temp});

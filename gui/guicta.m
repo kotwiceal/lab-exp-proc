@@ -5,8 +5,8 @@ function varargout = guicta(kwargs)
         kwargs.spec {mustBeA(kwargs.spec, {'double', 'cell'})} % matrix/pase-wise array
         kwargs.x {mustBeA(kwargs.x, {'double', 'cell'})} = [] % longitudinal coordinate matrix/pase-wise array
         kwargs.y {mustBeA(kwargs.y, {'double', 'cell'})} = [] % tranversal coordinate matrix/pase-wise array
-        kwargs.f (1,:) double = []
-        kwargs.intspec {mustBeA(kwargs.intspec, {'double', 'function_handle'})} = []
+        kwargs.f {mustBeA(kwargs.f, {'double', 'cell'})} = []
+        kwargs.intspec {mustBeA(kwargs.intspec, {'double', 'function_handle', 'cell'})} = []
         kwargs.amp {mustBeA(kwargs.amp, {'double', 'cell'})} = []
         kwargs.freqrange (1,:) double = []
         %% roi parameters
@@ -15,14 +15,15 @@ function varargout = guicta(kwargs)
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all' % interaction behaviour of ROI instances
         kwargs.number (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.number, 1)} = 1 % number of ROI instances
         %% axis parameters
+        kwargs.arrangement (1,:) char {mustBeMember(kwargs.arrangement, {'flow', 'vertical', 'horizontal'})} = 'flow'
         kwargs.xlim (:,:) {mustBeA(kwargs.xlim, {'double', 'cell'})} = [] % x-axis limit
         kwargs.ylim (:,:) {mustBeA(kwargs.ylim, {'double', 'cell'})} = [] % y-axis limit
         kwargs.xlabel (1,:) {mustBeA(kwargs.xlabel, {'char', 'cell'})} = {} % x-axis label of field subplot
         kwargs.ylabel (1,:) {mustBeA(kwargs.ylabel, {'char', 'cell'})} = {} % y-axis label of field subplot
         kwargs.clabel (1,:) {mustBeA(kwargs.clabel, {'char', 'cell'})} = {} % color-axis label of field subplot
         kwargs.clim (:,:) {mustBeA(kwargs.clim, {'double', 'cell'})} = [] % color-axis limit
-        kwargs.displayname (1,:) {mustBeA(kwargs.displayname, {'char', 'cell'})} = {} % list of labels
-        kwargs.mdisplayname string = [] % list of labels
+        kwargs.displayname (1,:) {mustBeA(kwargs.displayname, {'char', 'cell', 'string'})} = {} % list of labels
+        kwargs.mdisplayname (1,:) {mustBeA(kwargs.mdisplayname, {'char', 'cell', 'string'})} = {} % list of labels
         kwargs.mxlabel (1,:) char = [] % x-axis label of marker subplot
         kwargs.mylabel (1,:) char = [] % y-axis label of marker subplot
         kwargs.mxlim (1,:) double = [] % x-axis limit of marker subplot
@@ -47,8 +48,13 @@ function varargout = guicta(kwargs)
     if isa(kwargs.f, 'double'); kwargs.f = repmat({kwargs.f}, 1, numel(kwargs.spec)); end
     df = kwargs.f{1}(2)-kwargs.f{1}(1);
     freq2ind = @(ind) kwargs.f{1}>=ind(1)&kwargs.f{1}<=ind(2);
-    if isempty(kwargs.intspec); kwargs.intspec = @(spec, freq) reshape(sqrt(abs(df*sum(spec(freq2ind(freq), :)))), [], size(kwargs.spec, 2:ndims(kwargs.spec))); end
+    if isempty(kwargs.intspec); kwargs.intspec = repmat({@(spec, freq) reshape(sqrt(abs(df*sum(spec(freq2ind(freq), :)))), [], size(kwargs.spec, 2:ndims(kwargs.spec)))},1,numel(kwargs.spec)); end
+    if ~isa(kwargs.intspec, 'cell'); kwargs.intspec = {kwargs.intspec}; end
     
+    if numel(kwargs.intspec) == 1
+        kwargs.intspec = repmat(kwargs.intspec, 1, numel(kwargs.spec));
+    end
+
     % initiate amplitude cell array
     if isempty(kwargs.amp)
         % full frequency range
@@ -69,7 +75,7 @@ function varargout = guicta(kwargs)
     initplotfunc();
 
     % create figure and redefine appearance paremeter
-    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout('flow'); colormap(kwargs.colormap);
+    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout(kwargs.arrangement); colormap(kwargs.colormap);
     if isa(kwargs.xlabel, 'char'); kwargs.xlabel = repmat({kwargs.xlabel}, 1, numel(pltfunc)); end
     if isa(kwargs.ylabel, 'char'); kwargs.ylabel = repmat({kwargs.ylabel}, 1, numel(pltfunc)); end
     if isa(kwargs.aspect, 'char'); kwargs.aspect = repmat({kwargs.aspect}, 1, numel(pltfunc)); end
@@ -100,13 +106,14 @@ function varargout = guicta(kwargs)
     end
 
     varargout{1} = @() getdata();
+    varargout{2} = ax;
 
     %% functions
 
     function procamp()
         %% process amplitude by given frequency range
         for i = 1:numel(kwargs.spec)
-            kwargs.amp{i} = kwargs.intspec(kwargs.spec{i}, kwargs.freqrange);
+            kwargs.amp{i} = kwargs.intspec{i}(kwargs.spec{i}, kwargs.freqrange);
         end
     end
 
@@ -122,7 +129,7 @@ function varargout = guicta(kwargs)
     end
 
     function eventpointmoving(~, ~)
-        %% binding to nodes
+        %% snap to nodes
         for j = 1:numel(rois)
             for i = 1:numel(rois{j})
                 if rois{j}{i}.Position ~= kwargs.mask{j}{i}

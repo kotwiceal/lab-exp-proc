@@ -58,7 +58,11 @@ function result = guigetdata(roi, data, kwargs)
             kwargs.position = roi.Position;
         else
             pos = roi.Position;
-            mask = [pos(1), pos(2); pos(1)+pos(3), pos(2); pos(1)+pos(3), pos(2)+pos(4); pos(1), pos(2)+pos(4)];
+            if roi.Type == "images.roi.polygon"
+                mask = pos;
+            else
+                mask = [pos(1), pos(2); pos(1)+pos(3), pos(2); pos(1)+pos(3), pos(2)+pos(4); pos(1), pos(2)+pos(4)];
+            end
             index = inpolygon(kwargs.x(:), kwargs.z(:), mask(:, 1), mask(:, 2));
             [r, c] = ind2sub(sz(1:2), find(index==1));
             kwargs.position = [min(r), min(c), max(r)-min(r), max(c)-min(c)];

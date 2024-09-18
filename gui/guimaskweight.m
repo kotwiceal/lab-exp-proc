@@ -1,5 +1,5 @@
 function getdata = guimaskweight(data, kwargs)
-    %% Interactive weighting of multifram two-dimensional data.
+    %% Interactive weighting of multiframe two-dimensional data.
     %% The function returns following results:
     %   getdata:        [function_handle]       - function returning results at the last polygon displacements
     
@@ -11,7 +11,7 @@ function getdata = guimaskweight(data, kwargs)
 
     arguments
         data double % two-dimensional multiframe data
-        kwargs.tukey double = 1 % tukey window function parmeter
+        kwargs.tukey double = 1 % tukey window function parameter
         %% roi and axis parameters
         kwargs.mask double = [] % four-vertex polygon
         kwargs.docked logical = true % docked figure flag

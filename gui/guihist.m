@@ -25,7 +25,7 @@ function varargout = guihist(varargin, kwargs)
     % % fa = @(a, x) f1(a, x) + f2(a, x); % approximation function
     %
     % % constrain function
-    % nonlcon = @(x) nonlconfitdist(x,distname='beta2',rmode1=[1e-4,6e-4],rvar1=[1e-8,1e-7],rmode2=[7e-4,5e-3],rvar2=[1e-7,1e-5]);
+    % nonlcon = @(x) nonlconfitdist(x,distname='beta2',mode1=[1e-4,6e-4],var1=[1e-8,1e-7],mode2=[7e-4,5e-3],var2=[1e-7,1e-5]);
     % % boundary constrains
     % lb = [0, 1e-3, 0, 7.8, 6416, 1e-3, 1e-2, 0, 0, 0];
     % ub = [2, 2e1, 1e-2, 7.8, 6416, 10, 2e1, 1e-2, 1e3, 1e4];
@@ -72,7 +72,7 @@ function varargout = guihist(varargin, kwargs)
         kwargs.cdf logical = false % plot cdf of statistics
         kwargs.cumsum logical = false % plot cumulative sum of statistics
         kwargs.docked logical = false % docked figure
-        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto', 'image', 'square'})} = 'auto'
+        kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto', 'image', 'square'})} = 'image'
         kwargs.aspecthist (1,:) char {mustBeMember(kwargs.aspecthist, {'equal', 'auto', 'image', 'square'})} = 'auto'
         kwargs.title (1,:) char = [] % to show global title
         kwargs.filename (1,:) char = [] % to store figure
@@ -243,7 +243,7 @@ function varargout = guihist(varargin, kwargs)
                         edges = edges(index); counts = counts(index); clear index;
                     end
 
-                    plot(ax{1}, edges, counts, 'Color', rois{i}.UserData.color, ...
+                    plot(ax{1}, edges, counts, 'Color', rois{i}.Color, ...
                         'DisplayName', strcat("raw ", num2str(i)))
                     xlabel(ax{1}, 'edges'); ylabel(ax{1}, kwargs.norm);
                     hold(ax{1}, 'on'); box(ax{1}, 'on'); grid(ax{1}, 'on');
@@ -303,10 +303,10 @@ function varargout = guihist(varargin, kwargs)
             [~, modes, edges_fit, ~, edges_raw, counts_raw] = fithistfunc(rois{i});
 
             if length(rois) == 1
-                plot(ax{1}, edges_raw, counts_raw, 'Color', rois{i}.UserData.color, ...
+                plot(ax{1}, edges_raw, counts_raw, 'Color', rois{i}.Color, ...
                     'DisplayName', 'raw')
             else
-                plot(ax{1}, edges_raw, counts_raw, 'Color', rois{i}.UserData.color, ...
+                plot(ax{1}, edges_raw, counts_raw, 'Color', rois{i}.Color, ...
                     'DisplayName', strcat("raw ", num2str(i)))
             end
 
