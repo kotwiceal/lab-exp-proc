@@ -86,7 +86,7 @@ function result = procinterm(data, kwargs)
         kwargs.amp2 double = [] % constraints of amplitude value the second mode
         %% pre-pocessing parameters
         % method to filter threshold field
-        kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'average', 'gaussian', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'mode', 'dilate'})} = 'median'
+        kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'average', 'gaussian', 'median', 'wiener', 'mode', 'dilate'})} = 'median'
         kwargs.prefiltker double = [4, 4] % kernel of filtering threshold field
         kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string'})} = 'symmetric' % padding value
         %% post-processing parameters
@@ -114,14 +114,11 @@ function result = procinterm(data, kwargs)
 
             if ~isvector(data)
                 kernel = kwargs.kernel; stride = kwargs.stride;
-                kwargs.kernel = cell(1, 2); kwargs.stride = cell(1, 2); kwargs.offset = cell(1, 2);
-                kwargs.kernel{1} = [kernel, szd(3)];
-                kwargs.stride{1} = [stride, szd(3)];
-                kwargs.offset{1} = [0, 0, 0];
-                kwargs.kernel{2} = [kernel, szf(3)];
-                kwargs.stride{2} = [stride, szf(3)];
-                kwargs.offset{2} = [0, 0, 0];
-
+                kwargs.kernel = cell(1, 2); kwargs.stride = cell(1, 2);
+                kwargs.kernel{1} = [kernel, nan];
+                kwargs.stride{1} = [stride, nan];
+                kwargs.kernel{2} = [kernel, nan];
+                kwargs.stride{2} = [stride, nan];
                 x0 = @(y) squeeze(median(y, [1, 2], 'omitmissing'));
             else
                 x0 = @(y) median(y, 1, 'omitmissing');
@@ -132,7 +129,7 @@ function result = procinterm(data, kwargs)
                 lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
 
             result = nonlinfilt(data, fitdistcoef, method = @(x, y) nlkernel(x, y), ...
-                kernel = kwargs.kernel, stride = kwargs.stride, offset = kwargs.offset, padval = kwargs.padval);
+                kernel = kwargs.kernel, stride = kwargs.stride, padval = kwargs.padval);
         else
             nlkernel = @(x) fitdistfilt(x, method = kwargs.method, norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
                 quantile = kwargs.quantile, distname = kwargs.distname, x0 = kwargs.x0, ...

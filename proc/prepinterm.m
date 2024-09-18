@@ -19,7 +19,7 @@ function result = prepinterm(data, kwargs)
         % differentiation directions 
         kwargs.dirdim (1,:) double = 1
         % prefilter type
-        kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'gaussian', 'average', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'wiener-median', 'mode'})} = 'gaussian'
+        kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'gaussian', 'average', 'median', 'wiener', 'wiener-median', 'mode'})} = 'gaussian'
         kwargs.prefiltker double = [3, 3] % prefilter kernel size
         kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string'})} = 'symmetric' % padding value
         % fill missing data
@@ -36,7 +36,7 @@ function result = prepinterm(data, kwargs)
         kwargs.eigord double = 1
         %% postprocessing parameters
         % portfilter type
-        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'gaussian', 'average', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'wiener-median', 'mode'})} = 'median'
+        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'gaussian', 'average', 'median', 'wiener', 'wiener-median', 'mode'})} = 'median'
         % postfilter
         kwargs.postfiltker double = [15, 15] % postfilter kernel size
     end

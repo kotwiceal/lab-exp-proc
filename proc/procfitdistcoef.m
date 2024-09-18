@@ -52,8 +52,8 @@ function fitdistcoef =  procfitdistcoef(data, kwargs)
 
     if isempty(kwargs.fitdistcoefinit)
         if ~isvector(data)
-            kwargs.kernel = [kwargs.kernel, szd(3)];
-            kwargs.stride = [kwargs.stride, szd(3)];
+            kwargs.kernel = [kwargs.kernel, nan];
+            kwargs.stride = [kwargs.stride, nan];
         end
     
         nlkernel = @(x) fitdistfilt(x, method = 'fitdistcoef', norm = kwargs.norm, binedge = kwargs.binedge, ...
