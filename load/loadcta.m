@@ -43,10 +43,10 @@ function varargout = loadcta(folder, kwargs)
         % get filenames
         filenames.dat = getfilenames(folder, extension = '.dat', subfolders = kwargs.subfolders);
         filenames.txt = getfilenames(folder, extension = '.txt', subfolders = kwargs.subfolders);
-        filenames.raw = filenames.dat(contains(filenames.dat, 'raw'));
-        filenames.data = filenames.dat(~contains(filenames.dat, 'raw'));
-        filenames.scan = filenames.txt(contains(filenames.txt, 'scan'));
-        filenames.cal = filenames.txt(contains(filenames.txt, 'cal'));
+        try; filenames.raw = filenames.dat(contains(filenames.dat, 'raw')); catch; warning('raw data not found'); end
+        try; filenames.data = filenames.dat(~contains(filenames.dat, 'raw')); catch; warning('spectra data not found'); end
+        try; filenames.scan = filenames.txt(contains(filenames.txt, 'scan')); catch; warning('scan data not found'); end
+        try; filenames.cal = filenames.txt(contains(filenames.txt, 'cal')); catch; warning('calibration data not found'); end
     
         % load spectra
         try
@@ -109,8 +109,8 @@ function varargout = loadcta(folder, kwargs)
     
         % load cal
         try
+            mes = "calibration loading failed";
             if ~isempty(filenames.cal) && kwargs.calib
-                mes = "calibration loading failed";
                 temporary = readtable(filenames.cal, 'Delimiter', 'tab', 'VariableNamingRule', 'Preserve');
                 voltmap = table2array(temporary(1:3,1:2));
                 coef = table2array(temporary(6,:));

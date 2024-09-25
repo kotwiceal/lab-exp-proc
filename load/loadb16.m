@@ -56,7 +56,7 @@ function images = loadb16(input, kwargs)
         kwargs.filenames = input;
     end
 
-    images = [];
+    images = uint16([]);
 
     for i = 1:numel(kwargs.filenames)
         % Open the file
