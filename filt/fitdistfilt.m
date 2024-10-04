@@ -68,8 +68,7 @@ function y = fitdistfilt(x, kwargs)
     end
 
     function y = integralratio(modes)
-        modes_cs = cumsum(modes, 1);
-        y = 1-modes_cs(end,1)/sum(modes_cs(end,:), 'omitmissing');
+        y = sum(modes(:,2), 'omitmissing')./sum(modes(:), 'omitmissing');
     end
 
     try

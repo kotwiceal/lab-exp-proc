@@ -1,72 +1,72 @@
 function varargout = gridcta(ax1, ax2, ax3, kwargs)
-%% Build scanning grid for single hot-wire measurement
-%% The function takes following arguments:
-%   ax1:            [1×k double]            - longitudinal direction
-%   ax2:            [1×n double]            - transverse direction
-%   ax3:            [1×m double]            - vertical direction
-%   ax4:            [1×p double]            - optional axis
-%   filename:       [char array]            - to save scan table
-%   scanorder:      [1×3 double]            - scanning axis order
-%   axorder:        [1×3 double]            - axis coloumn order
-%   ax10:           [1×k double]            - base points of longitudinal direction
-%   ax20:           [1×n double]            - base points of transverse direction
-%   ax30:           [1×m double]            - base points of vertical direction
-%   show:           [1×1 logical]           - show scanning points
-%   fit:            [char array]            - fit type
-%   repelem:        [1×1 double]            - repeat element
-%% The function returns following results:
-%   scan:           [knm×3 double]          - scan table
-%   scancor:        [knm×3 double]          - corrected scan table
-%% Examples:
-
-%% 1. Build 1D scanning table (vertical profile) and save in scan_1d.txt
-% gridcta(0, 0, 0:50:1000, filename = 'scan_1d')
-
-%% 2. Build 2D scanning table (cross-section) and save in scan_2d.txt
-% gridcta(0, -3000:500:3000, 0:50:1000, filename = 'scan_2d')
-
-%% 3. Build 2D scanning table (volume) and save in scan_3d.txt
-% gridcta(0:200:1000, -3000:500:3000, 0:50:1000, filename = 'scan_3d')
-
-%% 4. Build 1D scanning table (vertical profile), correct base and save in scan_1dc.txt
-% gridcta(0, 0, 200:100:1000, ax10 = 0, ax20 = 0, ax30 = -35, filename = 'scan_1dc')
-
-%% 5. Build 2D scanning table (cross-section-transverse), correct base and save in scan_2dc.txt
-% gridcta(0, -1000:500:1000, 200:100:1000, ax10 = 0, ax20 = [-1200, -800, -400, 0, 400, 800, 1000], ...
-%   ax30 = [-10, 20, -30, 40, -50, 60, -70], filename = 'scan_2dc')
-
-%% 6. Build 2D scanning table (cross-section-longitudinal), correct base and save in scan_2dc.txt
-% gridcta(0:100:600, 800, 200:100:1000, ax10 = 0:200:1200, ...
-%    ax20 = 800, ax30 = [-10, 20, -30, 40, -50, 60, -70], filename = 'scan_2dc')
-
-%% 7. Build 3D scanning table (horizon-plane-section), correct base (grid-wise notation {ax10, ax20, ax30}) and save in scan_2dc.txt
-% gridcta(0:100:1000, -800:200:800, 200, ax10 = 0:400:2000, ax20 = -1000:500:1000, ...
-%   ax30 = 100*rand(6, 5), filename = 'scan_2dc')
-
-%% 8. Build 3D scanning table (horizon-plane-section), correct base (point-wise notation {ax10, ax20, ax30}) and save in scan_2dc.txt
-% ax10 = [0, 0, 0, 0, 500, 500, 500, 1000, 1000, 1000, 1000, 1000];
-% ax20 = [-1000, -800, 800, 1000, -1200, 600, 1200, -2000, -1000, -500, 0, 1000];
-% ax30 = 100*rand(1, numel(ax10));
-% gridcta(0:100:1000, -800:200:800, 500, ax10 = ax10, ax20 = ax20, ax30 = ax30, ...
-%   filename = 'scan_3dc', pointwise = true)
-
-%% 9. Build 3D scanning table (volume), correct base (grid-wise notation {ax10, ax20, ax30})  and save in scan_3dc.txt
-% gridcta(0:100:1000, -800:200:800, 200:100:1000, ax10 = 0:400:2000, ax20 = -1000:500:1000, ...
-%   ax30 = 100*rand(6, 5), filename = 'scan_3dc')
-
-%% 10. Build 3D scanning table (volume), correct base (point-wise notation {ax10, ax20, ax30}) and save in scan_3dc.txt
-% ax10 = [0, 0, 0, 0, 500, 500, 500, 1000, 1000, 1000, 1000, 1000];
-% ax20 = [-1000, -800, 800, 1000, -1200, 600, 1200, -2000, -1000, -500, 0, 1000];
-% ax30 = 100*rand(1, numel(ax10));
-% gridcta(0:100:1000, -800:200:800, 200:100:1000, ax10 = ax10, ax20 = ax20, ax30 = ax30, ...
-%   filename = 'scan_3dc', pointwise = true)
-
-%% 10. Build 2D scanning table (cross-section-transverse) with repeated elements
-% gridcta(3000, -1000:100:1000, 0:50:500, repelem = 2)
-
-%% 11. Build 2D scanning table (cross-section-transverse) with optinal axis
-% gridcta(3000, -1000:100:1000, 0:50:500, ax4 = [0, 1]);
-
+    %% Build scanning grid for single hot-wire measurement
+    %% The function takes following arguments:
+    %   ax1:            [1×k double]            - longitudinal direction
+    %   ax2:            [1×n double]            - transverse direction
+    %   ax3:            [1×m double]            - vertical direction
+    %   ax4:            [1×p double]            - optional axis
+    %   filename:       [char array]            - to save scan table
+    %   scanorder:      [1×3 double]            - scanning axis order
+    %   axorder:        [1×3 double]            - axis coloumn order
+    %   ax10:           [1×k double]            - base points of longitudinal direction
+    %   ax20:           [1×n double]            - base points of transverse direction
+    %   ax30:           [1×m double]            - base points of vertical direction
+    %   show:           [1×1 logical]           - show scanning points
+    %   fit:            [char array]            - fit type
+    %   repelem:        [1×1 double]            - repeat element
+    %% The function returns following results:
+    %   scan:           [knm×3 double]          - scan table
+    %   scancor:        [knm×3 double]          - corrected scan table
+    %% Examples:
+    
+    %% 1. Build 1D scanning table (vertical profile) and save in scan_1d.txt
+    % gridcta(0, 0, 0:50:1000, filename = 'scan_1d')
+    
+    %% 2. Build 2D scanning table (cross-section) and save in scan_2d.txt
+    % gridcta(0, -3000:500:3000, 0:50:1000, filename = 'scan_2d')
+    
+    %% 3. Build 2D scanning table (volume) and save in scan_3d.txt
+    % gridcta(0:200:1000, -3000:500:3000, 0:50:1000, filename = 'scan_3d')
+    
+    %% 4. Build 1D scanning table (vertical profile), correct base and save in scan_1dc.txt
+    % gridcta(0, 0, 200:100:1000, ax10 = 0, ax20 = 0, ax30 = -35, filename = 'scan_1dc')
+    
+    %% 5. Build 2D scanning table (cross-section-transverse), correct base and save in scan_2dc.txt
+    % gridcta(0, -1000:500:1000, 200:100:1000, ax10 = 0, ax20 = [-1200, -800, -400, 0, 400, 800, 1000], ...
+    %   ax30 = [-10, 20, -30, 40, -50, 60, -70], filename = 'scan_2dc')
+    
+    %% 6. Build 2D scanning table (cross-section-longitudinal), correct base and save in scan_2dc.txt
+    % gridcta(0:100:600, 800, 200:100:1000, ax10 = 0:200:1200, ...
+    %    ax20 = 800, ax30 = [-10, 20, -30, 40, -50, 60, -70], filename = 'scan_2dc')
+    
+    %% 7. Build 3D scanning table (horizon-plane-section), correct base (grid-wise notation {ax10, ax20, ax30}) and save in scan_2dc.txt
+    % gridcta(0:100:1000, -800:200:800, 200, ax10 = 0:400:2000, ax20 = -1000:500:1000, ...
+    %   ax30 = 100*rand(6, 5), filename = 'scan_2dc')
+    
+    %% 8. Build 3D scanning table (horizon-plane-section), correct base (point-wise notation {ax10, ax20, ax30}) and save in scan_2dc.txt
+    % ax10 = [0, 0, 0, 0, 500, 500, 500, 1000, 1000, 1000, 1000, 1000];
+    % ax20 = [-1000, -800, 800, 1000, -1200, 600, 1200, -2000, -1000, -500, 0, 1000];
+    % ax30 = 100*rand(1, numel(ax10));
+    % gridcta(0:100:1000, -800:200:800, 500, ax10 = ax10, ax20 = ax20, ax30 = ax30, ...
+    %   filename = 'scan_3dc', pointwise = true)
+    
+    %% 9. Build 3D scanning table (volume), correct base (grid-wise notation {ax10, ax20, ax30})  and save in scan_3dc.txt
+    % gridcta(0:100:1000, -800:200:800, 200:100:1000, ax10 = 0:400:2000, ax20 = -1000:500:1000, ...
+    %   ax30 = 100*rand(6, 5), filename = 'scan_3dc')
+    
+    %% 10. Build 3D scanning table (volume), correct base (point-wise notation {ax10, ax20, ax30}) and save in scan_3dc.txt
+    % ax10 = [0, 0, 0, 0, 500, 500, 500, 1000, 1000, 1000, 1000, 1000];
+    % ax20 = [-1000, -800, 800, 1000, -1200, 600, 1200, -2000, -1000, -500, 0, 1000];
+    % ax30 = 100*rand(1, numel(ax10));
+    % gridcta(0:100:1000, -800:200:800, 200:100:1000, ax10 = ax10, ax20 = ax20, ax30 = ax30, ...
+    %   filename = 'scan_3dc', pointwise = true)
+    
+    %% 10. Build 2D scanning table (cross-section-transverse) with repeated elements
+    % gridcta(3000, -1000:100:1000, 0:50:500, repelem = 2)
+    
+    %% 11. Build 2D scanning table (cross-section-transverse) with optinal axis
+    % gridcta(3000, -1000:100:1000, 0:50:500, ax4 = [0, 1]);
+    
     arguments
         ax1 double
         ax2 double
@@ -84,7 +84,7 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
         kwargs.show logical = true
         kwargs.delimiter (1,:) char = 'tab'
         kwargs.pointwise logical = false, 
-        kwargs.fit (1,:) char {mustBeMember(kwargs.fit, {'', 'poly01', 'poly10', 'poly11', 'poly02', 'poly20', 'poly22', 'poly21', 'poly12'})} = ''
+        kwargs.fit (1,:) char {mustBeMember(kwargs.fit, {'', 'poly01', 'poly10', 'poly11', 'poly02', 'poly20', 'poly22', 'poly21', 'poly12', 'linearinterp'})} = ''
         kwargs.repelem (1,1) double = 1
         kwargs.docked (1,1) logical = false
     end
@@ -103,18 +103,28 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
     
     iscorbase = ~(isempty(kwargs.ax10) && isempty(kwargs.ax20) && isempty(kwargs.ax30));
 
-    % shift the scan in x-z plane by linear law
+    % shift the scan in x-z plane by piesewise linear law
     if ~isempty(kwargs.ax1s) && ~isempty(kwargs.ax2s)
         [kwargs.ax1s, kwargs.ax2s] = prepareCurveData(kwargs.ax1s, kwargs.ax2s);
-        ft = fit(kwargs.ax1s, kwargs.ax2s, 'poly1');
-        scan(:, 2) = scan(:, 2) - ft(scan(:, 1));
+        ft = fit(kwargs.ax1s, kwargs.ax2s, 'linearinterp');
+        scan(:, 2) = scan(:, 2) - round(ft(scan(:, 1)));
     end
 
-    % shift the scan in y-z plane by linear law
+    % shift the scan in y-z plane by piesewise linear law
     if ~isempty(kwargs.ax2s) && ~isempty(kwargs.ax3s)
         [kwargs.ax2s, kwargs.ax3s] = prepareCurveData(kwargs.ax2s, kwargs.ax3s);
-        ft = fit(kwargs.ax2s, kwargs.ax3s, 'poly1');
-        scan(:, 3) = scan(:, 3) - ft(scan(:, 2));
+        ft = fit(kwargs.ax2s, kwargs.ax3s, 'linearinterp');
+        scan(:, 3) = scan(:, 3) - round(ft(scan(:, 2)));
+    end
+
+    % shift the scan in x-y-z plane by piesewise linear law
+    if ~isempty(kwargs.ax1s) && ~isempty(kwargs.ax2s) && ~isempty(kwargs.ax3s)
+        [kwargs.ax1s, kwargs.ax2s] = prepareCurveData(kwargs.ax1s, kwargs.ax2s);
+        [kwargs.ax1s, kwargs.ax3s] = prepareCurveData(kwargs.ax1s, kwargs.ax3s);
+        ft_12 = fit(kwargs.ax1s, kwargs.ax2s, 'linearinterp');
+        ft_13 = fit(kwargs.ax1s, kwargs.ax3s, 'linearinterp');
+        scan(:, 2) = scan(:, 2) - round(ft_12(scan(:, 1)));
+        scan(:, 3) = scan(:, 3) - round(ft_13(scan(:, 1)));
     end
 
     if iscorbase

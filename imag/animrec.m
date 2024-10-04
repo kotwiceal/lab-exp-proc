@@ -16,10 +16,12 @@ function animrec(data, kwargs)
         kwargs.ylabel (1,:) char = [] % y-axis label
         kwargs.aspect (1,:) {mustBeA(kwargs.aspect, {'char', 'cell'}), mustBeMember(kwargs.aspect, {'equal', 'auto', 'manual', 'image', 'square'})} = 'image' % axis ratio
         kwargs.fontsize (1,1) double = 14
-        kwargs.clim (1,2) double = [1e-4, 5e-3] % color axis limit
+        kwargs.clim (1,:) double = [] % color axis limit
         kwargs.colormap (1,:) char = 'turbo' % colomap name
         kwargs.colorbar (1,1) logical = false % show colorbar
+        kwargs.colorbarloc (1,:) char = []
         kwargs.clabel (1,:) {mustBeA(kwargs.clabel, {'char', 'cell'})} = {} % color-axis label
+        kwargs.title (1,:) char = []
     end
 
     function plotframe(index)
@@ -33,7 +35,7 @@ function animrec(data, kwargs)
             end
         else
             hold(ax, 'on');
-            surf(ax, kwargs.x, kwargs.z, data(:,:,index), 'LineStyle', 'None');
+            contourf(ax, kwargs.x, kwargs.z, data(:,:,index), 100, 'LineStyle', 'None');
             xlim(ax, [min(kwargs.x(:)), max(kwargs.x(:))]);
             ylim(ax, [min(kwargs.z(:)), max(kwargs.z(:))]);
             if display_label
@@ -44,9 +46,12 @@ function animrec(data, kwargs)
             box(ax, 'on');
         end
         axis(ax, kwargs.aspect);
-        xlabel(ax, kwargs.xlabel); ylabel(ax, kwargs.ylabel); clim(ax, kwargs.clim);
+        xlabel(ax, kwargs.xlabel); ylabel(ax, kwargs.ylabel); 
+        if isempty(kwargs.clim) && index == 1; kwargs.clim = clim(ax); end
+        clim(ax, kwargs.clim);
         colormap(ax, kwargs.colormap);
         if kwargs.colorbar; clb = colorbar(); if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel); end; end
+        if ~isempty(kwargs.title); title(kwargs.title,FontWeight='normal'); end
     end
 
     function eventroiselmoving(~, ~)

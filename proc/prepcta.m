@@ -25,6 +25,7 @@ function varargout = prepcta(input, kwargs)
         kwargs.corvibrind (1,:) double = [1, 2]
         kwargs.reshape double = [] % reshape data
         kwargs.permute double = [] % permute data
+        kwargs.procamp (1,:) char {mustBeMember(kwargs.procamp, {'rms', 'sum'})} = 'rms'
         % transform scan unit
         kwargs.unit (1,:) char {mustBeMember(kwargs.unit, {'mm', 'count'})} = 'mm'
         kwargs.xfit = [] % fitobj transfrom to leading edge coordinate system
@@ -129,9 +130,19 @@ function varargout = prepcta(input, kwargs)
     result.spec = spec;
     result.f = f;
     if ismatrix(spec{1,1})
-        handler = @(spec, freq) sqrt(abs(df*sum(spec(freq2ind(freq), :))));
+        switch kwargs.procamp
+            case 'rms'
+                handler = @(spec, freq) sqrt(abs(df*sum(spec(freq2ind(freq), :))));
+            case 'sum'
+                handler = @(spec, freq) (df*sum(spec(freq2ind(freq), :)));
+        end
     else
-        handler = @(spec, freq) reshape(sqrt(abs(df*sum(spec(freq2ind(freq), :)))), size(spec, 2:ndims(spec)));
+        switch kwargs.procamp
+            case 'rms'
+                handler = @(spec, freq) reshape(sqrt(abs(df*sum(spec(freq2ind(freq), :)))), size(spec, 2:ndims(spec)));
+            case 'sum'
+                handler = @(spec, freq) reshape(df*sum(spec(freq2ind(freq), :)), size(spec, 2:ndims(spec)));
+        end
     end
     result.intspec = handler;
     if ~isempty(kwargs.scan)

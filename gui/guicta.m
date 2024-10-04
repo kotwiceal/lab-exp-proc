@@ -28,8 +28,11 @@ function varargout = guicta(kwargs)
         kwargs.mylabel (1,:) char = [] % y-axis label of marker subplot
         kwargs.mxlim (1,:) double = [] % x-axis limit of marker subplot
         kwargs.mylim (1,:) double = [] % y-axis limit of marker subplot
-        kwargs.xscale (1,:) char {mustBeMember(kwargs.xscale, {'linear', 'log'})} = 'log'
-        kwargs.yscale (1,:) char {mustBeMember(kwargs.yscale, {'linear', 'log'})} = 'log'
+        kwargs.maspect (1,:) {mustBeA(kwargs.maspect, {'char', 'cell'}), mustBeMember(kwargs.maspect, {'equal', 'auto', 'manual', 'image', 'square'})} = 'square' % axis ratio
+        kwargs.xscale (1,:) char {mustBeMember(kwargs.xscale, {'linear', 'log'})} = 'linear'
+        kwargs.yscale (1,:) char {mustBeMember(kwargs.yscale, {'linear', 'log'})} = 'linear'
+        kwargs.mxscale (1,:) char {mustBeMember(kwargs.mxscale, {'linear', 'log'})} = 'log'
+        kwargs.myscale (1,:) char {mustBeMember(kwargs.myscale, {'linear', 'log'})} = 'log'
         kwargs.legend logical = false % show legend
         kwargs.docked logical = false % docker figure
         kwargs.colormap (1,:) char = 'turbo' % colormap
@@ -145,7 +148,7 @@ function varargout = guicta(kwargs)
     function eventpointmoved(~, ~)
         %% plot spectra
         cla(axpoint); hold(axpoint, 'on'); box(axpoint, 'on'); grid(axpoint, 'on');
-        set(axpoint, XScale = kwargs.xscale, YScale = kwargs.yscale, FontSize = kwargs.fontsize);
+        set(axpoint, XScale = kwargs.mxscale, YScale = kwargs.myscale, FontSize = kwargs.fontsize);
         kwargs.specpoint = cell(1, numel(rois));
         for i = 1:numel(rois)
             kwargs.specpoint{i} = cell(1, numel(rois{i}));
@@ -159,7 +162,7 @@ function varargout = guicta(kwargs)
         if ~isempty(kwargs.mxlim); xlim(axpoint, kwargs.mxlim); end
         if ~isempty(kwargs.mylim); xlim(axpoint, kwargs.mylim); end
         if ~isempty(kwargs.displayname); legend(axpoint, kwargs.mdisplayname, Location = kwargs.location); end
-        xlim(axpoint, [min(kwargs.f{1}), max(kwargs.f{1})]);
+        xlim(axpoint, [min(kwargs.f{1}), max(kwargs.f{1})]); axis(axpoint,kwargs.maspect);
         initrecroi();
     end
 
