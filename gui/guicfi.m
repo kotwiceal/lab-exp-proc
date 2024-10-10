@@ -307,7 +307,7 @@ function getdata = guicfi(kwargs)
     end
 
     %% plot spectra, general function
-    function plot_spec(ax, spec, label, alpha, beta)
+    function plotspec(ax, spec, label, alpha, beta)
         cla(ax); hold(ax, 'on'); grid(ax, 'on'); box(ax, 'on');
         if isempty(alpha) && isempty(beta)
             imagesc(ax, spec(:,:,kwargs.yi,kwargs.xi));
@@ -336,12 +336,12 @@ function getdata = guicfi(kwargs)
                 [specstead, spectrav, alpha, beta] = specproc(vel, velavg);
                 switch kwargs.display
                     case 'steady'
-                        plotspec(axspecs, specstead, 'steady')
+                        plotspec(axspecs, specstead, 'steady', alpha, beta)
                     case 'travel'
-                        plotspec(axspect, spectrav, 'travel')
+                        plotspec(axspect, spectrav, 'travel', alpha, beta)
                     case 'steady-travel'
-                        plotspec(axspecs, specstead, 'steady')
-                        plotspec(axspect, spectrav, 'travel')
+                        plotspec(axspecs, specstead, 'steady', alpha, beta)
+                        plotspec(axspect, spectrav, 'travel', alpha, beta)
                 end
                 initspecsel();
             case 'var'

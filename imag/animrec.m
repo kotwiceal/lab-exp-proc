@@ -1,15 +1,18 @@
-function animrec(data, kwargs)
+function animrec(kwargs)
     %% Animation recorder of 2D multi-frame data.
 
     %% Examples:
     %% 1. Record animation of set 2D multi-frame
-    % animrec(rand(120, 140, 10), filename = 'test.gif', clim = [-1, 1], axis = 'equal')
+    % animrec(data = rand(120, 140, 10), filename = 'test.gif', clim = [-1, 1], axis = 'equal')
 
     arguments
-        data (:,:,:) double % data
-        kwargs.x double = [] % longitudinal spatial coordinate
-        kwargs.z double = [] % transversal spatial coordinate
+        kwargs.data (:,:,:) double = [] % data
+        kwargs.range (1,:) double = [] % index frame
+        kwargs.x (:,:) double = [] % longitudinal spatial coordinate
+        kwargs.z (:,:) double = [] % transversal spatial coordinate
+        kwargs.plotfunc (1,:) {mustBeA(kwargs.plotfunc, {'function_handle', 'double'})} = [] % custom plotter handle
         kwargs.filename = '' % filename of storing animation
+        kwargs.resolution (1,1) double = 300
         kwargs.mask (:,:) double = [] % roi mask
         kwargs.roi (1,1) logical = false % cut data by roi
         kwargs.xlabel (1,:) char = [] % x-axis label
@@ -19,15 +22,15 @@ function animrec(data, kwargs)
         kwargs.clim (1,:) double = [] % color axis limit
         kwargs.colormap (1,:) char = 'turbo' % colomap name
         kwargs.colorbar (1,1) logical = false % show colorbar
-        kwargs.colorbarloc (1,:) char = []
+        kwargs.colorbarloc (1,:) char = [] % colorbar location
         kwargs.clabel (1,:) {mustBeA(kwargs.clabel, {'char', 'cell'})} = {} % color-axis label
-        kwargs.title (1,:) char = []
+        kwargs.title (1,:) char = [] % figure title
     end
 
-    function plotframe(index)
+    function plotfunc(ax, index)
         cla(ax); set(ax, 'FontSize', kwargs.fontsize);
         if display
-            imagesc(ax, data(:,:,index));
+            imagesc(ax, kwargs.data(:,:,index));
             if display_label
                 xlabel(ax, 'x_{n}'); ylabel(ax, 'z_[n}');
             else
@@ -35,7 +38,7 @@ function animrec(data, kwargs)
             end
         else
             hold(ax, 'on');
-            contourf(ax, kwargs.x, kwargs.z, data(:,:,index), 100, 'LineStyle', 'None');
+            contourf(ax, kwargs.x, kwargs.z, kwargs.data(:,:,index), 100, 'LineStyle', 'None');
             xlim(ax, [min(kwargs.x(:)), max(kwargs.x(:))]);
             ylim(ax, [min(kwargs.z(:)), max(kwargs.z(:))]);
             if display_label
@@ -47,7 +50,7 @@ function animrec(data, kwargs)
         end
         axis(ax, kwargs.aspect);
         xlabel(ax, kwargs.xlabel); ylabel(ax, kwargs.ylabel); 
-        if isempty(kwargs.clim) && index == 1; kwargs.clim = clim(ax); end
+        if isempty(kwargs.clim); kwargs.clim = clim(ax); end
         clim(ax, kwargs.clim);
         colormap(ax, kwargs.colormap);
         if kwargs.colorbar; clb = colorbar(); if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel); end; end
@@ -55,32 +58,37 @@ function animrec(data, kwargs)
     end
 
     function eventroiselmoving(~, ~)
-        data = select(rois{1});
-        plotframe(1);
+        kwargs.data = select(rois{1});
+        kwargs.plotfunc(ax, 1);
     end
 
     display = isempty(kwargs.x) & isempty(kwargs.z); 
     display_label = isempty(kwargs.xlabel) & isempty(kwargs.ylabel);
     rois = [];
 
-    datacopy = data;
+    datacopy = kwargs.data;
     if display
         select = @(roiobj) guigetdata(roiobj, datacopy, shape = 'raw');
     else
         select = @(roiobj) guigetdata(roiobj, datacopy, shape = 'raw', x = kwargs.x, z = kwargs.z);
     end
 
+    if isempty(kwargs.plotfunc); kwargs.plotfunc = @plotfunc; end
+
+    if isempty(kwargs.data) && isempty(kwargs.range) && isempty(kwargs.plotfunc); error('empty instruction'); end
+    if isempty(kwargs.range); kwargs.range = 2:size(kwargs.data,3); end
+
     clf; tiledlayout('flow'); nexttile; ax = gca;
-    plotframe(1);
+    kwargs.plotfunc(ax, 1);
     if kwargs.roi
             rois = guiselectregion(ax, moving = @eventroiselmoving, shape = 'poly', ...
             mask = kwargs.mask, interaction = 'all', number = 1);
         eventroiselmoving()
     end
-    exportgraphics(ax, kwargs.filename);
+    exportgraphics(ax, kwargs.filename, Resolution = kwargs.resolution);
 
-    for i = 2:size(data, 3)
-        plotframe(i);
-        exportgraphics(ax, kwargs.filename, Append = true);
+    for i = kwargs.range
+        kwargs.plotfunc(ax, i);
+        exportgraphics(ax, kwargs.filename, Append = true, Resolution = kwargs.resolution);
     end
 end

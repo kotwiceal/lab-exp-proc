@@ -18,7 +18,13 @@ function rois = guiselectregion(axroi, kwargs)
         rois (1,:) cell
     end
 
-    if isempty(kwargs.colororder); kwargs.colororder = 'gem'; end
+    if isempty(kwargs.colororder); 
+        if isMATLABReleaseOlderThan("R2023b")
+            kwargs.colororder = {'blue'}; 
+        else
+            kwargs.colororder = 'gem'; 
+        end
+    end
     colors = colororder(axroi, kwargs.colororder);
 
     roimethod = {};

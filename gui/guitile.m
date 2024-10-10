@@ -38,7 +38,7 @@ function getdata = guitile(data, kwargs)
     function result = getdatafunc()
         result = struct(data = [], mask = [], x = [], y = []);
         if kwargs.shape ~= "none"
-            for il = 1:numel(rois)
+            for il = 1:numel(data)
                 for jl = 1:numel(rois{il})
                     if ~isempty(kwargs.tukey)
                         bin = selectwin{il}(rois{il}{jl});

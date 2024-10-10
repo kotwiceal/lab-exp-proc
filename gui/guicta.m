@@ -160,9 +160,10 @@ function varargout = guicta(kwargs)
         if ~isempty(kwargs.mxlabel); xlabel(axpoint, kwargs.mxlabel); end
         if ~isempty(kwargs.mylabel); ylabel(axpoint, kwargs.mylabel); end
         if ~isempty(kwargs.mxlim); xlim(axpoint, kwargs.mxlim); end
-        if ~isempty(kwargs.mylim); xlim(axpoint, kwargs.mylim); end
+        if ~isempty(kwargs.mylim); ylim(axpoint, kwargs.mylim); end
         if ~isempty(kwargs.displayname); legend(axpoint, kwargs.mdisplayname, Location = kwargs.location); end
-        xlim(axpoint, [min(kwargs.f{1}), max(kwargs.f{1})]); axis(axpoint,kwargs.maspect);
+        % xlim(axpoint, [min(kwargs.f{1}), max(kwargs.f{1})]); 
+        axis(axpoint,kwargs.maspect);
         initrecroi();
     end
 
