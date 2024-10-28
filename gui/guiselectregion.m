@@ -18,7 +18,7 @@ function rois = guiselectregion(axroi, kwargs)
         rois (1,:) cell
     end
 
-    if isempty(kwargs.colororder); 
+    if isempty(kwargs.colororder)
         if isMATLABReleaseOlderThan("R2023b")
             kwargs.colororder = {'blue'}; 
         else

@@ -24,6 +24,7 @@ function getdata = guiautospec(data, kwargs)
         kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal' % axis aspect ratio
         kwargs.clim (1,:) double = [] % color axis limit
         kwargs.climspec (1,:) double = []
+        kwargs.clabel (1,:) char = []
         kwargs.cscale (1,:) char {mustBeMember(kwargs.cscale, {'linear', 'log'})} = 'log' % colormap scale
         kwargs.display (1,:) char {mustBeMember(kwargs.display, {'2d', '3d'})} = '2d' % display type
         kwargs.docked (1,1) logical = false % docked figure
@@ -123,14 +124,16 @@ function getdata = guiautospec(data, kwargs)
                         xlabel(ax, 'f_{x}, mm^{-1}'); ylabel(ax, 'f_{y}, mm^{-1}');
                 end
         end
-        colorbar(ax); colormap(ax, kwargs.colormap);
+        c = colorbar(ax); colormap(ax, kwargs.colormap);
+        if ~isempty(kwargs.clabel); ylabel(c, kwargs.clabel); end
         set(ax, 'ColorScale', kwargs.cscale); 
         if ~isempty(kwargs.climspec); clim(ax, kwargs.climspec); end
         axis(ax, kwargs.aspect)
     end
 
     function result = getdatafunc()
-        result = struct('raw', raw, 'x', xraw, 'y', yraw, 'spec', spec, 'fx', fx, 'fy', fy);
+        result = struct('raw', raw, 'x', xraw, 'y', yraw, 'spec', spec, ...
+            'fx', fx, 'fy', fy, 'mask', rois{1}.Position);
     end
 
     if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end

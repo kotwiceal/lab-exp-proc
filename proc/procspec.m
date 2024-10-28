@@ -84,9 +84,10 @@ function [spec, f] = procspec(data, kwargs)
             temp = [];
             for i = 1:size(spec, 1)
                 for j = 1:size(spec, 2)
-                    temp(i,j,:) = spec{i,j};
+                    temp(:,i,j) = spec{i,j}(:);
                 end
             end
-            spec = temp;
+            spec = reshape(temp, [ws, prod(sz(3:end)), size(spec)]);
     end
+    
 end
