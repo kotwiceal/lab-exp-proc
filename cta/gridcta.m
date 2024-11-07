@@ -133,7 +133,7 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
             scancor(:, 3) = scancor(:, 3) + kwargs.ax30;
             kwargs.ax10 = ax1;
             kwargs.ax20 = ax2;
-            ft = @(x,z) - kwargs.ax30;
+            ft = @(x,z) kwargs.ax30;
         else
             if isempty(kwargs.fit)
                 if numel(kwargs.ax10) == 1

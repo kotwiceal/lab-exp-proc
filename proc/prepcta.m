@@ -29,6 +29,7 @@ function varargout = prepcta(input, kwargs)
         kwargs.procamp (1,:) char {mustBeMember(kwargs.procamp, {'rms', 'sum'})} = 'rms'
         % transform scan unit
         kwargs.unit (1,:) char {mustBeMember(kwargs.unit, {'mm', 'count'})} = 'mm'
+        kwargs.refmarker (1,:) char {mustBeMember(kwargs.refmarker, {'none', 'n2', 'n8', 'n9'})} = 'n2'
         kwargs.xfit = [] % fitobj transfrom to leading edge coordinate system
         kwargs.yfit = [] % fitobj to reverse a correction of vectical scanning component
         kwargs.zfit = [] % fitobj transfrom to leading edge coordinate system
@@ -115,13 +116,31 @@ function varargout = prepcta(input, kwargs)
                 end
                 if kwargs.storeraw; kwargs.raw = permute(kwargs.raw, [1:2, kwargs.permute + 2]); end
             end
-        
+
             % transform units
             if ~isempty(kwargs.scan)
                 switch kwargs.unit
                     case 'mm'
                         y = y/kwargs.steps(2);
-        
+                        if kwargs.refmarker ~= "none"
+                            switch kwargs.refmarker
+                                case 'n2'
+                                    kwargs.ort = [113.9, 63.7; 113.9, 112.4; 126.8, 118.9; 126.7, 70.2]; % mm
+                                    kwargs.skew = [0, 0; 0, 2e4; 300, 2e4; 300, 0]; % count
+                                case 'n8'
+                                    kwargs.ort = [384.6, 189.4; 294, 148.4; 294.4, 198.5; 384.6, 139.4]; % mm
+                                    kwargs.skew = [0, 0; -2086, 1060; -2086, 21124; 0, -20060]; % count
+                                case 'n9'
+                                    kwargs.ort = [429.76, 209.95; 429.43, 260.50; 474.0, 283.03; 474.0, 233.36]; % mm
+                                    kwargs.skew = [0, 0; 0, 2e4; 1e3, 2e4; 1e3, 0]; % count
+                                    
+                            end
+                            % fit 
+                            [xf,yf,zf] = prepareSurfaceData(kwargs.skew(:,1),kwargs.skew(:,2),kwargs.ort(:,1));
+                            kwargs.xfit = fit([xf,yf],zf,'poly11');
+                            [xf,yf,zf] = prepareSurfaceData(kwargs.skew(:,1),kwargs.skew(:,2),kwargs.ort(:,2));
+                            kwargs.zfit = fit([xf,yf],zf,'poly11');
+                        end
                         % transform to LE coordinate system
                         if ~isempty(kwargs.xfit); xtemp = kwargs.xfit(x,z); else; xtemp = x/kwargs.steps(1); end
                         if ~isempty(kwargs.zfit); ztemp = kwargs.zfit(x,z); else; ztemp = z/kwargs.steps(3); end
@@ -146,6 +165,7 @@ function varargout = prepcta(input, kwargs)
                         handler = @(spec, freq) reshape(sqrt(abs(df*sum(spec(freq2ind(f,freq), :)))), size(spec, 2:ndims(spec)));
                     case 'sum'
                         handler = @(spec, freq) reshape(df*sum(spec(freq2ind(f,freq), :)), size(spec, 2:ndims(spec)));
+
                 end
             end
             result.intspec = handler;
@@ -159,7 +179,7 @@ function varargout = prepcta(input, kwargs)
             varargout{1} = result;
 
         case 'film'
-            % calculate auto/scross spectra
+            % calculate auto/cross spectra
             result = struct;
             [spec, f] = procspec(kwargs.raw, wintype = kwargs.wintype, winlen = kwargs.winlen, ...
                 overlap = kwargs.overlap, fs = kwargs.fs, norm = kwargs.norm, ans = 'double');
