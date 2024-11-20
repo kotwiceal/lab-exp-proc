@@ -34,20 +34,22 @@ function varargout = prepcta(input, kwargs)
         kwargs.yfit = [] % fitobj to reverse a correction of vectical scanning component
         kwargs.zfit = [] % fitobj transfrom to leading edge coordinate system
         kwargs.steps (1,:) double = [50, 800, 400] % single step displacement of step motor in um
+        kwargs.label (1,:) char = []
     end
 
     % parse inputs
     if isa(input, 'double')
         kwargs.raw = input;
     else
-        % raw = input.raw;
-        % kwargs.scan = input.scan;
         if isfield(input, 'raw'); kwargs.raw = input.raw; end
         if isfield(input, 'scan'); kwargs.scan = input.scan; end
         if isfield(input, 'fs'); kwargs.fs = input.fs; end
         if isfield(input, 'reshape'); kwargs.reshape = input.reshape; end
         if isfield(input, 'permute'); kwargs.permute = input.permute; end
         if isfield(input, 'corvibrind'); kwargs.corvibrind = input.corvibrind; end
+        if isfield(input, 'label'); kwargs.label = input.label; end
+        if isfield(input, 'cal'); kwargs.cal = input.cal; end
+        if isfield(input, 'velcor'); kwargs.velcor = input.velcor; end
 
         if isfield(input, 'xfit'); kwargs.xfit = input.xfit; end
         if isfield(input, 'yfit'); kwargs.yfit = input.yfit; end
@@ -175,6 +177,9 @@ function varargout = prepcta(input, kwargs)
                 result.y = y;
                 result.z = z;
             end
+            if ~isempty(kwargs.label); result.label = kwargs.label; end
+            if ~isempty(kwargs.cal); result.cal = kwargs.cal; end
+            if ~isempty(kwargs.velcor); result.velcor = kwargs.velcor; end
             if kwargs.storeraw; result.raw = kwargs.raw; end
             varargout{1} = result;
 
@@ -204,6 +209,7 @@ function varargout = prepcta(input, kwargs)
             result.spec = spec;
             result.f = f;
             result.intspec = handler;
+            if ~isempty(kwargs.label); result.label = kwargs.label; end
             if kwargs.storeraw; result.raw = kwargs.raw; end
             varargout{1} = result;
     end

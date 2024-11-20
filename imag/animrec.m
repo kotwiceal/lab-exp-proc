@@ -12,7 +12,7 @@ function animrec(kwargs)
         kwargs.y (:,:) double = [] % transversal spatial coordinate
         kwargs.plotfunc (1,:) {mustBeA(kwargs.plotfunc, {'function_handle', 'double'})} = [] % custom plotter handle
         kwargs.filename = '' % filename of storing animation
-        kwargs.resolution (1,1) double = 300
+        kwargs.resolution (1,1) double = 100
         kwargs.mask (:,:) double = [] % roi mask
         kwargs.roi (1,1) logical = false % cut data by roi
         kwargs.xlabel (1,:) char = [] % x-axis label

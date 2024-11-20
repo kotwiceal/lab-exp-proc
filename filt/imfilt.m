@@ -11,6 +11,7 @@ function data = imfilt(data, kwargs)
         kwargs.zero2nan (1,1) logical = true
         kwargs.verbose (1,1) logical = true
         kwargs.mediancondvars (1,2) double = [1, 1]
+        kwargs.paral (1,1) logical = true
     end
 
     arguments (Output)
@@ -45,8 +46,14 @@ function data = imfilt(data, kwargs)
             if kwargs.method ~= "none"
                 if kwargs.zero2nan; data(data==0) = nan; end
                 sz = size(data);
-                parfor i = 1:prod(sz(3:end))
-                    data(:, :, i) = fillmissing2(data(:, :, i), kwargs.method);
+                if kwargs.paral
+                    parfor i = 1:prod(sz(3:end))
+                        data(:, :, i) = fillmissing2(data(:, :, i), kwargs.method);
+                    end
+                else
+                    for i = 1:prod(sz(3:end))
+                        data(:, :, i) = fillmissing2(data(:, :, i), kwargs.method);
+                    end
                 end
                 data = reshape(data, sz);
             end

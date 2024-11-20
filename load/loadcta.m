@@ -36,7 +36,6 @@ function varargout = loadcta(path, kwargs)
         kwargs.rawextension (1,:) char = '.dat'
         kwargs.rawtype (1,:) char {mustBeMember(kwargs.rawtype, {'ascii', 'bin'})} = 'bin'
         kwargs.numch (1,1) double = 2
-        kwargs.output (1,:) char {mustBeMember(kwargs.output, {'struct', 'array'})} = 'struct'
         kwargs.parload (1,1) logical = false
         kwargs.calib (1,1) logical = true
         %% lcard settings
@@ -49,7 +48,7 @@ function varargout = loadcta(path, kwargs)
 
     warning on
 
-    scan = []; data = []; raw = [];
+    scan = []; data = []; raw = []; cal = []; velcor = [];
 
     switch kwargs.vendor
         case 'labview'
@@ -104,10 +103,7 @@ function varargout = loadcta(path, kwargs)
                                         fclose(id);
                                     end
                                 end
-                                % sz = size(temporary);
-                                % if ~(mod(sz(1),kwargs.numch) == 0)
-                                %     temporary = temporary((sz(1)-round(sz(1),-2)+1):end,:);
-                                % end
+                                
                                 temporary = temporary(5:end,:);
                                 raw = permute(reshape(temporary, kwargs.numch, [], numel(filenames.raw)), [2, 1, 3]);
                 end
@@ -141,24 +137,22 @@ function varargout = loadcta(path, kwargs)
                     eccor = ((coef(5)-coef(4))./(coef(5)-scan(1:sz(3),10))).^0.5;
                     raw(:,1,:) = permute(coef(1)*((squeeze(raw(:,1,:)).*eccor').^2-coef(3)).^coef(2), [1, 3, 2]);
                     raw = real(raw);
+
+                    cal = @(x,ch) voltmap(ch,1)+x.*voltmap(ch,2);
+                    velcor = @(x) real(coef(1)*((x.*eccor').^2-coef(3)).^coef(2));
                 end
             catch
                 warning(mes);
             end
         
             % return
-            switch kwargs.output
-                case 'struct'
-                    result = struct();
-                    if ~isempty(scan); result.scan = scan; end
-                    if ~isempty(data); result.data = data; end
-                    if ~isempty(raw); result.raw = raw; end
-                    varargout{1} = result;
-                case 'array'
-                    varargout{1} = scan;
-                    varargout{2} = data;
-                    varargout{3} = raw;
-            end
+            result = struct();
+            if ~isempty(scan); result.scan = scan; end
+            if ~isempty(data); result.data = data; end
+            if ~isempty(raw); result.raw = raw; end
+            if ~isempty(cal); result.cal = cal; end
+            if ~isempty(velcor); result.velcor = velcor; end
+            varargout{1} = result;
             
         case 'lcard'
             % validation

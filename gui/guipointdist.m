@@ -36,8 +36,8 @@ function varargout = guipointdist(data, marker, kwargs)
         kwargs.mylabel (1,:) char = [] % y-axis label of marker subplot
         kwargs.mxlim (1,:) double = [] % x-axis limit of marker subplot
         kwargs.mylim (1,:) double = [] % y-axis limit of marker subplot
-        kwargs.xscale (1,:) char {mustBeMember(kwargs.xscale, {'linear', 'log'})} = 'log'
-        kwargs.yscale (1,:) char {mustBeMember(kwargs.yscale, {'linear', 'log'})} = 'log'
+        kwargs.mxscale (1,:) char {mustBeMember(kwargs.mxscale, {'linear', 'log'})} = 'log'
+        kwargs.myscale (1,:) char {mustBeMember(kwargs.myscale, {'linear', 'log'})} = 'log'
         kwargs.legend logical = false % show legend
         kwargs.docked logical = false % docker figure
         kwargs.colormap (1,:) char = 'turbo' % colormap
@@ -98,7 +98,7 @@ function varargout = guipointdist(data, marker, kwargs)
     function eventmoved(~, ~)
         % plot 1D data
         cla(axevent); hold(axevent, 'on'); box(axevent, 'on'); grid(axevent, 'on');
-        set(axevent, XScale = kwargs.xscale, YScale = kwargs.yscale, FontSize = kwargs.fontsize);
+        set(axevent, XScale = kwargs.mxscale, YScale = kwargs.myscale, FontSize = kwargs.fontsize);
         for i = 1:numel(rois)
             for j = 1:numel(rois{i})
                 temp = kwargs.mhandle(squeeze(marker{i}(:,yi(j,i),xi(j,i),:)));

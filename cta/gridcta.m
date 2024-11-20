@@ -87,6 +87,7 @@ function varargout = gridcta(ax1, ax2, ax3, kwargs)
         kwargs.fit (1,:) char {mustBeMember(kwargs.fit, {'', 'poly01', 'poly10', 'poly11', 'poly02', 'poly20', 'poly22', 'poly21', 'poly12', 'linearinterp'})} = ''
         kwargs.repelem (1,1) double = 1
         kwargs.docked (1,1) logical = false
+        kwargs.steps (1,:) double = [50, 800, 400] % single step displacement of step motor in um
     end
 
     nax1 = size(ax1, 2);
