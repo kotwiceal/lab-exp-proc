@@ -29,7 +29,7 @@ function varargout = prepcta(input, kwargs)
         kwargs.procamp (1,:) char {mustBeMember(kwargs.procamp, {'rms', 'sum'})} = 'rms'
         % transform scan unit
         kwargs.unit (1,:) char {mustBeMember(kwargs.unit, {'mm', 'count'})} = 'mm'
-        kwargs.refmarker (1,:) char {mustBeMember(kwargs.refmarker, {'none', 'n2', 'n8', 'n9'})} = 'n2'
+        kwargs.refmarker (1,:) char {mustBeMember(kwargs.refmarker, {'none', 'n2', 'n8', 'n9'})} = 'none'
         kwargs.xfit = [] % fitobj transfrom to leading edge coordinate system
         kwargs.yfit = [] % fitobj to reverse a correction of vectical scanning component
         kwargs.zfit = [] % fitobj transfrom to leading edge coordinate system

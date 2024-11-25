@@ -1,12 +1,12 @@
 function varargout = calibcta(varargin, kwargs)
-    %% Calibrate wire/film sensor.
+    %% Calibrate hot-wire/film sensor.
 
     arguments (Input, Repeating)
         varargin
     end
 
     arguments (Input)
-        kwargs.type (1,:) char {mustBeMember(kwargs.type, {'wire', 'film'})} = 'wire'
+        kwargs.sensor (1,:) char {mustBeMember(kwargs.sensor, {'wire', 'film'})} = 'wire'
         kwargs.show (1,1) logical = true
         kwargs.y (:,:) double = [] % wall position
         kwargs.u0 (1,:) double = [] % inflow velocity
@@ -17,7 +17,7 @@ function varargout = calibcta(varargin, kwargs)
         varargout
     end
 
-    switch kwargs.type
+    switch kwargs.sensor
         case 'wire'
 
             probe = varargin{1};
@@ -35,8 +35,8 @@ function varargout = calibcta(varargin, kwargs)
             fclose(fid);
 
         case 'film'
-            wire = varargin{1}; % [sample, wall position, inflow velocity];
-            film = varargin{2}; % [sample, channel, inflow velocity];
+            wire = varargin{1}; % dims = [sample, wall position, inflow velocity];
+            film = varargin{2}; % dims = [sample, channel, inflow velocity];
 
             wire = squeeze(mean(wire,1));
             film = squeeze(mean(film,1));

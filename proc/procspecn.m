@@ -38,6 +38,7 @@ function [spec, f] = procspecn(data, kwargs)
                 f{i} = df(i) * (-nh:nh1-1);
         end
         [f{:}] = ndgrid(f{:});
+        if numel(f) == 1; f = f{1}; end
     end
 
     switch kwargs.winfun
@@ -108,7 +109,7 @@ function [spec, f] = procspecn(data, kwargs)
 
     if kwargs.avg; spec = squeeze(mean(spec, (1:numel(kwargs.winlen)) + numel(kwargs.winlen))); end
 
-    spec = spec./cf; % window function correction factor
+    spec = spec.*cf; % window function correction factor
 
     if kwargs.norm; spec = spec./df; end % norm to spectral density
 

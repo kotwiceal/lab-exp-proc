@@ -44,6 +44,7 @@ function varargout = guipointdist(data, marker, kwargs)
         kwargs.colorbar (1,1) logical = true % show colorbar
         kwargs.fontsize (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.fontsize, 1)} = 10 % axis font size
         kwargs.aspect (1,:) {mustBeA(kwargs.aspect, {'char', 'cell'}), mustBeMember(kwargs.aspect, {'equal', 'auto', 'manual', 'image', 'square'})} = 'image' % axis ratio
+        kwargs.maspect (1,:) char {mustBeMember(kwargs.maspect, {'equal', 'auto', 'manual', 'image', 'square'})} = 'image' % axis ratio
         % legend location
         kwargs.location (1,:) char {mustBeMember(kwargs.location, {'north','south','east','west','northeast','northwest','southeast','southwest','northoutside','southoutside','eastoutside','westoutside','northeastoutside','northwestoutside','southeastoutside','southwestoutside','best','bestoutside','layout','none'})} = 'best'
         kwargs.title = [] % figure global title
@@ -97,12 +98,12 @@ function varargout = guipointdist(data, marker, kwargs)
 
     function eventmoved(~, ~)
         % plot 1D data
-        cla(axevent); hold(axevent, 'on'); box(axevent, 'on'); grid(axevent, 'on');
+        cla(axevent); hold(axevent, 'on'); box(axevent, 'on'); grid(axevent, 'on'); axis(axevent, kwargs.maspect);
         set(axevent, XScale = kwargs.mxscale, YScale = kwargs.myscale, FontSize = kwargs.fontsize);
         for i = 1:numel(rois)
             for j = 1:numel(rois{i})
                 temp = kwargs.mhandle(squeeze(marker{i}(:,yi(j,i),xi(j,i),:)));
-                plot(axevent, kwargs.mx{i}, temp)
+                plot(axevent, kwargs.mx{i}, temp, Color = rois{i}{j}.Color)
             end
         end
         if ~isempty(kwargs.mxlabel); xlabel(axevent, kwargs.mxlabel); end
