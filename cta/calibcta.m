@@ -6,11 +6,14 @@ function varargout = calibcta(varargin, kwargs)
     end
 
     arguments (Input)
+        %% processing
         kwargs.sensor (1,:) char {mustBeMember(kwargs.sensor, {'wire', 'film'})} = 'wire'
-        kwargs.show (1,1) logical = true
         kwargs.y (:,:) double = [] % wall position
         kwargs.u0 (1,:) double = [] % inflow velocity
         kwargs.index (1,:) double = 1:2 % node index to poly1 fit
+        %% appearance
+        kwargs.show (1,1) logical = true % display results
+        kwargs.docked (1,1) logical = false % dock figure
     end
 
     arguments (Output, Repeating)
@@ -49,7 +52,8 @@ function varargout = calibcta(varargin, kwargs)
 
             % show velocity profiles
             if kwargs.show
-                figure(WindowStyle = 'docked'); tiledlayout('flow');
+                if kwargs.docked; figure(WindowStyle = 'docked'); else; figure; end
+                tiledlayout('flow');
                 nexttile; hold on; box on; grid on; axis square;
                 plot(kwargs.y, wire,'.-');
                 if kwargs.yunit; xlabel('y, mm'); else; xlabel('y_n'); end
@@ -85,7 +89,8 @@ function varargout = calibcta(varargin, kwargs)
 
             % show calibration
             if kwargs.show
-                figure(WindowStyle = 'docked'); tiledlayout('flow');
+                if kwargs.docked; figure(WindowStyle = 'docked'); else; figure; end
+                tiledlayout('flow');
                 nexttile; hold on; box on; grid on; axis square;
                 for i = 1:size(film, 1)
                     plot(dudy, film(i,:), '.-', DisplayName = num2str(i));

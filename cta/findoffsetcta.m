@@ -2,17 +2,20 @@ function [y0, z0, x0] = findoffsetcta(filename, kwargs)
     %% Find offset vertical coordinates by specified velocity isoline level.
 
     arguments (Input)
-        filename (1,:) {mustBeA(filename , {'char', 'string'})}
-        kwargs.isovel (1,1) double = 10
-        kwargs.y (:,:) double = []
-        kwargs.yi (1,:) double = []
-        kwargs.ratio (1,:) double = []
-        kwargs.tonan (1,1) logical = true
-        kwargs.numch (1,1) double = 3
-        kwargs.show (1,1) logical = true
-        kwargs.reshape (1,:) double = []
+        %% imput
+        filename (1,:) {mustBeA(filename , {'char', 'string'})} % path to scan.txt file or folder
         kwargs.scandelimiter (1,:) char = '\t'
         kwargs.scanseparator (1,:) char = ','
+        kwargs.numch (1,1) double = 3
+        %% processing
+        kwargs.isovel (1,1) double = 10 % cutoff velocity
+        kwargs.y (:,:) double = [] % vertical vector
+        kwargs.yi (1,:) double = [] % initial approximation
+        kwargs.ratio (1,:) double = [] % dimensionless velocity at which the vertical position is assumed to be zero 
+        kwargs.reshape (1,:) double = [] % reshape scan to gridwise notation
+        %% appearance
+        kwargs.show (1,1) logical = true % display resutls
+        kwargs.docked (1,1) logical = false % dock figure
     end
 
     if isfolder(filename)
@@ -51,7 +54,7 @@ function [y0, z0, x0] = findoffsetcta(filename, kwargs)
     y(~index) = nan;
 
     % piecewise linear interpolation
-    vf = {}; yf = {};
+    vf = cell(1, size(v, 2));
     for i = 1:size(v, 2)
         [y0,v0] = prepareCurveData(y(:,i),v(:,i));
         vf{i} = fit(y0,v0,'linearinterp');
@@ -77,7 +80,8 @@ function [y0, z0, x0] = findoffsetcta(filename, kwargs)
 
     % show results
     if kwargs.show
-        figure(WindowStyle='docked'); hold on; grid on; box on; axis square;
+        if kwargs.docked; figure(WindowStyle = 'docked'); else; figure; end
+        hold on; grid on; box on; axis square;
         plt = plot(y,v,'.-');
         l = legend(plt, "("+string(split(num2str(x0)))+";"+string(split(num2str(z0)))+")"); 
         title(l,'(x,z), count',FontWeight='normal');

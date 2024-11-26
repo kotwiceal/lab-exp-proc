@@ -1,8 +1,8 @@
 %% Examples
-% This section presents a brief explanation of the usage of grid generation
+% This section presents several examples of the usage of grid generation
 % for multi-axis traverse actuator.
 %% Create a 1D scan grid at 3-axis measurement and save into scan_ax1fix_ax2fix_ax3var.txt
-scan = gridcta(0, 0, 0:50:1000, filename = 'scan_ax1fix_ax2fix_ax3var')
+scan = gridcta(0, 0, 0:50:1000, filename = 'docs\src\gridcta\scan_ax1fix_ax2fix_ax3var')
 %% Create a 2D scan grid at 3-axis measurement.
 scan = gridcta(0, -3000:500:3000, 0:50:1000)
 %% Create a 3D scan grid at 3-axis measurement.
