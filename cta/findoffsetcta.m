@@ -13,6 +13,8 @@ function [y0, z0, x0] = findoffsetcta(filename, kwargs)
         kwargs.yi (1,:) double = [] % initial approximation
         kwargs.ratio (1,:) double = [] % dimensionless velocity at which the vertical position is assumed to be zero 
         kwargs.reshape (1,:) double = [] % reshape scan to gridwise notation
+        kwargs.smooth (1,:) char {mustBeMember(kwargs.smooth, {'none', 'moving', 'lowess', 'loess', 'sgolay', 'rlowess', 'rloess'})} = 'none' % smoothing method
+        kwargs.span (1,1) double = 5 % number of data points for calculating the smoothed value 
         %% appearance
         kwargs.show (1,1) logical = true % display resutls
         kwargs.docked (1,1) logical = false % dock figure
@@ -52,6 +54,13 @@ function [y0, z0, x0] = findoffsetcta(filename, kwargs)
     index = cumsum(v >= kwargs.isovel, 1) == repmat((1:size(v,1))',1,size(v,2));
     v(~index) = nan;
     y(~index) = nan;
+
+    % smooth profiles
+    if kwargs.smooth ~= "none"
+        for i = 1:size(v, 2)
+            v(:, i) = smooth(y(:,i), v(:, i), kwargs.span, kwargs.smooth);
+        end
+    end
 
     % piecewise linear interpolation
     vf = cell(1, size(v, 2));

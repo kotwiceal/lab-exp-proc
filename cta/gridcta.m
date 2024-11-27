@@ -14,6 +14,13 @@ function varargout = gridcta(varargin, kwargs)
         kwargs.offsetdim (1,:) double {mustBeInRange(kwargs.offsetdim, 1, 3)} = 3 % axis order to apply offset
         kwargs.pointwise (1,:) {mustBeA(kwargs.pointwise, {'double', 'cell'})} = [] % axis order of offsetting vectors to transform from grid to pointwise notation
         kwargs.fit (1,:) {mustBeA(kwargs.fit, {'char', 'cell'})} = 'linearinterp' % fit type at applying offset
+        %% basis
+        kwargs.unit (1,:) char {mustBeMember(kwargs.unit, {'mm', 'count'})} = 'count'
+        kwargs.refmarker (1,:) char {mustBeMember(kwargs.refmarker, {'none', 'n2', 'n8', 'n9'})} = 'none' % point considered as origin
+        kwargs.steps (1,:) double = [50, 400, 800] % single step displacement of step motor in um
+        kwargs.xfit = [] % fitobj transfrom to leading edge coordinate system
+        kwargs.yfit = [] % fitobj to reverse a correction of vectical scanning component
+        kwargs.zfit = [] % fitobj transfrom to leading edge coordinate system
         %% appearance
         kwargs.show (1,1) logical = true % display a grid scan
         kwargs.docked (1,1) logical = false % dock figure
@@ -122,6 +129,54 @@ function varargout = gridcta(varargin, kwargs)
 
     end
 
+    % transform units
+    switch kwargs.unit
+        case 'mm'
+            if kwargs.refmarker ~= "none"
+                switch kwargs.refmarker
+                    case 'n2'
+                        kwargs.ort = [113.9, 63.7; 113.9, 112.4; 126.8, 118.9; 126.7, 70.2]; % mm
+                        kwargs.skew = [0, 0; 0, 2e4; 300, 2e4; 300, 0]; % count
+                    case 'n8'
+                        kwargs.ort = [384.6, 189.4; 294, 148.4; 294.4, 198.5; 384.6, 139.4]; % mm
+                        kwargs.skew = [0, 0; -2086, 1060; -2086, 21124; 0, -20060]; % count
+                    case 'n9'
+                        kwargs.ort = [429.76, 209.95; 429.43, 260.50; 474.0, 283.03; 474.0, 233.36]; % mm
+                        kwargs.skew = [0, 0; 0, 2e4; 1e3, 2e4; 1e3, 0]; % count
+                end
+                % fit 
+                [xf,yf,zf] = prepareSurfaceData(kwargs.skew(:,1),kwargs.skew(:,2),kwargs.ort(:,1));
+                kwargs.xfit = fit([xf,yf],zf,'poly11');
+                [xf,yf,zf] = prepareSurfaceData(kwargs.skew(:,1),kwargs.skew(:,2),kwargs.ort(:,2));
+                kwargs.zfit = fit([xf,yf],zf,'poly11');
+            end
+
+            if isempty(kwargs.xfit); kwargs.xfit = @(x,z) x/kwargs.steps(1); end
+            if isempty(kwargs.yfit); kwargs.yfit = @(y) y/kwargs.steps(3); end
+            if isempty(kwargs.zfit); kwargs.zfit = @(x,z) z/kwargs.steps(2); end
+
+            % transform to LE coordinate system
+            args = {scan, scanoffset, kwargs.offset}; flg = false;
+
+            for i = 1:numel(args)
+                if isa(args{i}, 'double')
+                    args{i} = {num2cell(args{i}, 1)};
+                    flg = true;
+                end
+                for j = 1:numel(args{i})
+                    temp = args{i}{j};
+                    
+                    args{i}{j}{1} = kwargs.xfit(temp{1:2});
+                    args{i}{j}{3} = kwargs.yfit(temp{3});
+                    args{i}{j}{2} = kwargs.zfit(temp{1:2}); 
+                end
+                if flg; args{i} = cell2mat(args{i}{1}); flg = false; end
+            end
+
+            [scan, scanoffset, kwargs.offset] = deal(args{:});
+
+    end
+
     % show a scan grid
     if kwargs.show 
         if kwargs.docked; figure(WindowStyle = 'Docked'); else; figure; end
@@ -147,7 +202,8 @@ function varargout = gridcta(varargin, kwargs)
         fill3([0, 0, 0, 0], [yl(1), yl(2), yl(2), yl(1)], [0, 0, zl(2), zl(2)], ...
             colors(2,:), FaceAlpha = 0.1, DisplayName = 'inlet');
 
-        xlabel(ax, 'axis 1'); ylabel(ax, 'axis 2'); zlabel(ax, 'axis 3');
+        if kwargs.unit == "count"; kwargs.unit = ""; else; kwargs.unit = ", " + kwargs.unit; end
+        xlabel(ax, strcat("axis 1", kwargs.unit)); ylabel(ax, strcat("axis 2", kwargs.unit)); zlabel(ax, strcat("axis 3", kwargs.unit));
         legend(ax); view(ax, [-125, 45]);
     end
 

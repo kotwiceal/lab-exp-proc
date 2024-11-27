@@ -6,4 +6,4 @@ scangridzeros = gridcta([-4050, -3550, -3050], 0:5e3:20e3, flip([-400:50:200, 30
     filename = 'docs\src\findoffsetcta\scan_zeros')
 
 [ax30, ax20, ax10] = findoffsetcta('docs\src\findoffsetcta\data',...
-    isovel = 12, ratio = 0.7, y = scangridzeros(:,3))
+    isovel = 12, ratio = 0.7, y = scangridzeros(:,3), smooth = 'moving', span = 3)
