@@ -14,7 +14,7 @@ for i = 1:numel(files)
     % load script as text
     text = fileread(fullfile(folderscripts,files{i}));
     % request LLM
-    response = requestllm(action + text);
+    response = requestllm(action + text, timeout = 600);
     % store response and modify
     writelines(response, fullfile(folderdescr, strcat('descr_', files{i})))
     descr = readlines(fullfile(folderdescr, strcat('descr_', files{i})));

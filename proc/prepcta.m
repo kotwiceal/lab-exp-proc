@@ -11,25 +11,30 @@ function varargout = prepcta(input, kwargs)
     % [spec, f, vel, x, y, z] = prepcta(raw, scan = scan);
 
     arguments
+        %% input
         input {mustBeA(input, {'double', 'struct'})}
         kwargs.scan (:,:) double = [] % scan table
         kwargs.storeraw (1,1) logical = false
         kwargs.type (1,:) char {mustBeMember(kwargs.type, {'wire', 'film'})} = 'wire'
-        % window function
-        kwargs.wintype (1,:) char {mustBeMember(kwargs.wintype, {'uniform', 'hanning', 'hamming'})} = 'hanning'
+        %% spectra
+        kwargs.spectrumtype (1,:) char {mustBeMember(kwargs.spectrumtype, {'power', 'psd'})} = 'psd'
+        kwargs.freqrange (1,:) char {mustBeMember(kwargs.freqrange, {'onesided', 'twosided', 'centered'})} = 'onesided' % half, total and total centered spectra
+        kwargs.winfun (1,:) char {mustBeMember(kwargs.winfun, {'uniform', 'hanning', 'hamming'})} = 'hanning' % window function
+        kwargs.winfuncor (1,1) logical = true % spectra power correction at weighting data by window function
         kwargs.winlen double = 4096 % window function width
         kwargs.overlap double = 3072 % window function overlap
         kwargs.fs (1,1) double = 25e3 % frequency sampling
-        % spectra norm
-        kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'none', 'psd', 'psd-corrected'})} = 'psd-corrected'
-        kwargs.corvibr (1,1) logical = true; % supress vibrations via cross-correlation correction
-        kwargs.corvibrind (1,:) double = [1, 2]
+        kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'none', 'rms'})} = 'rms' % spectra norm, `rms` means assertion sqrt(sum(spec))=rms(x)
+        kwargs.corvibr (1,1) logical = true; % suppress vibrations via cross-correlation correction technique
+        kwargs.corvibrind (1,:) double = [1, 2] % indexes of correcting channel and reference channel
+        kwargs.procamp (1,:) char {mustBeMember(kwargs.procamp, {'rms', 'sum', 'sel'})} = 'rms'
+        kwargs.procspec (1,:) char {mustBeMember(kwargs.procspec, {'spectrogram', 'manual'})} = 'spectrogram'
+        %% organization
         kwargs.reshape double = [] % reshape data
         kwargs.permute double = [] % permute data
-        kwargs.procamp (1,:) char {mustBeMember(kwargs.procamp, {'rms', 'sum'})} = 'rms'
-        % transform scan unit
-        kwargs.unit (1,:) char {mustBeMember(kwargs.unit, {'mm', 'count'})} = 'mm'
-        kwargs.refmarker (1,:) char {mustBeMember(kwargs.refmarker, {'none', 'n2', 'n8', 'n9'})} = 'none'
+        %% transform
+        kwargs.unit (1,:) char {mustBeMember(kwargs.unit, {'mm', 'count'})} = 'mm' % scan unit
+        kwargs.refmarker (1,:) char {mustBeMember(kwargs.refmarker, {'none', 'n2', 'n8', 'n9'})} = 'none' % reference marker of skew coordinate system
         kwargs.xfit = [] % fitobj transfrom to leading edge coordinate system
         kwargs.yfit = [] % fitobj to reverse a correction of vectical scanning component
         kwargs.zfit = [] % fitobj transfrom to leading edge coordinate system
@@ -41,6 +46,13 @@ function varargout = prepcta(input, kwargs)
     if isa(input, 'double')
         kwargs.raw = input;
     else
+
+        % todo assing
+         % f = fieldnames(structA);
+         % for i = 1:length(f)
+         %    structB.(f{i}) = structA.(f{i})
+         % end
+
         if isfield(input, 'raw'); kwargs.raw = input.raw; end
         if isfield(input, 'scan'); kwargs.scan = input.scan; end
         if isfield(input, 'fs'); kwargs.fs = input.fs; end
@@ -48,8 +60,8 @@ function varargout = prepcta(input, kwargs)
         if isfield(input, 'permute'); kwargs.permute = input.permute; end
         if isfield(input, 'corvibrind'); kwargs.corvibrind = input.corvibrind; end
         if isfield(input, 'label'); kwargs.label = input.label; end
-        if isfield(input, 'cal'); kwargs.cal = input.cal; end
-        if isfield(input, 'velcor'); kwargs.velcor = input.velcor; end
+        if isfield(input, 'cal'); kwargs.cal = input.cal; else; kwargs.cal = []; end
+        if isfield(input, 'velcor'); kwargs.velcor = input.velcor; else; kwargs.velcor = []; end
 
         if isfield(input, 'xfit'); kwargs.xfit = input.xfit; end
         if isfield(input, 'yfit'); kwargs.yfit = input.yfit; end
@@ -57,15 +69,22 @@ function varargout = prepcta(input, kwargs)
     end
 
     % handler to select mask index by given frequency range
-    freq2ind = @(f,x) f>=x(1)&f<=x(2);
+    freq2ind = @(f,x) find(f>=x(1)&f<=x(2));
 
     switch kwargs.type
         case 'wire'
             % calculate auto/scross spectra
-            [spec, f] = procspec(kwargs.raw, wintype = kwargs.wintype, winlen = kwargs.winlen, ...
-                overlap = kwargs.overlap, fs = kwargs.fs, norm = kwargs.norm);
+            switch kwargs.procspec
+                case 'spectrogram'
+                    [spec, f] = procspec(kwargs.raw, winfun = kwargs.winfun, winlen = kwargs.winlen, ...
+                        overlap = kwargs.overlap, fs = kwargs.fs, norm = kwargs.norm, ...
+                        spectrumtype = kwargs.spectrumtype, freqrange = kwargs.freqrange);
+                case 'manual'
+                    [spec, f] = procspecn(kwargs.raw, winfun = kwargs.winfun, winlen = kwargs.winlen, ...
+                        overlap = kwargs.overlap, fs = kwargs.fs, ftdim = 1, chdim = 2, output = 'cell', norm = true, center = true);
+            end
             df = f(2)-f(1);
-        
+
             % to substract correrlated signal part 
             if kwargs.corvibr
                 spec{kwargs.corvibrind(1),kwargs.corvibrind(1)} = spec{kwargs.corvibrind(1),kwargs.corvibrind(1)} ...
@@ -160,6 +179,8 @@ function varargout = prepcta(input, kwargs)
                         handler = @(spec, freq) sqrt(abs(df*sum(spec(freq2ind(f,freq), :))));
                     case 'sum'
                         handler = @(spec, freq) (df*sum(spec(freq2ind(f,freq), :)));
+                    case 'sel'
+                        @(spec, freq) spec(freq2ind(f,freq), :);
                 end
             else
                 switch kwargs.procamp
@@ -167,7 +188,8 @@ function varargout = prepcta(input, kwargs)
                         handler = @(spec, freq) reshape(sqrt(abs(df*sum(spec(freq2ind(f,freq), :)))), size(spec, 2:ndims(spec)));
                     case 'sum'
                         handler = @(spec, freq) reshape(df*sum(spec(freq2ind(f,freq), :)), size(spec, 2:ndims(spec)));
-
+                    case 'sel'
+                        handler = @(spec, freq) reshape(spec(freq2ind(f,freq), :), [numel(freq2ind(f,freq)), size(spec, 2:ndims(spec))]);
                 end
             end
             result.intspec = handler;
@@ -196,6 +218,8 @@ function varargout = prepcta(input, kwargs)
                         handler = @(spec, freq) sqrt(abs(df*sum(spec(freq2ind(freq), :))));
                     case 'sum'
                         handler = @(spec, freq) (df*sum(spec(freq2ind(freq), :)));
+                    case 'sel'
+                        @(spec, freq) spec(freq2ind(f,freq), :);
                 end
             else
                 switch kwargs.procamp
@@ -203,6 +227,8 @@ function varargout = prepcta(input, kwargs)
                         handler = @(spec, freq) reshape(sqrt(abs(df*sum(spec(freq2ind(f,freq), :)))), size(spec, 2:ndims(spec)));
                     case 'sum'
                         handler = @(spec, freq) reshape(df*sum(spec(freq2ind(f,freq), :)), size(spec, 2:ndims(spec)));
+                    case 'sel'
+                        handler = @(spec, freq) reshape(spec(freq2ind(f,freq), :), [numel(freq2ind(f,freq)), size(spec, 2:ndims(spec))]);
                 end
             end
 

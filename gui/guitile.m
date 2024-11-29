@@ -13,6 +13,9 @@ function getdata = guitile(data, kwargs)
         kwargs.tukey (1,:) double = 1 % tukey window function parameter
         %% axis parameters
         kwargs.axtarget (1,:) double = []
+        kwargs.hold (1,:) char {mustBeMember(kwargs.hold, {'on', 'off'})} = 'on'
+        kwargs.grid (1,:) char {mustBeMember(kwargs.grid, {'on', 'off'})} = 'on'
+        kwargs.box (1,:) char {mustBeMember(kwargs.box, {'on', 'off'})} = 'on'
         kwargs.tile {mustBeA(kwargs.tile, {'double', 'char'})} = 'flow'
         kwargs.xlim (:,:) {mustBeA(kwargs.xlim, {'double', 'cell'})} = [] % x-axis limit
         kwargs.ylim (:,:) {mustBeA(kwargs.ylim, {'double', 'cell'})} = [] % y-axis limit
@@ -145,7 +148,9 @@ function getdata = guitile(data, kwargs)
     end
     ax = cell(1, numel(pltfunc));
     for i = kwargs.axtarget
-        ax{i} = nexttile; pltfunc{i}(); 
+        ax{i} = nexttile; 
+        hold(ax{i}, kwargs.hold);
+        pltfunc{i}(); box(ax{i}, kwargs.box); grid(ax{i}, kwargs.grid);
         set(gca, FontSize = kwargs.fontsize);
         if ~isempty(kwargs.aspect); axis(kwargs.aspect{i}); end
         if ~isempty(kwargs.xlim{i}); xlim(kwargs.xlim{i}); end

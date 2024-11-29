@@ -15,6 +15,9 @@ function animrec(kwargs)
         kwargs.resolution (1,1) double = 100
         kwargs.mask (:,:) double = [] % roi mask
         kwargs.roi (1,1) logical = false % cut data by roi
+        kwargs.hold (1,:) char {mustBeMember(kwargs.hold, {'on', 'off'})} = 'on'
+        kwargs.grid (1,:) char {mustBeMember(kwargs.grid, {'on', 'off'})} = 'on'
+        kwargs.box (1,:) char {mustBeMember(kwargs.box, {'on', 'off'})} = 'on'
         kwargs.xlabel (1,:) char = [] % x-axis label
         kwargs.ylabel (1,:) char = [] % y-axis label
         kwargs.aspect (1,:) {mustBeA(kwargs.aspect, {'char', 'cell'}), mustBeMember(kwargs.aspect, {'equal', 'auto', 'manual', 'image', 'square'})} = 'image' % axis ratio
@@ -24,7 +27,7 @@ function animrec(kwargs)
         kwargs.clim (1,:) double = [] % color axis limit
         kwargs.colormap (1,:) char = 'turbo' % colomap name
         kwargs.colorbar (1,1) logical = false % show colorbar
-        kwargs.colorbarloc (1,:) char = [] % colorbar location
+        kwargs.colorbarloc (1,:) char = 'eastoutside' % colorbar location
         kwargs.clabel (1,:) {mustBeA(kwargs.clabel, {'char', 'cell'})} = {} % color-axis label
         kwargs.title (1,:) char = [] % figure title
     end
@@ -39,8 +42,9 @@ function animrec(kwargs)
                 xlabel(ax, kwargs.xlabel); ylabel(ax, kwargs.ylabel); 
             end
         else
-            hold(ax, 'on');
+            hold(ax, kwargs.hold);
             contourf(ax, kwargs.x, kwargs.y, kwargs.data(:,:,index), 100, 'LineStyle', 'None');
+            box(ax, kwargs.box); grid(ax, kwargs.grid);
             if isempty(kwargs.xlim)
                 xlim(ax, [min(kwargs.x(:)), max(kwargs.x(:))]);
             else
@@ -63,7 +67,7 @@ function animrec(kwargs)
         if isempty(kwargs.clim); kwargs.clim = clim(ax); end
         clim(ax, kwargs.clim);
         colormap(ax, kwargs.colormap);
-        if kwargs.colorbar; clb = colorbar(); if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel); end; end
+        if kwargs.colorbar; clb = colorbar(kwargs.colorbarloc); if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel); end; end
         if ~isempty(kwargs.title); title(kwargs.title,FontWeight='normal'); end
     end
 

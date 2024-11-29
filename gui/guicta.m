@@ -16,6 +16,9 @@ function varargout = guicta(kwargs)
         kwargs.number (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.number, 1)} = 1 % number of ROI instances
         %% axis parameters
         kwargs.arrangement (1,:) char {mustBeMember(kwargs.arrangement, {'flow', 'vertical', 'horizontal'})} = 'flow'
+        kwargs.hold (1,:) char {mustBeMember(kwargs.hold, {'on', 'off'})} = 'on'
+        kwargs.grid (1,:) char {mustBeMember(kwargs.grid, {'on', 'off'})} = 'on'
+        kwargs.box (1,:) char {mustBeMember(kwargs.box, {'on', 'off'})} = 'on'
         kwargs.xlim (:,:) {mustBeA(kwargs.xlim, {'double', 'cell'})} = [] % x-axis limit
         kwargs.ylim (:,:) {mustBeA(kwargs.ylim, {'double', 'cell'})} = [] % y-axis limit
         kwargs.xlabel (1,:) {mustBeA(kwargs.xlabel, {'char', 'cell'})} = {} % x-axis label of field subplot
@@ -37,6 +40,7 @@ function varargout = guicta(kwargs)
         kwargs.docked logical = false % docker figure
         kwargs.colormap (1,:) char = 'turbo' % colormap
         kwargs.colorbar (1,1) logical = true % show colorbar
+        kwargs.colorbarloc (1,:) char = 'eastoutside'
         kwargs.fontsize (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.fontsize, 1)} = 10 % axis font size
         kwargs.aspect (1,:) {mustBeA(kwargs.aspect, {'char', 'cell'}), mustBeMember(kwargs.aspect, {'equal', 'auto', 'manual', 'image', 'square'})} = 'image' % axis ratio
         % legend location
@@ -65,7 +69,7 @@ function varargout = guicta(kwargs)
         procamp();
     end
     
-    xi = ones(1, kwargs.number); yi = ones(1, kwargs.number); rois = {}; roisrect = {}; pltfunc = {}; kwargs.specpoint = {};
+    xi = ones(1, kwargs.number); yi = ones(1, kwargs.number); rois = {}; roisrect = {}; pltfunc = {}; kwargs.specpoint = {}; kwargs.ampval = [];
     if isa(kwargs.amp, 'double'); kwargs.amp = {kwargs.amp}; end
     if isa(kwargs.x, 'double'); kwargs.x = repmat({kwargs.x}, 1, numel(kwargs.amp)); end
     if isa(kwargs.y, 'double'); kwargs.y = repmat({kwargs.y}, 1, numel(kwargs.amp)); end
@@ -118,6 +122,17 @@ function varargout = guicta(kwargs)
         for i = 1:numel(kwargs.spec)
             kwargs.amp{i} = kwargs.intspec{i}(kwargs.spec{i}, kwargs.freqrange);
         end
+
+        try
+            kwargs.ampval = cell(1, numel(rois));
+            for i = 1:numel(rois)
+                for j = 1:numel(rois{i})
+                    kwargs.ampval{i}(j,:) = squeeze(kwargs.amp{i}(yi(j,i),xi(j,i),:));
+                end
+            end
+        catch
+        end
+
     end
 
     function eventrectmoved(~, ~)
@@ -161,7 +176,7 @@ function varargout = guicta(kwargs)
         if ~isempty(kwargs.mylabel); ylabel(axpoint, kwargs.mylabel); end
         if ~isempty(kwargs.mxlim); xlim(axpoint, kwargs.mxlim); end
         if ~isempty(kwargs.mylim); ylim(axpoint, kwargs.mylim); end
-        if ~isempty(kwargs.displayname); legend(axpoint, kwargs.mdisplayname, Location = kwargs.location); end
+        if ~isempty(kwargs.mdisplayname); legend(axpoint, kwargs.mdisplayname, Location = kwargs.location); end
         % xlim(axpoint, [min(kwargs.f{1}), max(kwargs.f{1})]); 
         axis(axpoint,kwargs.maspect);
         initrecroi();
@@ -214,7 +229,9 @@ function varargout = guicta(kwargs)
 
     function plotdata()
         for i = 1:numel(pltfunc)
+            hold(ax{i}, kwargs.hold);
             pltfunc{i}(ax{i}); 
+            box(ax{i}, kwargs.box); grid(ax{i}, kwargs.grid);
             set(ax{i}, FontSize = kwargs.fontsize);
             if ~isempty(kwargs.aspect); axis(ax{i}, kwargs.aspect{i}); end
             if ~isempty(kwargs.xlim{i}); xlim(ax{i}, kwargs.xlim{i}); end
@@ -223,7 +240,7 @@ function varargout = guicta(kwargs)
             if ~isempty(kwargs.xlabel); xlabel(ax{i}, kwargs.xlabel{i}); end
             if ~isempty(kwargs.ylabel); ylabel(ax{i}, kwargs.ylabel{i}); end
             if ~isempty(kwargs.displayname); title(ax{i}, kwargs.displayname{i}, 'FontWeight', 'Normal'); end
-            if kwargs.colorbar; clb = colorbar(ax{i}); if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel{i}); end; end
+            if kwargs.colorbar; clb = colorbar(ax{i}, kwargs.colorbarloc); if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel{i}); end; end
         end
     end
 
@@ -263,7 +280,9 @@ function varargout = guicta(kwargs)
     end
 
     function result = getdata()
+        result.f = kwargs.f;
         result.amp = kwargs.amp;
+        result.ampval = kwargs.ampval;
         result.spec = kwargs.specpoint;
         result.mask = kwargs.mask;
     end

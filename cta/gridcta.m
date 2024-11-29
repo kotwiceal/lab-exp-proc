@@ -164,11 +164,13 @@ function varargout = gridcta(varargin, kwargs)
                     flg = true;
                 end
                 for j = 1:numel(args{i})
-                    temp = args{i}{j};
-                    
-                    args{i}{j}{1} = kwargs.xfit(temp{1:2});
-                    args{i}{j}{3} = kwargs.yfit(temp{3});
-                    args{i}{j}{2} = kwargs.zfit(temp{1:2}); 
+                    if ~isempty(args{i}{j})
+                        temp = args{i}{j};
+                        
+                        args{i}{j}{1} = kwargs.xfit(temp{1:2});
+                        args{i}{j}{3} = kwargs.yfit(temp{3});
+                        args{i}{j}{2} = kwargs.zfit(temp{1:2}); 
+                    end
                 end
                 if flg; args{i} = cell2mat(args{i}{1}); flg = false; end
             end

@@ -3,18 +3,19 @@ function [spec, f] = procspec(data, kwargs)
 
     arguments
         data double % signal data, 1-dim: sample, 2-dim: channel, 3-..dims: realization
-        % window function
-        kwargs.wintype (1,:) char {mustBeMember(kwargs.wintype, {'uniform', 'hanning', 'hamming'})} = 'hanning'
+        kwargs.spectrumtype (1,:) char {mustBeMember(kwargs.spectrumtype, {'power', 'psd'})} = 'psd'
+        kwargs.freqrange (1,:) char {mustBeMember(kwargs.freqrange, {'onesided', 'twosided', 'centered'})} = 'onesided' % half, total and total centered spectra
+        kwargs.winfun (1,:) char {mustBeMember(kwargs.winfun, {'uniform', 'hanning', 'hamming'})} = 'hanning' % window function
         kwargs.winlen double = 4096 % window function width
         kwargs.overlap double = 3072 % window function overlap
         kwargs.fs (1,1) double = 25e3 % frequency sampling
-        % spectra norm
-        kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'none', 'psd', 'psd-corrected'})} = 'psd-corrected'
+        kwargs.winfuncor (1,1) logical = true % spectra power correction at weighting data by window function
+        kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'none', 'rms'})} = 'rms' % spectra norm
         kwargs.ans (1,:) char {mustBeMember(kwargs.ans, {'double', 'cell'})} = 'cell'
     end
 
     % build window function
-    switch kwargs.wintype
+    switch kwargs.winfun
         case 'uniform'
             win = ones(1, kwargs.winlen);
         case 'hanning'
@@ -24,8 +25,13 @@ function [spec, f] = procspec(data, kwargs)
     end
 
     sz = size(data); if ismatrix(data); sz(3) = 1; end
-    ws = ceil(kwargs.winlen/2+1);
-    ecf = 1/rms(win); % energy correction factor
+    if kwargs.winfuncor; ecf = 1/rms(win); else; ecf = 1; end % energy correction factor
+
+    % frequency grid
+    [~, f, ~] = spectrogram(data(:, 1, 1), win, kwargs.overlap, [], kwargs.fs, ...
+        kwargs.freqrange, kwargs.spectrumtype);
+    df = f(2)-f(1);
+    ws = numel(f);
 
     % calculate auto/cross spectra
     % allocate
@@ -40,7 +46,8 @@ function [spec, f] = procspec(data, kwargs)
         % proc fft
         si = cell(1, sz(2));
         for i = 1:sz(2)
-            si{i} = spectrogram(data(:, i, k), win, kwargs.overlap , [], kwargs.fs);
+            si{i} = spectrogram(data(:, i, k), win, kwargs.overlap, [], kwargs.fs, ...
+                kwargs.freqrange, kwargs.spectrumtype);
         end
 
         % calc auto/cross term
@@ -53,22 +60,32 @@ function [spec, f] = procspec(data, kwargs)
 
     clear si;
 
-    % frequency grid
-    [~, f, ~] = spectrogram(data(:, 1, 1), win, kwargs.overlap , [], kwargs.fs);
-    df = f(2)-f(1);
+    % manual one-half amplitude spectral correction, `spectrogram` isn't work
+    switch kwargs.freqrange
+        case 'onesided'
+            ampcor = 2;
+            wsn = kwargs.winlen;
+        otherwise
+            ampcor = 1;
+            wsn = ws;
+    end
+
+    switch kwargs.spectrumtype
+        case 'power'
+            df = 1;
+    end
 
     % norm spectra
     switch kwargs.norm
-        case 'psd'
-            nrm = 1/ws^2/df*2;
-        case 'psd-corrected'
-            nrm = 1/ws^2/df*2*ecf;
+        case 'rms'
+            nrm = 1/wsn^2;
         otherwise
             nrm = 1;
     end
     for i = 1:sz(2)
         for j = 1:sz(2)
-            spec{i,j} = spec{i,j}*nrm;
+            spec{i,j} = spec{i,j}*nrm*ecf.^2/df;
+            spec{i,j}(2:end,:) = spec{i,j}(2:end,:)*ampcor;
         end
     end
 

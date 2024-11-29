@@ -109,7 +109,7 @@ function varargout = guipointdist(data, marker, kwargs)
         if ~isempty(kwargs.mxlabel); xlabel(axevent, kwargs.mxlabel); end
         if ~isempty(kwargs.mylabel); ylabel(axevent, kwargs.mylabel); end
         if ~isempty(kwargs.mxlim); xlim(axevent, kwargs.mxlim); end
-        if ~isempty(kwargs.mylim); xlim(axevent, kwargs.mylim); end
+        if ~isempty(kwargs.mylim); ylim(axevent, kwargs.mylim); end
         if ~isempty(kwargs.displayname); legend(axevent, kwargs.mdisplayname, Location = kwargs.location); end
     end
 
