@@ -15,7 +15,7 @@ function animrec(kwargs)
         kwargs.resolution (1,1) double = 100
         kwargs.mask (:,:) double = [] % roi mask
         kwargs.roi (1,1) logical = false % cut data by roi
-        kwargs.hold (1,:) char {mustBeMember(kwargs.hold, {'on', 'off'})} = 'on'
+        kwargs.hold (1,:) char {mustBeMember(kwargs.hold, {'on', 'off'})} = 'off'
         kwargs.grid (1,:) char {mustBeMember(kwargs.grid, {'on', 'off'})} = 'on'
         kwargs.box (1,:) char {mustBeMember(kwargs.box, {'on', 'off'})} = 'on'
         kwargs.xlabel (1,:) char = [] % x-axis label
@@ -91,6 +91,8 @@ function animrec(kwargs)
 
     if isempty(kwargs.data) && isempty(kwargs.range) && isempty(kwargs.plotfunc); error('empty instruction'); end
     if isempty(kwargs.range); kwargs.range = 2:size(kwargs.data,3); end
+
+    if isfolder(kwargs.filename); kwargs.filename = fullfile(kwargs.filename, strrep(string(datetime), ':', '-')+".gif"); end 
 
     clf; tiledlayout('flow'); nexttile; ax = gca;
     kwargs.plotfunc(ax, 1);

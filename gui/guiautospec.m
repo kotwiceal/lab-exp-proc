@@ -22,6 +22,7 @@ function getdata = guiautospec(data, kwargs)
         kwargs.mask (:,:) double = [] % location and size of rectangle selection
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all' % region selection behaviour
         kwargs.aspect (1,:) char {mustBeMember(kwargs.aspect, {'equal', 'auto'})} = 'equal' % axis aspect ratio
+        kwargs.arrangement (1,:) char {mustBeMember(kwargs.arrangement, {'flow', 'vertical', 'horizontal'})} = 'flow'
         kwargs.clim (1,:) double = [] % color axis limit
         kwargs.climspec (1,:) double = []
         kwargs.clabel (1,:) char = []
@@ -137,7 +138,7 @@ function getdata = guiautospec(data, kwargs)
     end
 
     if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
-    tiledlayout('flow'); axroi = nexttile;
+    tiledlayout(kwargs.arrangement, TileSpacing = 'tight'); axroi = nexttile;
     switch disptype
         case 'node'
             imagesc(axroi, data);

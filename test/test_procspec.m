@@ -21,7 +21,7 @@ label = "procspec, twosided, psd, uniform";
     winfun='uniform',norm='rms',fs=fs,freqrange='centered',spectrumtype='psd',...
     winfuncor=true);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)*df), rms(x(:)), sqrt(sum(spec)*df)./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% test procspec, twosided, power, uniform
@@ -30,7 +30,7 @@ label = "procspec, twosided, power, uniform";
     winfun='uniform',norm='rms',fs=fs,freqrange='centered',spectrumtype='power',...
     winfuncor=true);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)), rms(x(:)), sqrt(sum(spec))./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% test procspec, onesided, psd, uniform
@@ -39,7 +39,7 @@ label = "procspec, onesided, psd, uniform";
     winfun='uniform',norm='rms',fs=fs,freqrange='onesided',spectrumtype='psd',...
     winfuncor=true);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)*df), rms(x(:)), sqrt(sum(spec)*df)./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% test procspec, onesided, power, uniform
@@ -48,7 +48,7 @@ label = "procspec, onesided, power, uniform";
     winfun='uniform',norm='rms',fs=fs,freqrange='onesided',spectrumtype='power',...
     winfuncor=true);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)), rms(x(:)), sqrt(sum(spec))./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% test procspec, twosided, psd, hanning
@@ -57,7 +57,7 @@ label = "procspec, twosided, psd, hanning";
     winfun='hanning',norm='rms',fs=fs,freqrange='centered',spectrumtype='psd',...
     winfuncor=true);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)*df), rms(x(:)), sqrt(sum(spec)*df)./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% test procspec, twosided, power, hanning
@@ -66,7 +66,7 @@ label = "procspec, twosided, power, hanning";
     winfun='hanning',norm='rms',fs=fs,freqrange='centered',spectrumtype='power',...
     winfuncor=true);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)), rms(x(:)), sqrt(sum(spec))./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% test procspec, onesided, psd, hanning
@@ -75,7 +75,7 @@ label = "procspec, onesided, psd, hanning";
     winfun='hanning',norm='rms',fs=fs,freqrange='onesided',spectrumtype='psd',...
     winfuncor=true);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)*df), rms(x(:)), sqrt(sum(spec)*df)./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% test procspec, onesided, power, hanning
@@ -84,7 +84,7 @@ label = "procspec, onesided, power, hanning";
     winfun='hanning',norm='rms',fs=fs,freqrange='onesided',spectrumtype='power',...
     winfuncor=true);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)), rms(x(:)), sqrt(sum(spec))./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% test procspecn, twosided, psd, uniform
@@ -92,7 +92,7 @@ label = "procspecn, twosided, psd, uniform";
 [spec, f] = procspecn(x(:),winlen=1024,overlap=512, ...
     winfun='uniform',norm=true,fs=fs,side='double',type='psd',center=false);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)*df), rms(x(:)), sqrt(sum(spec)*df)./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% test procspecn, twosided, power, uniform
@@ -100,7 +100,7 @@ label = "procspecn, twosided, power, uniform";
 [spec, f] = procspecn(x(:),winlen=1024,overlap=512, ...
     winfun='uniform',norm=true,fs=fs,side='double',type='power',center=false);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)), rms(x(:)), sqrt(sum(spec))./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% test procspecn, onesided, psd, uniform
@@ -108,7 +108,7 @@ label = "procspecn, onesided, psd, uniform";
 [spec, f] = procspecn(x(:),winlen=1024,overlap=512, ...
     winfun='uniform',norm=true,fs=fs,side='single',type='psd',center=false);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)*df), rms(x(:)), sqrt(sum(spec)*df)./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% test procspecn, onesided, power, uniform
@@ -116,7 +116,7 @@ label = "procspecn, onesided, power, uniform";
 [spec, f] = procspecn(x(:),winlen=1024,overlap=512, ...
     winfun='uniform',norm=true,fs=fs,side='single',type='power',center=false);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)), rms(x(:)), sqrt(sum(spec))./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% test procspecn, twosided, psd, hanning
@@ -124,7 +124,7 @@ label = "procspecn, twosided, psd, hanning";
 [spec, f] = procspecn(x(:),winlen=1024,overlap=512, ...
     winfun='hanning',norm=true,fs=fs,side='double',type='psd',center=false);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)*df), rms(x(:)), sqrt(sum(spec)*df)./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% test procspecn, twosided, power, hanning
@@ -132,7 +132,7 @@ label = "procspecn, twosided, power, hanning";
 [spec, f] = procspecn(x(:),winlen=1024,overlap=512, ...
     winfun='hanning',norm=true,fs=fs,side='double',type='power',center=false);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)), rms(x(:)), sqrt(sum(spec))./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% test procspecn, onesided, psd, hanning
@@ -140,7 +140,7 @@ label = "procspecn, onesided, psd, hanning";
 [spec, f] = procspecn(x(:),winlen=1024,overlap=512, ...
     winfun='hanning',norm=true,fs=fs,side='single',type='psd',center=false);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)*df), rms(x(:)), sqrt(sum(spec)*df)./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% test procspecn, onesided, power, hanning
@@ -148,7 +148,7 @@ label = "procspecn, onesided, power, hanning";
 [spec, f] = procspecn(x(:),winlen=1024,overlap=512, ...
     winfun='hanning',norm=true,fs=fs,side='single',type='power',center=false);
 df = f(2) - f(1);
-% Parcevall assersion
+% Parcevall identity
 [sqrt(sum(spec)), rms(x(:)), sqrt(sum(spec))./rms(x(:))]
 plotspec(f,spec,xscale='linear',title=label)
 %% comare procspec and procspecn, twosided, psd, uniform

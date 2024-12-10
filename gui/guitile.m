@@ -13,7 +13,7 @@ function getdata = guitile(data, kwargs)
         kwargs.tukey (1,:) double = 1 % tukey window function parameter
         %% axis parameters
         kwargs.axtarget (1,:) double = []
-        kwargs.hold (1,:) char {mustBeMember(kwargs.hold, {'on', 'off'})} = 'on'
+        kwargs.hold (1,:) char {mustBeMember(kwargs.hold, {'on', 'off'})} = 'off'
         kwargs.grid (1,:) char {mustBeMember(kwargs.grid, {'on', 'off'})} = 'on'
         kwargs.box (1,:) char {mustBeMember(kwargs.box, {'on', 'off'})} = 'on'
         kwargs.tile {mustBeA(kwargs.tile, {'double', 'char'})} = 'flow'

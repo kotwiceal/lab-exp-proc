@@ -48,7 +48,7 @@ function varargout = loadcta(path, kwargs)
 
     warning on
 
-    scan = []; data = []; raw = []; cal = []; velcor = [];
+    scan = []; data = []; raw = []; voltcal = []; velcal = [];
 
     switch kwargs.vendor
         case 'labview'
@@ -138,8 +138,8 @@ function varargout = loadcta(path, kwargs)
                     raw(:,1,:) = permute(coef(1)*((squeeze(raw(:,1,:)).*eccor').^2-coef(3)).^coef(2), [1, 3, 2]);
                     raw = real(raw);
 
-                    cal = @(x,ch) voltmap(ch,1)+x.*voltmap(ch,2);
-                    velcor = @(x) real(coef(1)*((x.*eccor').^2-coef(3)).^coef(2));
+                    voltcal = @(x,ch) voltmap(ch,1)+x.*voltmap(ch,2);
+                    velcal = @(vel,tempind) real(coef(1)*((vel.*eccor(tempind)').^2-coef(3)).^coef(2));
                 end
             catch
                 warning(mes);
@@ -150,8 +150,8 @@ function varargout = loadcta(path, kwargs)
             if ~isempty(scan); result.scan = scan; end
             if ~isempty(data); result.data = data; end
             if ~isempty(raw); result.raw = raw; end
-            if ~isempty(cal); result.cal = cal; end
-            if ~isempty(velcor); result.velcor = velcor; end
+            if ~isempty(voltcal); result.voltcal = voltcal; end
+            if ~isempty(velcal); result.velcal = velcal; end
             varargout{1} = result;
             
         case 'lcard'

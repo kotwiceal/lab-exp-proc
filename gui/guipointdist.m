@@ -12,7 +12,7 @@ function varargout = guipointdist(data, marker, kwargs)
     % guipointdist(data = intlotspec, point = spec, displayname = {'dbd', 'ref.'}, aspect = 'image', mask = [5, 7], x = x, y = y)
 
     arguments
-        data {mustBeA(data, {'numeric', 'cell'})} % matrix/pase-wise array
+        data {mustBeA(data, {'numeric', 'cell'})} % matrix/page-wise array
         marker {mustBeA(marker, {'numeric', 'cell'})} % marker data
         kwargs.mx {mustBeA(kwargs.mx, {'numeric', 'cell'})} = [] % marker data coordinate
         kwargs.x {mustBeA(kwargs.x, {'numeric', 'cell'})} = [] % longitudinal coordinate matrix/pase-wise array
@@ -24,6 +24,10 @@ function varargout = guipointdist(data, marker, kwargs)
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all' % interaction behaviour of ROI instances
         kwargs.number (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.number, 1)} = 1 % number of ROI instances
         %% axis parameters
+        kwargs.arrangement (1,:) char {mustBeMember(kwargs.arrangement, {'flow', 'vertical', 'horizontal'})} = 'flow'
+        kwargs.hold (1,:) char {mustBeMember(kwargs.hold, {'on', 'off'})} = 'off'
+        kwargs.grid (1,:) char {mustBeMember(kwargs.grid, {'on', 'off'})} = 'on'
+        kwargs.box (1,:) char {mustBeMember(kwargs.box, {'on', 'off'})} = 'on'
         kwargs.xlim (:,:) {mustBeA(kwargs.xlim, {'double', 'cell'})} = [] % x-axis limit
         kwargs.ylim (:,:) {mustBeA(kwargs.ylim, {'double', 'cell'})} = [] % y-axis limit
         kwargs.xlabel (1,:) {mustBeA(kwargs.xlabel, {'char', 'cell'})} = {} % x-axis label of field subplot
@@ -42,9 +46,12 @@ function varargout = guipointdist(data, marker, kwargs)
         kwargs.docked logical = false % docker figure
         kwargs.colormap (1,:) char = 'turbo' % colormap
         kwargs.colorbar (1,1) logical = true % show colorbar
+        kwargs.colortype (1,:) char {mustBeMember(kwargs.colortype, {'roi', 'data'})} = 'roi'
         kwargs.fontsize (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.fontsize, 1)} = 10 % axis font size
         kwargs.aspect (1,:) {mustBeA(kwargs.aspect, {'char', 'cell'}), mustBeMember(kwargs.aspect, {'equal', 'auto', 'manual', 'image', 'square'})} = 'image' % axis ratio
         kwargs.maspect (1,:) char {mustBeMember(kwargs.maspect, {'equal', 'auto', 'manual', 'image', 'square'})} = 'image' % axis ratio
+        kwargs.colorbarloc (1,:) char = 'eastoutside'
+        kwargs.roilabel (1,1) logical = false;
         % legend location
         kwargs.location (1,:) char {mustBeMember(kwargs.location, {'north','south','east','west','northeast','northwest','southeast','southwest','northoutside','southoutside','eastoutside','westoutside','northeastoutside','northwestoutside','southeastoutside','southwestoutside','best','bestoutside','layout','none'})} = 'best'
         kwargs.title = [] % figure global title
@@ -66,15 +73,17 @@ function varargout = guipointdist(data, marker, kwargs)
     if numel(data) ~= numel(kwargs.mask); error('data and mask must be cell array same size'); end
     if isempty(kwargs.mhandle); kwargs.mhandle = @(x)x; end
 
-    function reuslt = getdatafunc()
-        reuslt = struct();
-        temp = {};
+    function result = getdatafunc()
+        result = struct();
+        temp = {}; masks = {};
         for i = 1:numel(rois)
             for j = 1:numel(rois{i})
                 temp{i,j} = squeeze(marker{i}(:,yi(j,i),xi(j,i),:));
+                masks{i,j} = rois{i}{j}.Position;
             end
         end
-        reuslt.data = temp;
+        result.data = temp;
+        result.mask = masks;
         % store figure
         if ~isempty(kwargs.filename)
             savefig(gcf, strcat(kwargs.filename, '.fig'))
@@ -90,6 +99,10 @@ function varargout = guipointdist(data, marker, kwargs)
                     [~, indt] = min(abs(kwargs.x{j}-rois{j}{i}.Position(1)).*abs(kwargs.y{j}-rois{j}{i}.Position(2)), [], 'all');
                     [yi(i,j), xi(i,j)] = ind2sub(size(data{j}, [1, 2]), indt);
                     rois{j}{i}.Position = [kwargs.x{j}(yi(i,j),xi(i,j)), kwargs.y{j}(yi(i,j),xi(i,j))];
+                    if kwargs.roilabel
+                        rois{j}{i}.Label = jsonencode([yi(i,j),xi(i,j)]);
+                        rois{j}{i}.LabelAlpha = 0.5;
+                    end
                     rois{j}{i}.UserData.PreviousPosition = rois{j}{i}.Position;
                 end
             end
@@ -103,7 +116,12 @@ function varargout = guipointdist(data, marker, kwargs)
         for i = 1:numel(rois)
             for j = 1:numel(rois{i})
                 temp = kwargs.mhandle(squeeze(marker{i}(:,yi(j,i),xi(j,i),:)));
-                plot(axevent, kwargs.mx{i}, temp, Color = rois{i}{j}.Color)
+                switch kwargs.colortype
+                    case 'roi'
+                        plot(axevent, kwargs.mx{i}, temp, Color = rois{i}{j}.Color)
+                    case 'data'
+                        plot(axevent, kwargs.mx{i}, temp)
+                end
             end
         end
         if ~isempty(kwargs.mxlabel); xlabel(axevent, kwargs.mxlabel); end
@@ -160,7 +178,9 @@ function varargout = guipointdist(data, marker, kwargs)
 
     function plotdata()
         for i = 1:numel(pltfunc)
+            hold(ax{i}, kwargs.hold);
             pltfunc{i}(ax{i}); 
+            box(ax{i}, kwargs.box); grid(ax{i}, kwargs.grid);
             set(ax{i}, FontSize = kwargs.fontsize);
             if ~isempty(kwargs.aspect); axis(ax{i}, kwargs.aspect{i}); end
             if ~isempty(kwargs.xlim{i}); xlim(ax{i}, kwargs.xlim{i}); end
@@ -169,7 +189,7 @@ function varargout = guipointdist(data, marker, kwargs)
             if ~isempty(kwargs.xlabel); xlabel(ax{i}, kwargs.xlabel{i}); end
             if ~isempty(kwargs.ylabel); ylabel(ax{i}, kwargs.ylabel{i}); end
             if ~isempty(kwargs.displayname); title(ax{i}, kwargs.displayname{i}, 'FontWeight', 'Normal'); end
-            if kwargs.colorbar; clb = colorbar(ax{i}); if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel{i}); end; end
+            if kwargs.colorbar; clb = colorbar(ax{i}, kwargs.colorbarloc); if ~isempty(kwargs.clabel); ylabel(clb, kwargs.clabel{i}); end; end
         end
     end
 
@@ -206,7 +226,7 @@ function varargout = guipointdist(data, marker, kwargs)
     pltfunc = initplothandl(data);
 
     % create figure and redefine appearance paremeter
-    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout('flow'); colormap(kwargs.colormap);
+    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout(kwargs.arrangement, TileSpacing = 'tight'); colormap(kwargs.colormap);
     if isa(kwargs.xlabel, 'char'); kwargs.xlabel = repmat({kwargs.xlabel}, 1, numel(pltfunc)); end
     if isa(kwargs.ylabel, 'char'); kwargs.ylabel = repmat({kwargs.ylabel}, 1, numel(pltfunc)); end
     if isa(kwargs.aspect, 'char'); kwargs.aspect = repmat({kwargs.aspect}, 1, numel(pltfunc)); end

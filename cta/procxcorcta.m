@@ -3,6 +3,7 @@ function data = procxcorcta(data, kwargs)
 
     arguments   
         data (1,1) struct
+        kwargs.val double = []
         kwargs.df (1,1) double = 50
         kwargs.fgrid (1,:) double = [100:25:900];
         kwargs.phi (1,:) double = 0:5:360
@@ -27,6 +28,8 @@ function data = procxcorcta(data, kwargs)
             temp = data.tf;
     end
 
+    if ~isempty(kwargs.val); temp = kwargs.val; end
+
     switch kwargs.freqsel
         case 'range'
             freq2ind = @(f,x) find(f>=x(1)&f<=x(2));
@@ -37,15 +40,15 @@ function data = procxcorcta(data, kwargs)
 
     switch kwargs.intspec
         case 'sum'
-            kwargs.intspec = @(spec, freq) reshape(df*sum(spec(freq2ind(data.f,freq), :)), size(spec, 2:ndims(spec)));
+            kwargs.intspec = @(spec, freq) reshape(df*sum(spec(freq2ind(data.f,freq), :), 1), size(spec, 2:ndims(spec)));
         case 'mean'
             df = sqrt(df);
-            kwargs.intspec = @(spec, freq) reshape(df*mean(spec(freq2ind(data.f,freq), :),1), size(spec, 2:ndims(spec)));  
+            kwargs.intspec = @(spec, freq) reshape(df*mean(spec(freq2ind(data.f,freq), :), 1), size(spec, 2:ndims(spec)));  
         case 'struct'
-            kwargs.intspec = @data.intspec;
+            kwargs.intspec = data.intspec;
     end
 
-    % phase rotation of cross-spectra: [x-axis, z-axis, frequency band, dis/ref, phase shift];
+    % phase rotation of cross-spectra: [x-axis, z-axis, frequency band, phase shift];
     data.fgrid = kwargs.fgrid;
     data.df = kwargs.df;
     data.rcsd = shiftdim(real(shiftdim(temp,-1).*exp(1j*deg2rad(kwargs.phi)')),1);

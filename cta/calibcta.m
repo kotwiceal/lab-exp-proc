@@ -14,6 +14,7 @@ function varargout = calibcta(varargin, kwargs)
         %% appearance
         kwargs.show (1,1) logical = true % display results
         kwargs.docked (1,1) logical = false % dock figure
+        kwargs.title (1,:) char = []
     end
 
     arguments (Output, Repeating)
@@ -55,16 +56,18 @@ function varargout = calibcta(varargin, kwargs)
                 if kwargs.docked; figure(WindowStyle = 'docked'); else; figure; end
                 tiledlayout('flow');
                 nexttile; hold on; box on; grid on; axis square;
-                plot(kwargs.y, wire,'.-');
+                plt = plot(kwargs.y, wire,'.-');
+                scatter(kwargs.y(kwargs.index,:), wire(kwargs.index,:), 'filled');
                 if kwargs.yunit; xlabel('y, mm'); else; xlabel('y_n'); end
                 ylabel('u, m/s');
-                l = legend(num2str(round(kwargs.u0',1)),Location='eastoutside');
+                l = legend(plt, num2str(round(kwargs.u0',1)),Location='eastoutside');
                 if kwargs.u0isloc
                     title(l, 'U_e, m/s', FontWeight = 'normal');
                 else 
                     title(l, 'U_0, m/s', FontWeight = 'normal');
                 end
                 title('wire', FontWeight = 'normal');
+                if ~isempty(kwargs.title); sgtitle(kwargs.title); end
             end
 
             dudy = zeros(1, size(wire, 2));
@@ -99,6 +102,7 @@ function varargout = calibcta(varargin, kwargs)
                 ylabel('voltage'); 
                 if kwargs.yunit; xlabel('du/dy, 1/s'); else; xlabel('du/dy_n'); end
                 title('film', FontWeight = 'normal');
+                if ~isempty(kwargs.title); sgtitle(kwargs.title); end
             end
 
     end

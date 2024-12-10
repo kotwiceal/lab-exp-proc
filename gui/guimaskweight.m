@@ -65,7 +65,7 @@ function getdata = guimaskweight(data, kwargs)
     for i = 1:sz(3)
         nexttile; axroi = gca; imagesc(axroi, data(:,:,i,end)); xlim([0, sz(2)+1]); axis image;
         if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
-        temp = guiselectregion(axroi, moving = @eventroiselmoving, shape = 'poly', ...
+        temp = guiselectregion(axroi, moving = @eventroiselmoving, shape = 'polygon', ...
             mask = mask(:, :, i), interaction = 'all', number = 1);
         rois{i} = temp{1};
     end

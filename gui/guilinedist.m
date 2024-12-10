@@ -180,7 +180,7 @@ function getdata = guilinedist(data, kwargs)
                     X = hypot(xi - xi(1), zi - zi(1));
             end
             centerdata();
-            weightdata();
+            % weightdata();
             if length(rois) == 1
                 if isempty(kwargs.displayname)
                     for j = 1:prod(sz(3:end))
@@ -229,7 +229,10 @@ function getdata = guilinedist(data, kwargs)
             end
             % centerdata();
             % weightdata();
-            plot(ax, X{i}, raw{i}, 'Color', rois{i}.Color)
+            szw = size(raw{i});
+            for j = 1:prod(szw(2:end))
+                plot(ax, X{i}, raw{i}(:,j), 'Color', rois{i}.Color)
+            end
             % if length(rois) == 1
             %     if isempty(kwargs.displayname)
             %         for i = 1:numel(raw)

@@ -20,12 +20,12 @@ function result = prepinterm(data, kwargs)
         kwargs.dirdim (1,:) double = 1
         % prefilter type
         kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'gaussian', 'average', 'median', 'wiener', 'wiener-median', 'mode'})} = 'gaussian'
-        kwargs.prefiltker double = [3, 3] % prefilter kernel size
+        kwargs.prefiltker (1,:) double = [3, 3] % prefilter kernel size
         kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string'})} = 'symmetric' % padding value
         % fill missing data
         kwargs.fillmiss (1,:) char {mustBeMember(kwargs.fillmiss, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'none'
-        kwargs.pow double = 2 % raise to the power
-        kwargs.abs logical = false % calculate an absolute value
+        kwargs.pow (1,1) double = 2 % raise to the power
+        kwargs.abs (1,1) logical = false % calculate an absolute value
         %% dirgrad parameters
         kwargs.angle double = deg2rad(-22) % anlge of directed gradient, [rad]
         % derivative component at spatial differentiation
@@ -33,12 +33,12 @@ function result = prepinterm(data, kwargs)
         %% l2 parameters
         % threshold of tensor invariant
         kwargs.threshold (1,:) char {mustBeMember(kwargs.threshold, {'none', 'neg', 'pos'})} = 'none'
-        kwargs.eigord double = 1
+        kwargs.eigord (1,1) double = 1
         %% postprocessing parameters
         % portfilter type
         kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'gaussian', 'average', 'median', 'wiener', 'wiener-median', 'mode'})} = 'median'
         % postfilter
-        kwargs.postfiltker double = [15, 15] % postfilter kernel size
+        kwargs.postfiltker (1,:) double = [15, 15] % postfilter kernel size
     end
 
     result = [];

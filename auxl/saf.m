@@ -1,7 +1,7 @@
 function saf(folder, kwargs)
     arguments
         folder (1,:) char {mustBeFolder} = []
-        kwargs.resolution (1,1) = 600
+        kwargs.resolution (1,1) = 300
         kwargs.extension (1,:) = '.png'
     end
     
