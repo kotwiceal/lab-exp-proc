@@ -13,6 +13,8 @@ function [X, matind] = pivfindlocmax(data, kwargs)
         matind (:,:)
     end
 
+    data = abs(data);
+
     switch kwargs.method
         case 'morph'
             if isempty(kwargs.msz); kwargs.msz = floor(size(data, [1, 2])/2); end

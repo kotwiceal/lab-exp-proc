@@ -261,3 +261,32 @@ function varargout = guipointdist(data, marker, kwargs)
     end
 
 end
+
+function snaphandler(src, pos, kwargs)
+    arguments
+        src
+        pos
+        kwargs.sz (1,:) double = []
+    end
+    switch class(src)
+        case 'images.roi.Rectangle'
+            curpos = src.Position;
+            vertexes = [curpos(1), curpos(2); curpos(1)+curpos(3), curpos(2); ...
+                curpos(1)+curpos(3), curpos(2)+curpos(4); curpos(1), curpos(2)+curpos(4)];
+            k = dsearchn(pos, vertexes);
+            src.UserData.linind = k;
+            actvertexes = pos(k,:);
+            actvertexes = sort(actvertexes, 1);
+            actpos = [actvertexes(1,1), actvertexes(1,2), ...
+                actvertexes(4,1)-actvertexes(1,1), actvertexes(4,2)-actvertexes(1,2)];
+            src.Position = actpos;
+        otherwise
+            k = dsearchn(pos, src.Position);
+            src.Position = pos(k,:);
+            src.UserData.linind = k;
+    end
+    if ~isempty(kwargs.sz)
+        src.UserData.subind = cell(numel(kwargs.sz), 1);
+        [src.UserData.subind{:}] = ind2sub(kwargs.sz, src.UserData.linind);
+    end
+end

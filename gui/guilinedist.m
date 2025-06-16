@@ -27,6 +27,7 @@ function getdata = guilinedist(data, kwargs)
         kwargs.winfun char {mustBeMember(kwargs.winfun, {'none', 'hann', 'hamming', 'tukey'})} = 'none'
         kwargs.tukey (1,1) double = 1; % tukey window function parameter
         %% roi and axis parameters
+        kwargs.arrangement (1,:) char {mustBeMember(kwargs.arrangement, {'flow', 'vertical', 'horizontal'})} = 'flow'
         kwargs.frame (1,:) double {mustBeInteger} = [] % position of interactive subplot
         % shape of selection tool
         kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'line', 'rect'})} = 'line'
@@ -59,7 +60,7 @@ function getdata = guilinedist(data, kwargs)
         kwargs.extension (1, :) char = '.png' % filename of storing figure
         kwargs.showrotframe (1,1) logical = true % supporing figure to show rotated frames
         % aspect ratio of line-distribution subplot 
-        kwargs.maspect (1,:) char {mustBeMember(kwargs.maspect , {'equal', 'square', 'auto'})} = 'auto'
+        kwargs.maspect (1,:) char {mustBeMember(kwargs.maspect , {'equal', 'square', 'auto'})} = 'square'
         kwargs.fontsize (1,1) double = 14
     end
 
@@ -293,7 +294,7 @@ function getdata = guilinedist(data, kwargs)
     if isa(kwargs.clabel, 'char'); kwargs.clabel = repmat({kwargs.clabel}, 1, numel(kwargs.frame)); end
 
     if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
-    tiledlayout('flow');
+    tiledlayout(kwargs.arrangement);
     switch disptype
         case 'node'
             if isempty(kwargs.xlabel); kwargs.xlabel = 'x_{n}'; end

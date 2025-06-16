@@ -20,6 +20,7 @@ function varargout = splitdatcell(varargin, kwargs)
     szd = cell(numel(temp), 1);
     for i = 1:numel(temp)
         szd{i} = size(temp{i});
+        if isrow(temp{i}); temp{i} = temp{i}'; end
         temp2 = squeeze(num2cell(temp{i}, kwargs.dims));
         data = cat(1, data, temp2{:});
     end
@@ -44,7 +45,7 @@ function varargout = splitdatcell(varargin, kwargs)
         else
             numelin = zeros(nargin-1, 1);
             for i = 1:nargin-1; numelin(i) = numel(varargin{i}); end
-            if ~isscalar(unique(numelin)); error('X, Y cell array must have same size'); end
+            if ~isscalar(unique(numelin)); error('grid cell array must have same size'); end
     
             grid = cell(nargin-1, 1);
             % grid dims loop
@@ -53,7 +54,8 @@ function varargout = splitdatcell(varargin, kwargs)
                 % slice loop
                 for j = 1:numel(temp)
                     sz = size(temp{j});
-                    if numel(sz) == numel(szd{j})
+                    if isrow(temp{j}); temp{j} = temp{j}'; end
+                    if numel(sz) == numel(szd{j}) && ~iscolumn(temp{j})
                         if isscalar(unique(sz == szd{j}))
                             temp2 = squeeze(num2cell(temp{j}, kwargs.dims));
                         else

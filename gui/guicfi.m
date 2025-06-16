@@ -182,7 +182,7 @@ function getdata = guicfi(kwargs)
         end
     
         % fillmissing
-        vm = imfilt(vm, filt = 'fillmissing', method = kwargs.fillmissing);
+        vm = imfilt(vm, filt = 'fillmiss', method = kwargs.fillmissing);
     
         % prefiltering
         vm = imfilt(vm, filt = kwargs.prefilter, filtker = kwargs.prefiltker);

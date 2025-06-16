@@ -1,4 +1,4 @@
-function varargout = guihist(varargin, kwargs)
+function varargout = guihist(varargin, kwargs, opt)
     %% Visualize data statistics by means manually region selection.
 
     %% Examples:
@@ -50,7 +50,9 @@ function varargout = guihist(varargin, kwargs)
         % type of data normalization
         kwargs.normalize (1,:) char {mustBeMember(kwargs.normalize, {'none', 'zscore', 'norm', 'center', 'scale', 'range'})} = 'none'
         kwargs.pow (1,:) double = []
+        kwargs.trackline (1,1) logical = false
         %% roi and axis parameters
+        kwargs.arrangement (1,:) char {mustBeMember(kwargs.arrangement, {'flow', 'vertical', 'horizontal'})} = 'flow'
         % type of region selection
         kwargs.shape (1,:) char {mustBeMember(kwargs.shape, {'rect', 'polygon'})} = 'rect'
         % edge size to rectangle selection or n-row verxex to polygon selection 
@@ -68,6 +70,7 @@ function varargout = guihist(varargin, kwargs)
         kwargs.clim double = [] % color-axis limit
         kwargs.colormap (1,:) char = 'turbo' % colormap name
         kwargs.colorbarloc (1,:) char = 'eastoutside'
+        kwargs.levels (1,:) double = 100;
         kwargs.markersize double = 3 % 
         kwargs.cdf logical = false % plot cdf of statistics
         kwargs.cumsum logical = false % plot cumulative sum of statistics
@@ -78,31 +81,32 @@ function varargout = guihist(varargin, kwargs)
         kwargs.filename (1,:) char = [] % to store figure
         kwargs.extension (1,:) char = '.png' % image extension of stored figure
         kwargs.fontsize (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.fontsize, 1)} = 10 % axis font size
+        kwargs.linewidth double = 1.25
         %% optimization parameters
         % type of statistics fit
-        kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'none', 'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'none'
-        kwargs.objnorm double = 2 % norm order at calculation objective function
-        kwargs.Aineq double = [] % linear optimization inequality constrain matrix
-        kwargs.bineq double = [] % linear optimization inequality constrain right side
-        kwargs.Aeq double = [] % linear optimization equality constrain matrix
-        kwargs.beq double = [] % linear optimization equality constrain right side
-        kwargs.nonlcon = [] % non-linear optimization constrain function
-        kwargs.x0 double = [] % inital approximation
-        kwargs.lb double = [] % lower bound of parameters
-        kwargs.ub double = [] % upper bpund of parameters
-        kwargs.mb double = [0, 10] % scale range of auto constrains
-        kwargs.verbose logical = false % display of statistic parameters and optimization result 
+        opt.distname (1,:) char {mustBeMember(opt.distname, {'none', 'chi21', 'beta1', 'beta1l', 'beta2', 'beta2l', 'gamma1', 'gamma2', 'gumbel1', 'gumbel2'})} = 'none'
+        opt.objnorm double = 2 % norm order at calculation objective function
+        opt.Aineq double = [] % linear optimization inequality constrain matrix
+        opt.bineq double = [] % linear optimization inequality constrain right side
+        opt.Aeq double = [] % linear optimization equality constrain matrix
+        opt.beq double = [] % linear optimization equality constrain right side
+        opt.nonlcon = [] % non-linear optimization constrain function
+        opt.x0 double = [] % inital approximation
+        opt.lb double = [] % lower bound of parameters
+        opt.ub double = [] % upper bpund of parameters
+        opt.mb double = [0, 10] % scale range of auto constrains
+        opt.verbose logical = false % display of statistic parameters and optimization result 
         %% restriction parameters
-        kwargs.mean1 double = [] % constraints of mean value the first mode
-        kwargs.mode1 double = [] % constraints of mode value the first mode
-        kwargs.var1 double = [] %  constraints of variance value the first mode
-        kwargs.amp1 double = [] % constraints of amplitude value the first mode
-        kwargs.mean2 double = [] % constraints of mean value the second mode
-        kwargs.mode2 double = [] % constraints of mode value the second mode
-        kwargs.var2 double = [] % constraints of variance value the second mode
-        kwargs.amp2 double = [] % constraints of amplitude value the second mode
+        opt.mean1 double = [] % constraints of mean value the first mode
+        opt.mode1 double = [] % constraints of mode value the first mode
+        opt.var1 double = [] %  constraints of variance value the first mode
+        opt.amp1 double = [] % constraints of amplitude value the first mode
+        opt.mean2 double = [] % constraints of mean value the second mode
+        opt.mode2 double = [] % constraints of mode value the second mode
+        opt.var2 double = [] % constraints of variance value the second mode
+        opt.amp2 double = [] % constraints of amplitude value the second mode
         %% other parameters
-        kwargs.quantile double = 0.9
+        opt.quantile double = 0.9
     end
 
     % define variables
@@ -145,26 +149,26 @@ function varargout = guihist(varargin, kwargs)
     end
 
     % auto build non-linear constrain function
-    temporary = isempty(cat(1, kwargs.mean1, kwargs.mode1, kwargs.var1, kwargs.amp1, kwargs.mean2, ...
-        kwargs.mode2, kwargs.var2, kwargs.amp2));
-    if isempty(kwargs.nonlcon) && ~temporary
-        kwargs.nonlcon = @(x) nonlconfitdist(x, distname = kwargs.distname, mean1 = kwargs.mean1, mode1 = kwargs.mode1, ...
-            var1 = kwargs.var1, amp1 = kwargs.amp1, mean2 = kwargs.mean2, mode2 = kwargs.mode2, var2 = kwargs.var2, amp2 = kwargs.amp2);
+    temporary = isempty(cat(1, opt.mean1, opt.mode1, opt.var1, opt.amp1, opt.mean2, ...
+        opt.mode2, opt.var2, opt.amp2));
+    if isempty(opt.nonlcon) && ~temporary
+        opt.nonlcon = @(x) nonlconfitdist(x, distname = opt.distname, mean1 = opt.mean1, mode1 = opt.mode1, ...
+            var1 = opt.var1, amp1 = opt.amp1, mean2 = opt.mean2, mode2 = opt.mode2, var2 = opt.var2, amp2 = opt.amp2);
     end
 
     fithistfunc = @(roi) fithist(data = select(roi), ...
-        distname = kwargs.distname, ...
-        objnorm = kwargs.objnorm, ...
-        nonlcon = kwargs.nonlcon, ...
-        lb = kwargs.lb, ...
-        x0 = kwargs.x0, ...
-        ub = kwargs.ub, ...
-        mb = kwargs.mb, ...
+        distname = opt.distname, ...
+        objnorm = opt.objnorm, ...
+        nonlcon = opt.nonlcon, ...
+        lb = opt.lb, ...
+        x0 = opt.x0, ...
+        ub = opt.ub, ...
+        mb = opt.mb, ...
         range = kwargs.range, ...
         normalize = kwargs.normalize, ...
         binedge = kwargs.binedge, ...
         pow = kwargs.pow, ...
-        verbose = kwargs.verbose);
+        verbose = opt.verbose);
 
     function result = getdatafunc()
         result = struct();
@@ -172,7 +176,7 @@ function varargout = guihist(varargin, kwargs)
         for i = 1:length(rois)  
             result.mask{i} = rois{i}.Position; 
         end
-        if numel(result.mask) == 1
+        if isscalar(result.mask)
             result.mask = result.mask{1};
         end
         % normalization
@@ -188,8 +192,8 @@ function varargout = guihist(varargin, kwargs)
         end
         for i = 1:length(rois)       
             [~, counts_raw, edges_raw, coef, ~, ~] = fithistfunc(rois{i});
-            if kwargs.distname ~= "none"
-                result.param{i} = distparam(coef, distname = kwargs.distname, disp = false);
+            if opt.distname ~= "none"
+                result.param{i} = distparam(coef, distname = opt.distname, disp = false);
             end
             result.dist{i} = [edges_raw, counts_raw];
         end
@@ -210,7 +214,7 @@ function varargout = guihist(varargin, kwargs)
 
     function plot_raw_hist()
         %% show statistic of raw data
-        cla(ax{1});
+        cla(ax{1}); axis(ax{1}, kwargs.aspecthist); set(ax{1}, fontsize = kwargs.fontsize);
         for i = 1:length(rois)
             switch numel(varargin)
                 case 1
@@ -244,8 +248,8 @@ function varargout = guihist(varargin, kwargs)
                     end
 
                     plot(ax{1}, edges, counts, 'Color', rois{i}.Color, ...
-                        'DisplayName', strcat("raw ", num2str(i)))
-                    xlabel(ax{1}, 'edges'); ylabel(ax{1}, kwargs.norm);
+                        'DisplayName', strcat("raw ", num2str(i)), 'LineWidth', kwargs.linewidth)
+                    xlabel(ax{1}, kwargs.clabel); ylabel(ax{1}, upper(kwargs.norm));
                     hold(ax{1}, 'on'); box(ax{1}, 'on'); grid(ax{1}, 'on');
                 case 2
                     temporary = select(rois{i});
@@ -279,7 +283,7 @@ function varargout = guihist(varargin, kwargs)
                     box(ax{1}, 'on'); grid(ax{1}, 'on');
             end
         end
-        if kwargs.verbose
+        if opt.verbose
             tab = reshape([param.mean; param.mode; param.variance; param.skewness; param.kurtosis], [], 5)';
             tab = array2table(tab, 'VariableNames', "raw"+split(num2str(1:size(temporary,2)))+" roi"+split(num2str(1:numel(rois)))', 'RowName', {'mean', 'mode', 'variance', 'skewness', 'kurtosis'});
             disp(tab);
@@ -289,20 +293,20 @@ function varargout = guihist(varargin, kwargs)
     function plot_fit_hist()
         %% show statistic of fitted data
         cla(ax{1}); hold(ax{1}, 'on'); box(ax{1}, 'on'); grid(ax{1}, 'on');
-        xlabel(ax{1}, 'edges'); ylabel(ax{1}, kwargs.norm);
+        xlabel(ax{1}, kwargs.clabel); ylabel(ax{1}, upper(kwargs.norm));
         axis(ax{1}, kwargs.aspecthist); set(ax{1}, FontSize = kwargs.fontsize);
 
         if kwargs.cdf
             cla(ax{2}); hold(ax{2}, 'on'); box(ax{2}, 'on'); grid(ax{2}, 'on');
             set(ax{2}, FontSize = kwargs.fontsize);
-            xlabel(ax{2}, 'edges'); ylabel(ax{2}, 'cdf');
+            xlabel(ax{2}, kwargs.clabel); ylabel(ax{2}, 'cdf');
             ylim(ax{2}, [-0.1, 1.1])
         end
 
         for i = 1:length(rois)       
             [~, modes, edges_fit, ~, edges_raw, counts_raw] = fithistfunc(rois{i});
 
-            if length(rois) == 1
+            if isscalar(rois)
                 plot(ax{1}, edges_raw, counts_raw, 'Color', rois{i}.Color, ...
                     'DisplayName', 'raw')
             else
@@ -329,9 +333,9 @@ function varargout = guihist(varargin, kwargs)
             end
 
             if kwargs.number == 1
-                if length(rois) == 1
+                if isscalar(rois)
                     plot(ax{1}, edges_fit, sum(modes, 2), ...
-                        'DisplayName', 'sum modes')
+                        'DisplayName', 'lam.+turb.')
                 else
                     plot(ax{1}, edges_fit, sum(modes, 2), ...
                         'DisplayName', strcat("sum mode", num2str(i)))
@@ -346,11 +350,11 @@ function varargout = guihist(varargin, kwargs)
                 if size(cdf, 2) == 2
                     cdf(:, 2) = 1 - cdf(:, 2);
 
-                    if kwargs.verbose
+                    if opt.verbose
                         [~, indcdfint] = min(abs(diff(cdf, 1, 2)));
-                        [~, indqntl] = min(abs(cdf(:, 1)-kwargs.quantile));
+                        [~, indqntl] = min(abs(cdf(:, 1)-opt.quantile));
                         tab = [edges_fit(indcdfint); edges_fit(indqntl)];
-                        tab = array2table(tab, 'VariableNames', {'value'}, 'RowName', {'cdf intersection', char(strcat("quantile ", num2str(kwargs.quantile)))});
+                        tab = array2table(tab, 'VariableNames', {'value'}, 'RowName', {'cdf intersection', char(strcat("quantile ", num2str(opt.quantile)))});
                         disp(tab);
                     end
                 end
@@ -403,6 +407,24 @@ function varargout = guihist(varargin, kwargs)
                 rois{i}.Position = [rois{i}.Position(1), yl(1), rois{i}.Position(3), yl(2)-yl(1)];
             end
         end
+
+
+        if kwargs.trackline
+            %% event to align rectangle selection box along line
+            positions = [];
+            for i = 1:numel(rois)
+                positions = cat(1, positions, rois{i}.Position);
+            end
+            positions(:,1) = linspace(positions(1,1), positions(end,1), kwargs.number);
+            positions(:,2) = linspace(positions(1,2), positions(end,2), kwargs.number);
+            try
+                positions(:,3:4) = repmat(evt.CurrentPosition(:,3:4), kwargs.number, 1);
+            catch
+            end
+            for i = 1:numel(rois)
+                rois{i}.Position = positions(i, :);
+            end
+        end
     end
 
     function plot_cumsum()
@@ -416,7 +438,7 @@ function varargout = guihist(varargin, kwargs)
 
     function event(~, ~)
         %% callback at moved event
-        switch kwargs.distname
+        switch opt.distname
             case 'none'
                 plot_raw_hist();
             otherwise
@@ -431,7 +453,7 @@ function varargout = guihist(varargin, kwargs)
         customize_appearance();
     end
 
-    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout('flow');
+    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end; tiledlayout(kwargs.arrangement);
     axroi = nexttile;
     if isvect
         hold(axroi, 'on'); grid(axroi, 'on'); box(axroi, 'on');
@@ -447,8 +469,9 @@ function varargout = guihist(varargin, kwargs)
                 imagesc(axroi, varargin{1}(:,:,1)); 
                 if kwargs.aspect ~= "auto"; axis(axroi, kwargs.aspect); end
             case 'spatial'
-                hold(axroi, 'on'); grid(axroi, 'on'); box(axroi, 'on');
-                contourf(axroi, kwargs.x, kwargs.z, varargin{1}(:,:,1), 100, 'LineStyle', 'None'); 
+                % hold(axroi, 'off'); grid(axroi, 'on'); box(axroi, 'on');
+                contourf(axroi, kwargs.x, kwargs.z, varargin{1}(:,:,1), kwargs.levels, 'LineStyle', 'None'); 
+                grid(axroi, 'on'); box(axroi, 'on');
                 xlim([min(kwargs.x(:)), max(kwargs.x(:))]);
                 ylim([min(kwargs.z(:)), max(kwargs.z(:))]);
                 axis(axroi, kwargs.aspect);

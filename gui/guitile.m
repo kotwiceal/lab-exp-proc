@@ -150,7 +150,7 @@ function getdata = guitile(data, kwargs)
     for i = kwargs.axtarget
         ax{i} = nexttile; 
         hold(ax{i}, kwargs.hold);
-        pltfunc{i}(); box(ax{i}, kwargs.box); grid(ax{i}, kwargs.grid);
+        pltfunc{i}(); hold(ax{i}, kwargs.hold); box(ax{i}, kwargs.box); grid(ax{i}, kwargs.grid);
         set(gca, FontSize = kwargs.fontsize);
         if ~isempty(kwargs.aspect); axis(kwargs.aspect{i}); end
         if ~isempty(kwargs.xlim{i}); xlim(kwargs.xlim{i}); end
