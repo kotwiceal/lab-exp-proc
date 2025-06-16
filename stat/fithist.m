@@ -195,7 +195,7 @@ function varargout = fithist(kwargs)
             distparam(coef, distname = kwargs.distname, disp = true);
         end
     catch
-        f = []; modes = y; edges = x; coef = [];
+        f = []; modes = y; edges = x; coef = nan(1, 6);
     end
 
     % select outputs

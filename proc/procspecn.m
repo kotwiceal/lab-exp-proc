@@ -6,8 +6,8 @@ function [spec, f] = procspecn(data, kwargs)
         kwargs.ftdim (1,:) double = [] % dimensions to apply transform
         kwargs.chdim (1,:) double = [] % dimensions to process cross spectra
         kwargs.winlen (1,:) double = 1024 % transform window lengths
-        kwargs.overlap (1,:) double = 512 % transform window overlaps
-        kwargs.offset (1,:) {mustBeA(kwargs.offset, {'double', 'cell '})} = [] % sliding window offset at performing STFT
+        kwargs.overlap (1,:) double = 512 % transform window strides
+        kwargs.offset (1,:) {mustBeA(kwargs.offset, {'double', 'cell '})} = 0 % sliding window offset at performing STFT
         kwargs.side (1,:) char {mustBeMember(kwargs.side, {'single', 'double'})} = 'single' % spectra process mode
         kwargs.type (1,:) char {mustBeMember(kwargs.type, {'amp', 'power', 'psd'})} = 'power' % spectra process mode
         kwargs.avg (1,1) logical = true % averaging by statistics of spectra
@@ -15,7 +15,13 @@ function [spec, f] = procspecn(data, kwargs)
         kwargs.center (1,1) logical = true % centre data at transform
         kwargs.winfun (1,:) char {mustBeMember(kwargs.winfun, {'uniform', 'hann', 'hanning', 'hamming'})} = 'hanning' % to weight data at transform
         kwargs.norm (1,1) logical = true % norm for spectral density
-        kwargs.output (1,:) char {mustBeMember(kwargs.output, {'double', 'cell'})} = 'double'
+        kwargs.ans (1,:) char {mustBeMember(kwargs.ans, {'double', 'cell'})} = 'double' % output data format
+        % parallel processing settings
+        kwargs.usefiledatastore (1, 1) logical = false
+        kwargs.useparallel (1,1) logical = false
+        kwargs.extract {mustBeMember(kwargs.extract, {'readall', 'writeall'})} = 'writeall'
+        kwargs.poolsize = {16, 16}
+        kwargs.resources {mustBeA(kwargs.resources, {'cell'}), mustBeMember(kwargs.resources, {'Processes', 'Threads'})} = {'Threads', 'Processes'}
     end
 
     szd = size(data); nd = ndims(data); ndw = numel(kwargs.winlen);
@@ -39,9 +45,9 @@ function [spec, f] = procspecn(data, kwargs)
             case 'double'
                 f{i} = df(i) * (-nh:nh1-1);
         end
-        [f{:}] = ndgrid(f{:});
-        if numel(f) == 1; f = f{1}; end
     end
+    [f{:}] = ndgrid(f{:});
+    if isscalar(f); f = f{1}; end
 
     % create multidimensional window function
     switch kwargs.winfun
@@ -63,14 +69,17 @@ function [spec, f] = procspecn(data, kwargs)
     
     kernel = zeros(1, nd); kernel(kwargs.ftdim) = kwargs.winlen;
     stride = ones(1, nd); stride(kwargs.ftdim) = kwargs.overlap;
-    spec = nonlinfilt(data, method = @specker, kernel = kernel, stride = stride, offset = kwargs.offset, shape = 'valid');
+    offset = zeros(1, nd); offset(kwargs.ftdim) = kwargs.offset;
+    spec = nonlinfilt(@specker, data, kernel = kernel, stride = stride, offset = offset, padval = false, ...
+        resources = kwargs.resources, usefiledatastore = kwargs.usefiledatastore, useparallel = kwargs.useparallel, ...
+        extract = kwargs.extract, poolsize = kwargs.poolsize);
 
     if ismatrix(spec); nd = nd - 1; end
 
     arbind = 1:ndims(spec); arbind([kwargs.ftdim, nd+1:numel(kwargs.winlen)+nd]) = [];
     permind = [nd+1:numel(kwargs.winlen)+nd, kwargs.ftdim, arbind];
 
-    spec = permute(spec, permind); % permute dims
+    % spec = permute(spec, permind); % permute dims
     if kwargs.norm;  spec = spec./kwargs.winlen; end % norm spectra
 
     szs = size(spec);
@@ -105,16 +114,21 @@ function [spec, f] = procspecn(data, kwargs)
                 for i = 1:ndims(spec); indi{i} = 1:szs(i); end
                 indj = indi;
 
-                temp = [];
+                temp = zeros([szst, szd(kwargs.chdim), szd(kwargs.chdim)]);
                 for i = 1:szd(kwargs.chdim)
                     indi{kwargs.chdim+numel(kwargs.winlen)} = i;
                     for j = 1:szd(kwargs.chdim)
                         indj{kwargs.chdim+numel(kwargs.winlen)} = j;
                         indt = cat(2, indg, i, j);
-                        temp(indt{:}) = spec(indi{:}).*conj(spec(indj{:}));
+                        if j < i
+                            temp2 = nan; 
+                        else
+                            temp2 = spec(indi{:}).*conj(spec(indj{:}));
+                        end
+                        temp(indt{:}) = temp2;
                     end
                 end
-                spec = temp; clear temp;
+                spec = temp; clear temp temp2;
             end
     end
 
@@ -124,7 +138,7 @@ function [spec, f] = procspecn(data, kwargs)
 
     if kwargs.type == "psd"; spec = spec./df; end % norm to spectral density
 
-    switch kwargs.output
+    switch kwargs.ans
         case 'cell'
             szs = size(spec);
             indg = cell(1, numel(kwargs.winlen) + nd - 2);
@@ -141,7 +155,7 @@ function [spec, f] = procspecn(data, kwargs)
             spec = temp; clear temp;
     end
 
-    function y = specker(x)
+    function y = specker(x, ~)
         x = squeeze(x);
         if kwargs.center; for k = 1:ndw; x = normalize(x,k,'center'); end; end % centre data
         x = x.*win; % weight data by window function

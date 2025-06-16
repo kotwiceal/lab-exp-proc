@@ -88,7 +88,7 @@ function result = procinterm(data, kwargs)
         % method to filter threshold field
         kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'average', 'gaussian', 'median', 'wiener', 'mode', 'dilate'})} = 'median'
         kwargs.prefiltker double = [4, 4] % kernel of filtering threshold field
-        kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string'})} = 'symmetric' % padding value
+        kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string', 'logical', 'cell'})} = 'symmetric' % padding value
         %% post-processing parameters
         % method to filter intermittency field
         kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'average', 'gaussian', 'median', 'median-omitmissing', 'median-weighted', 'wiener', 'mode'})} = 'none'
@@ -96,6 +96,11 @@ function result = procinterm(data, kwargs)
         kwargs.resize (1,1) logical = true
         %% support parameters
         kwargs.verbose (1,1) logical = true % show logger
+        %% optional
+        kwargs.resources {mustBeA(kwargs.resources, {'cell'}), mustBeMember(kwargs.resources, {'Processes', 'Threads'})} = {'Processes', 'Processes'}
+        kwargs.usefiledatastore (1, 1) logical = false
+        kwargs.useparallel (1,1) logical = false
+        kwargs.extract {mustBeMember(kwargs.extract, {'readall', 'writeall'})} = 'readall'
     end
 
     function [result, fitdistcoef] = procfitdistfilt(data, kwargs)
@@ -110,37 +115,48 @@ function result = procinterm(data, kwargs)
                 fitdistcoef = kwargs.fitdistcoef;
             end
 
-            szf = size(fitdistcoef);
-
             if ~isvector(data)
+                m = numel(kwargs.kernel);
+                n = ndims(data) - numel(kwargs.kernel);
+                padval = {cat(2, repmat({kwargs.padval}, 1, m), repmat({false}, 1, n)), ...
+                    cat(2, repmat({kwargs.padval}, 1, m), {false})};
                 kernel = kwargs.kernel; stride = kwargs.stride;
                 kwargs.kernel = cell(1, 2); kwargs.stride = cell(1, 2);
-                kwargs.kernel{1} = [kernel, nan];
-                kwargs.stride{1} = [stride, nan];
+                kwargs.kernel{1} = [kernel, nan(1, n)];
+                kwargs.stride{1} = [stride, ones(1, n)];
                 kwargs.kernel{2} = [kernel, nan];
-                kwargs.stride{2} = [stride, nan];
+                kwargs.stride{2} = [stride, 1];
                 x0 = @(y) squeeze(median(y, [1, 2], 'omitmissing'));
             else
                 x0 = @(y) median(y, 1, 'omitmissing');
             end
 
-            nlkernel = @(x, y) fitdistfilt(x, method = kwargs.method, norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
+            nlkernel = @(x, y, ~) fitdistfilt(x, method = kwargs.method, norm = kwargs.norm, ...
+                binedge = kwargs.binedge, root = kwargs.root, ...
                 quantile = kwargs.quantile, distname = kwargs.distname, x0 = x0(y), ...
                 lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
 
-            result = nonlinfilt(data, fitdistcoef, method = @(x, y) nlkernel(x, y), ...
-                kernel = kwargs.kernel, stride = kwargs.stride, padval = kwargs.padval);
+            result = nonlinfilt(nlkernel, data, fitdistcoef, ...
+                kernel = kwargs.kernel, stride = kwargs.stride, padval = padval, ...
+                    resources = kwargs.resources, usefiledatastore = kwargs.usefiledatastore, ...
+                    useparallel = kwargs.useparallel, extract = kwargs.extract);
         else
-            nlkernel = @(x) fitdistfilt(x, method = kwargs.method, norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
+            nlkernel = @(x, ~) fitdistfilt(x, method = kwargs.method, norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
                 quantile = kwargs.quantile, distname = kwargs.distname, x0 = kwargs.x0, ...
                 lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
 
             if ~isvector(data)
-                kwargs.kernel = [kwargs.kernel, szd(3)];
-                kwargs.stride = [kwargs.stride, szd(3)];
+                m = numel(kwargs.kernel);
+                n = ndims(data) - numel(kwargs.kernel);
+                kwargs.kernel = [kwargs.kernel, nan(1, n)];
+                kwargs.stride = [kwargs.stride, ones(1, n)];
+    
+                padval = cat(2, repmat({kwargs.padval}, 1, m), repmat({false}, 1, n));
             end
 
-            result = nonlinfilt(data, method = @(x) nlkernel(x), kernel = kwargs.kernel, stride = kwargs.stride, padval = kwargs.padval);
+            result = nonlinfilt(nlkernel, data, kernel = kwargs.kernel, stride = kwargs.stride, padval = padval, ...
+                resources = kwargs.resources, usefiledatastore = kwargs.usefiledatastore, ...
+                useparallel = kwargs.useparallel, extract = kwargs.extract);
         end
         if kwargs.method ~= "integral-ratio"
             result = imfilt(result, filt = kwargs.prefilt, filtker = kwargs.prefiltker, padval = kwargs.padval);
@@ -211,7 +227,7 @@ function result = procinterm(data, kwargs)
 
     % morphological postprocessing
     if ~isempty(binarized)
-        if kwargs.dilate1d; binarized = nonlinfilt(binarized, method = @(x) sum(x(:))>0, kernel = kwargs.dilate1dker); end
+        if kwargs.dilate1d; binarized = nonlinfilt(@(x) sum(x(:))>0, binarized, kernel = kwargs.dilate1dker); end
         if kwargs.dilate; binarized = immorph(binarized, method = 'dilate', strelker = kwargs.dilateker); end
         if kwargs.imerode; binarized = immorph(binarized, method = 'erode', strelker = kwargs.erodeker); end
         if kwargs.imclose; binarized = immorph(binarized, method = 'close', strelker = kwargs.closeker); end

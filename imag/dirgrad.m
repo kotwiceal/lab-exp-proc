@@ -13,42 +13,75 @@ function varargout = dirgrad(u, w, angle, kwargs)
         kwargs.component (1,:) char {mustBeMember(kwargs.component, {'dudl', 'dudn', 'dwdl', 'dwdn', 'all'})} = 'dwdl'
         % differentiation kernel
         kwargs.diffilt (1,:) char {mustBeMember(kwargs.diffilt, {'sobel', '4ord', '4ordgauss', '2ord'})} = 'sobel'
+        kwargs.fillmiss (1,:) char {mustBeMember(kwargs.fillmiss, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'none'
         % prefilter kernel
         kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'gaussian'
         kwargs.prefiltker double = [3, 3] % prefilter kernel size
+        kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string', 'logical', 'cell'})} = 'symmetric' % padding value
+        kwargs.pow (1,1) double = 2 % raise to the power
+        % portfilter type
+        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'gaussian', 'average', 'median', 'wiener'})} = 'none'
+        kwargs.postfiltker (1,:) double = [] % postfilter kernel size
+        %%
+        kwargs.ans {mustBeMember(kwargs.ans, {'array', 'cell'})} = 'array'
     end
 
-    mat = [cos(angle)^2, cos(angle)*sin(angle), cos(angle)*sin(angle), sin(angle)^2; ...
+    math = memoize(@(angle) [cos(angle)^2, cos(angle)*sin(angle), cos(angle)*sin(angle), sin(angle)^2; ...
         -cos(angle)*sin(angle), cos(angle)^2, -sin(angle)^2, cos(angle)*sin(angle); ...
         -cos(angle)*sin(angle), -sin(angle)^2, cos(angle)^2, cos(angle)*sin(angle); ...
-        sin(angle)^2, -cos(angle)*sin(angle), -cos(angle)*sin(angle), cos(angle)^2];
+        sin(angle)^2, -cos(angle)*sin(angle), -cos(angle)*sin(angle), cos(angle)^2]);
+    mat = math(angle);
 
-    sz = size(u); u = u(:, :, :); w = w(:, :, :);
+    difkerh = memoize(@(x) cat(3, difkernel(x), difkernel(x)'));
+    difker = difkerh(kwargs.diffilt);
 
-    % velocity prefiltering
-    u = imfilt(u, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
-    w = imfilt(w, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
+    sz = size(u);
 
-    % derivation
-    Gx = difkernel(kwargs.diffilt); Gz = Gx';
-    dudx = imfilter(u, Gx); dudz = imfilter(u, Gz);
-    dwdx = imfilter(w, Gx); dwdz = imfilter(w, Gz);
-        
-    % rotate
-    vr = mat' * [dudx(:), dudz(:), dwdx(:), dwdz(:)]';
+    % fill missing
+    u = imfilt(u, filt = 'fillmiss', method = kwargs.fillmiss, zero2nan = true);
+    w = imfilt(w, filt = 'fillmiss', method = kwargs.fillmiss, zero2nan = true);
+
+    % prefiltering
+    u = imfilt(u, filt = kwargs.prefilt, filtker = kwargs.prefiltker, padval = kwargs.padval);
+    w = imfilt(w, filt = kwargs.prefilt, filtker = kwargs.prefiltker, padval = kwargs.padval);
+
     switch kwargs.component
         case 'dudl'
-            varargout{1} = reshape(vr(1, :), sz);
+            ind = 1;
         case 'dudn'
-            varargout{1} = reshape(vr(2, :), sz);
+            ind = 2;
         case 'dwdl'
-            varargout{1} = reshape(vr(3, :), sz);
+            ind = 3;
         case 'dwdn'
-            varargout{1} = reshape(vr(4, :), sz);
+            ind = 4;
         case 'all'
-            varargout{1} = reshape(vr(1, :), sz);
-            varargout{2} = reshape(vr(2, :), sz);
-            varargout{3} = reshape(vr(3, :), sz);
-            varargout{4} = reshape(vr(4, :), sz);
+            ind = 1:4;
     end
+
+    % differentiation
+    dudx = imfilter(u, difker(:,:,1), 'symmetric'); dudz = imfilter(u, difker(:,:,2), 'symmetric');
+    dwdx = imfilter(w, difker(:,:,1), 'symmetric'); dwdz = imfilter(w, difker(:,:,2), 'symmetric');
+
+    % rotate
+    temp = [dudx(:), dudz(:), dwdx(:), dwdz(:)]*mat;
+
+    % slice
+    temp = temp(:, ind);
+
+    if ~isempty(kwargs.pow); temp = temp.^kwargs.pow; end
+
+    if isscalar(ind)
+        temp = reshape(temp(:, 1), sz);
+        temp = imfilt(temp, filt = kwargs.postfilt, filtker = kwargs.postfiltker, padval = kwargs.padval);
+        varargout{1} = temp;
+    else
+        varargout = cell(1, 4);
+        temp = cellfun(@(n) reshape(temp(:, n), sz), num2cell(ind), UniformOutput = false);
+        [varargout{:}] = deal(temp{:});
+    end
+
+    % postfiltering
+    % [varargout{:}] = cellfun(@(x) imfilt(x{1}, filt = kwargs.postfilt, filtker = kwargs.postfiltker, padval = kwargs.padval), ...
+    %     varargout, UniformOutput = false);
+
 end

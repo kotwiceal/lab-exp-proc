@@ -1,17 +1,21 @@
-function data = imfilt(data, kwargs)
+function data = imfilt(data, kwargs, opts)
     %% Batch filtering of 2D data.
 
     arguments (Input)
         data
         % filter name
-        kwargs.filt (1,:) char {mustBeMember(kwargs.filt, {'none', 'gaussian', 'average', 'median', 'wiener', 'wiener-median', 'mode', 'fillmissing', 'mediancond'})} = 'gaussian'
+        kwargs.filt (1,:) char {mustBeMember(kwargs.filt, {'none', 'gaussian', 'average', 'median', 'wiener', 'fillmiss', 'mediancond'})} = 'gaussian'
         kwargs.filtker double = [3, 3] % kernel size
-        kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string'})} = nan % padding value
-        kwargs.method (1,:) char {mustBeMember(kwargs.method, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'none' % at specifying `fillmissing`
+        kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string', 'logical', 'cell'})} = nan % padding value
+        kwargs.method (1,:) char {mustBeMember(kwargs.method, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'nearest' % at specifying `filtker=fillmiss`
         kwargs.zero2nan (1,1) logical = true
-        kwargs.verbose (1,1) logical = true
+        kwargs.verbose (1,1) logical = false
         kwargs.mediancondvars (1,2) double = [1, 1]
-        kwargs.paral (1,1) logical = true
+        opts.usefiledatastore (1, 1) logical = false
+        opts.useparallel (1,1) logical = false
+        opts.extract {mustBeMember(opts.extract, {'readall', 'writeall'})} = 'readall'
+        opts.poolsize = {16, 16}
+        opts.resources {mustBeA(opts.resources, {'cell'}), mustBeMember(opts.resources, {'Processes', 'Threads'})} = {'Threads', 'Threads'}
     end
 
     arguments (Output)
@@ -19,48 +23,47 @@ function data = imfilt(data, kwargs)
     end
 
     switch kwargs.filt
-        case 'average'
-            data = imfilter(data, fspecial(kwargs.filt, kwargs.filtker), kwargs.padval);
-        case 'gaussian'
-            data = imfilter(data, fspecial(kwargs.filt, kwargs.filtker), kwargs.padval);
-        case 'median'
-            data = nonlinfilt(data, method = @(x) median(x(:), 'omitmissing'), kernel = kwargs.filtker, padval = kwargs.padval, verbose = kwargs.verbose);
         case 'wiener'
-            sz = size(data);
-            for i = 1:prod(sz(3:end))
-                data(:, :, i) = wiener2(data(:, :, i), kwargs.filtker);
-            end
-            data = reshape(data, sz);
-        case 'wiener-median'
-            sz = size(data);
-            for i = 1:prod(sz(3:end))
-                data(:, :, i) = wiener2(data(:, :, i), kwargs.filtker);
-            end
-            for i = 1:prod(sz(3:end))
-                data(:, :, i) = medfilt2(data(:, :, i), kwargs.filtker);
-            end
-            data = reshape(data, sz);
-        case 'mode'
-            data = nonlinfilt(data, method = @(x) mode(x(:)), kernel = kwargs.filtker, padval = kwargs.padval, verbose = kwargs.verbose);
-        case 'fillmissing'
+            data = nonlinfilt(@(x,~) wiener2(x, kwargs.filtker), data, kernel = [nan, nan], padval = false, ...
+                verbose = kwargs.verbose, usefiledatastore = opts.usefiledatastore, ...
+                useparallel = opts.useparallel, extract = opts.extract, ...
+                resources = opts.resources);
+        case 'median'
+            kerfunc = @(y,~) nonlinfilt(@(x,~) median(x(:), 'omitmissing'), y, kernel = kwargs.filtker, padval = kwargs.padval);
+
+            data = nonlinfilt(kerfunc, data, kernel = [nan, nan], padval = false, ...
+                verbose = kwargs.verbose, usefiledatastore = opts.usefiledatastore, ...
+                useparallel = opts.useparallel, extract = opts.extract, ...
+                resources = opts.resources);
+
+            % m = numel(kwargs.filtker);
+            % n = ndims(data) - numel(kwargs.filtker);
+            % kwargs.padval = cat(2, repmat({kwargs.padval}, 1, m), repmat({false}, 1, n));
+            % 
+            % data = nonlinfilt(@(x,~) median(x(:), 'omitmissing'), data, kernel = kwargs.filtker, ...
+            %     padval = kwargs.padval, verbose = kwargs.verbose, usefiledatastore = opts.usefiledatastore, ...
+            %     useparallel = opts.useparallel, extract = opts.extract, ...
+            %     resources = opts.resources);
+        case 'fillmiss'
             if kwargs.method ~= "none"
                 if kwargs.zero2nan; data(data==0) = nan; end
-                sz = size(data);
-                if kwargs.paral
-                    parfor i = 1:prod(sz(3:end))
-                        data(:, :, i) = fillmissing2(data(:, :, i), kwargs.method);
-                    end
-                else
-                    for i = 1:prod(sz(3:end))
-                        data(:, :, i) = fillmissing2(data(:, :, i), kwargs.method);
-                    end
-                end
-                data = reshape(data, sz);
+                data = nonlinfilt(@(x,~) fillmissing2(x, kwargs.method), data, kernel = [nan, nan], padval = false, ...
+                    verbose = kwargs.verbose, usefiledatastore = opts.usefiledatastore, ...
+                    useparallel = opts.useparallel, extract = opts.extract, ...
+                    resources = opts.resources);
             end
         case 'mediancond'
-            data = nonlinfilt(data, method = @(x) kermedcond(x, kwargs.mediancondvars), kernel = kwargs.filtker, ...
-                padval = kwargs.padval, verbose = kwargs.verbose);
+            data = nonlinfilt(@(x,~) kermedcond(x, kwargs.mediancondvars), data, kernel = kwargs.filtker, ...
+                padval = kwargs.padval, verbose = kwargs.verbose, usefiledatastore = opts.usefiledatastore, ...
+                useparallel = opts.useparallel, extract = opts.extract, ...
+                resources = opts.resources);
+        otherwise
+            if kwargs.filt ~= "none"
+                data = imfilter(data, fspecial(kwargs.filt, kwargs.filtker), kwargs.padval);
+            end
     end
+
+    clearAllMemoizedCaches;
 
     function y = kermedcond(x,n)
         szx = size(x); szm = floor(szx/2);

@@ -13,84 +13,91 @@ function result = vortind(u, w, kwargs)
         kwargs.pow double = [] % raise result to the power
         kwargs.abs logical = false % absolute value of result
         kwargs.eigord double = 1 % eigenvalue odrer
+        kwargs.fillmiss (1,:) char {mustBeMember(kwargs.fillmiss, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'none'
         % prefilter kernel
-        kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'gaussian'
+        kwargs.prefilt (1,:) char {mustBeMember(kwargs.prefilt, {'none', 'average', 'gaussian', 'median', 'wiener'})} = 'none'
         kwargs.prefiltker double = [3, 3] % prefilter kernel size
+        % portfilter type
+        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'gaussian', 'average', 'median', 'wiener'})} = 'none'
+        kwargs.postfiltker (1,:) double = [15, 15] % postfilter kernel size
+        kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string', 'logical', 'cell'})} = 'symmetric' % padding value
     end
+
+    sz = size(u);
+    difkerh = memoize(@(x) cat(3, difkernel(x), difkernel(x)'));
+    difker = difkerh(kwargs.diffilt);
+
+    % velocity fill missing
+    u = imfilt(u, filt = 'fillmiss', method = kwargs.fillmiss, zero2nan = true);
+    w = imfilt(w, filt = 'fillmiss', method = kwargs.fillmiss, zero2nan = true);
 
     % velocity prefiltering
     u = imfilt(u, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
     w = imfilt(w, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
 
-    % derivation
-    Gx = difkernel(kwargs.diffilt); Gz = Gx';
-    dudx = imfilter(u, Gx); dudz = imfilter(u, Gz);
-    dwdx = imfilter(w, Gx); dwdz = imfilter(w, Gz);
+    % differentiation
+    dudx = imfilter(u, difker(:,:,1), 'symmetric'); dudz = imfilter(u, difker(:,:,2), 'symmetric');
+    dwdx = imfilter(w, difker(:,:,1), 'symmetric'); dwdz = imfilter(w, difker(:,:,2), 'symmetric');
 
     % gradient prefiltering
-    dudx = imfilt(dudx, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
-    dudz = imfilt(dudz, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
-    dwdx = imfilt(dwdx, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
-    dwdz = imfilt(dwdz, filt = kwargs.prefilt, filtker = kwargs.prefiltker);
+    dudx = imfilt(dudx, filt = kwargs.prefilt, filtker = kwargs.prefiltker, padval = kwargs.padval);
+    dudz = imfilt(dudz, filt = kwargs.prefilt, filtker = kwargs.prefiltker, padval = kwargs.padval);
+    dwdx = imfilt(dwdx, filt = kwargs.prefilt, filtker = kwargs.prefiltker, padval = kwargs.padval);
+    dwdz = imfilt(dwdz, filt = kwargs.prefilt, filtker = kwargs.prefiltker, padval = kwargs.padval);
 
-    gradvel = cat(ndims(u)+1, dudx, dudz, dwdx, dwdz);
-    gradvel = reshape(gradvel, [size(u), 2, 2]);
+    gradvel = cat(3, dudx, dudz, dwdx, dwdz);
+    gradvel = reshape(gradvel, [sz(1:2), 2, 2]);
     gradvel = permute(gradvel, [ndims(gradvel)-1, ndims(gradvel), 1:ndims(gradvel)-2]);
-    
-    clear dudx dudz dwdx dwdz
-
+       
     switch kwargs.type
         case 'q'
             symmat = 1/2*(gradvel+pagetranspose(gradvel));
             skewmat = 1/2*(gradvel-pagetranspose(gradvel));
-            
-            det2d = @(mat) squeeze(mat(1,1,:).*mat(2,2,:)-mat(1,2,:).*mat(2,1,:));
-            
+
             symmatdet = det2d(symmat);
             symmatdet = reshape(symmatdet, size(u));
-            
-            clear symmat
         
             skewmatdet = det2d(skewmat);
             skewmatdet = reshape(skewmatdet, size(u));
         
-            clear skewmat
-            
-            % result = abs(skewmatdet) - abs(symmatdet);
-            result =skewmatdet.^2 - symmatdet.^2;
+            temporary =skewmatdet.^2 - symmatdet.^2;
         case 'l2'
             symmat = 1/2*(gradvel+pagetranspose(gradvel));
             skewmat = 1/2*(gradvel-pagetranspose(gradvel));
 
             mat = pagemtimes(symmat, symmat) + pagemtimes(skewmat, skewmat);
-
-            clear symmat skewmat
-
+    
             e = squeeze(pageeig(mat));
-            result = reshape(e(kwargs.eigord,:), size(u));
-        case 'd'
-            det2d = @(mat) squeeze(mat(1,1,:).*mat(2,2,:)-mat(1,2,:).*mat(2,1,:));
-            tr2d = @(mat) squeeze(mat(1,1,:)+mat(2,2,:));
-            
-            result = tr2d(gradvel).^2-4*det2d(gradvel);
-            result = reshape(result, size(u));
-        otherwise
-            result = [];
+            temporary = reshape(e(kwargs.eigord,:), sz(1:2));
+        case 'd'              
+            temp = tr2d(gradvel).^2-4*det2d(gradvel);
+            temporary = reshape(temp, sz(1:2));
     end
 
     switch kwargs.threshold
         case 'neg'
-            result(result<0) = 0;
+            temporary(temporary<0) = 0;
         case 'pos'
-            result(result>0) = 0;
+            temporary(temporary>0) = 0;
     end
 
     if ~isempty(kwargs.pow)
-        result = result.^kwargs.pow;
+        temporary = temporary.^kwargs.pow;
     end
 
     if kwargs.abs
-        result = abs(result);
+        temporary = abs(temporary);
     end
 
+    % postfiltering
+    result = imfilt(temporary, filt = kwargs.postfilt, filtker = kwargs.postfiltker, padval = kwargs.padval);
+
+end
+
+function y = det2d(x)
+    y = squeeze(x(1,1,:).*x(2,2,:)-x(1,2,:).*x(2,1,:));
+end
+
+function y = tr2d(x)
+    y = squeeze(x(1,1,:)+x(2,2,:));
 end
