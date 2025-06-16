@@ -77,7 +77,11 @@ function varargout = loadcta(path, kwargs)
                         for i = 1:numel(filenames.raw)
                             temporary = readtable(filenames.raw(i), 'Delimiter', kwargs.rawdelimiter, 'DecimalSeparator', kwargs.rawseparator, ...
                                 'VariableNamingRule', 'preserve');
-                            temporary = table2array(temporary(5:end, 2:end));
+                            try
+                                temporary = table2array(temporary(5:end, 2:end));
+                            catch
+                                temporary = nan([size(raw,1), 3]);
+                            end
                             raw = cat(2, raw, temporary); 
                         end
                         chsz = size(temporary, 2);
