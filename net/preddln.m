@@ -1,67 +1,35 @@
-function varargout = preddln(network, data, kwargs)
-    %% Predict the train deep neural network.
+function varargout = preddln(network, data, param)
+    %% Predict by deep neural network.
 
-    arguments
+    arguments (Input)
         network {mustBeA(network, {'dlnetwork'})}
-        data {mustBeA(data, {'double', 'matlab.io.datastore.ArrayDatastore', 'matlab.io.datastore.CombinedDatastore'})}
-        kwargs.type (1,:) char {mustBeMember(kwargs.type, {'simple', 'segmentation'})} = 'simple'
+        data {mustBeA(data, {'matlab.io.datastore.SequentialDatastore', 'matlab.io.datastore.TransformedDatastore', 'matlab.io.datastore.CombinedDatastore'})}
+        param.ans {mustBeMember(param.ans, {'double', 'struct', 'table'})} = 'double'
+    end
+    arguments (Output, Repeating)
+        varargout {mustBeA(varargout, {'double', 'struct', 'table'})}
     end
 
-    switch kwargs.type
-        case 'segmentation'
-            if isa(data, 'double')
-                sz = size(data); if ndims(data) == 1; sz(3) = 1; end
-                result = zeros(sz);
-                for i = 1:prod(sz(3:end))
-                    [~, result(:,:,i)] = max(predict(network, data(:,:,i)), [], 3);
-                end
-                result = result - 1;
-            end
+    temp = readall(data);
+    X = temp(:,1);
+    T = temp(:,2);
         
-            if isa(data, 'matlab.io.datastore.ArrayDatastore')
-                data = readall(data); sz = size(data{1}); result = zeros([sz, numel(data)]);
-                for i = 1:numel(data)
-                    [~, result(:,:,i)] = max(predict(network, data{i}), [], 3);
-                end
-                result = result - 1;
-            end
-        
-            if isa(data, 'matlab.io.datastore.CombinedDatastore')
-                input = readall(data.UnderlyingDatastores{1}); output = readall(data.UnderlyingDatastores{2});
-                result = zeros([size(input{1}), numel(input)]); resultRaw = zeros([size(output{1}), numel(output)]);
-                for i = 1:numel(input)
-                    [~, result(:,:,i)] = max(predict(network, input{i}), [], 3);
-                    resultRaw(:,:,i) = double(output{i}) - 1;
-                end
-                result = result - 1;
-                varargout{2} = vecnorm(resultRaw-result, 2, 3);
-            end
-        case 'simple'
-            if isa(data, 'double')
-                sz = size(data); if ndims(data) == 1; sz(3) = 1; end
-                result = zeros(sz);
-                for i = 1:prod(sz(3:end))
-                    result(:,:,i) = predict(network, data(:,:,i));
-                end
-            end
-        
-            if isa(data, 'matlab.io.datastore.ArrayDatastore')
-                data = readall(data); sz = size(data{1}); result = zeros([sz, numel(data)]);
-                for i = 1:numel(data)
-                    result(:,:,i) = predict(network, data{i});
-                end
-            end
-        
-            if isa(data, 'matlab.io.datastore.CombinedDatastore')
-                input = readall(data.UnderlyingDatastores{1}); output = readall(data.UnderlyingDatastores{2});
-                result = zeros([size(input{1}), numel(input)]); resultRaw = zeros([size(output{1}), numel(output)]);
-                for i = 1:numel(input)
-                    result(:,:,i) = predict(network, input{i});
-                    resultRaw(:,:,i) = output{i};
-                end
-                varargout{2} = vecnorm(resultRaw-result, 2, 3);
-            end
+    Y = cell(numel(X), 1);
+    for i = 1:numel(X)
+        Y{i} = gather(predict(network, X{i}));
     end
-    varargout{1} = result;
+
+    temp = cellfun(@cell2arr, {X; Y; T}, UniformOutput = false);
+    [X, Y, T] = deal(temp{:});
+
+    switch param.ans
+        case 'double'
+            varargout = cell(1 ,3);
+            [varargout{:}] = deal(X, Y, T);
+        case 'struct'
+            varargout{1} = struct(X = X, Y = Y, T = T);
+        case 'table'
+            varargout{1} = table({X}, {Y}, {T}, 'VariableNames', {'X', 'Y', 'T'});
+    end
 
 end

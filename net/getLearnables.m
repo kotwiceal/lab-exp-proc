@@ -1,4 +1,4 @@
-function [learnables, szl] = getLearnables(net, kwargs)
+function [learnables, szl, nl] = getLearnables(net, kwargs)
     % get learnables of dlnetwork.
 
     arguments
@@ -7,7 +7,7 @@ function [learnables, szl] = getLearnables(net, kwargs)
         kwargs.ans (1,:) char {mustBeMember(kwargs.ans, {'dlarray', 'double'})} = 'dlarray' 
     end
 
-    sz = size(net.Learnables);
+    sz = size(net.Learnables); nl = [];
     learnables = []; szl = cell(1, sz(1));
     for i = 1:sz(1)
         temp = net.Learnables{i, 3}{1};
@@ -23,4 +23,11 @@ function [learnables, szl] = getLearnables(net, kwargs)
                 learnables{i} = temp;
         end
     end
+
+    temp = 0;
+    for j = 1:numel(szl)
+        temp = temp+prod(szl{j});
+    end
+    nl = temp;
+
 end

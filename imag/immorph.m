@@ -4,7 +4,7 @@ function result = immorph(data, kwargs)
     arguments
         data double % multidimensional data
         % morphological method
-        kwargs.method (1,:) char {mustBeMember(kwargs.method , {'none', 'fill', 'erode', 'dilate', 'close', 'open', 'remclosedom'})} = 'erode'
+        kwargs.method (1,:) char {mustBeMember(kwargs.method , {'none', 'fill', 'erode', 'dilate', 'close', 'open', 'remclosedom', 'fillbound'})} = 'erode'
         kwargs.strel (1,:) char {mustBeMember(kwargs.strel, {'disk', 'line'})} = 'disk' % structure element
         kwargs.strelker (1,:) double = 4 % kernel of structure element
         kwargs.threshold (1,1) double = 1e3
@@ -27,6 +27,8 @@ function result = immorph(data, kwargs)
             method = @(img) imopen(img, strl);
         case 'remclosedom'
             method = @(img) remclosedom(img, kwargs.threshold);
+        case 'fillbound'
+            method = @(img) fillbound(img);
     end
 
     sz = size(data); if ismatrix(data); sz(3) = 1; end
@@ -53,4 +55,29 @@ function result = immorph(data, kwargs)
             if bwarea(temp) > trh; img = img | temp; end
         end
     end
+
+    function img = fillbound(img)
+
+        % fill boundary holes: west
+        img = padarray(img, [0, 1], 1, 'pre');
+        img = imfill(img, 'holes');
+        img = img(:,2:end,:);
+
+        % fill boundary holes: east
+        img = padarray(img, [0, 1], 1, 'post');
+        img = imfill(img, 'holes');
+        img = img(:,1:end-1,:);
+        
+        % fill boundary holes: north
+        img = padarray(img, [1, 0], 1, 'pre');
+        img = imfill(img, 'holes');
+        img = img(2:end,:,:);
+
+        % fill boundary holes: south
+        img = padarray(img, [1, 0], 1, 'post');
+        img = imfill(img, 'holes');
+        img = img(1:end-1,:,:);
+
+    end
+
 end
