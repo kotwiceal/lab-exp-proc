@@ -1,4 +1,4 @@
-function estbaseflow(input, x0, z0, u0, k)
+function estbaseflow(input, x0, z0, u0, k, param)
     %% Estimate component velocity distributions along proper axex of swept plate.
 
     %% Example:
@@ -13,6 +13,7 @@ function estbaseflow(input, x0, z0, u0, k)
         z0 (1,:) double % streamline origin z
         u0 (1,1) double % incoming flow velocity
         k (1,:) double % incoming flow velocity
+        param.step (1,1) double = 1
     end
 
     load(fullfile(fileparts(mfilename('fullpath')), 'designed_base_flow.mat'));
@@ -50,7 +51,7 @@ function estbaseflow(input, x0, z0, u0, k)
     %% streamline
     for i = 1:size(data.x, 3)
         temp = streamline(data.x(:, :, i), data.z(:, :, i), data.u(:, :, i), data.w(:, :, i), x0(i), z0(i));
-        data.xl{i} = temp.XData(1:end); data.zl{i} = temp.YData(1:end); 
+        data.xl{i} = temp.XData(1:param.step:end); data.zl{i} = temp.YData(1:param.step:end); 
         data.ul{i} = data.uf{i}(data.xl{i}, data.zl{i});
         data.wl{i} = data.wf{i}(data.xl{i}, data.zl{i});
         data.Ul{i} = data.Uf{i}(data.xl{i}, data.zl{i});
@@ -59,7 +60,7 @@ function estbaseflow(input, x0, z0, u0, k)
     %% plot U(x, z)
     figure('WindowStyle', 'docked'); tiledlayout('flow');
     for i = 1:size(data.x, 3)
-        nexttile; hold on; grid on; grid minor; box on; axis equal;
+        nexttile; hold on; grid on; box on; axis equal;
         contourf(data.x(:, :, i), data.z(:, :, i), data.U(:, :, i), 50, 'LineStyle', 'None')
         clim([10, 50]);
         plot(data.xl{i}, data.zl{i})
@@ -68,8 +69,8 @@ function estbaseflow(input, x0, z0, u0, k)
         title(data.label(i), 'FontWeight', 'Normal')
     end
     %% plot u(x), v(x), U(x)
-    figure('WindowStyle', 'docked'); hold on; grid on; grid minor; box on; pbaspect([1, 1, 1]);
-    xlabel('x [mm]', 'Interpreter', 'Latex');
+    figure('WindowStyle', 'docked'); hold on; grid on; box on; pbaspect([1, 1, 1]);
+    xlabel('x, mm');
     for i = 1:size(data.x, 3)
         plot(data.xl{i}, data.ul{i}./data.u0*data.k(i), 'Color', [0 0.4470 0.7410], 'DisplayName', data.label(i))
         plot(data.xl{i}, data.wl{i}./data.u0*data.k(i), 'Color', [0.8500 0.3250 0.0980], 'DisplayName', data.label(i))

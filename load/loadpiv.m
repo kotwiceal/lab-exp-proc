@@ -31,8 +31,8 @@ function data = loadpiv(input, kwargs)
 
     arguments
         input (:,:) string
-        kwargs.subfolders logical = false
-        kwargs.parallel logical = false
+        kwargs.subfolders (1,1) logical = false
+        kwargs.parallel (1,1) logical = false
         kwargs.components (1,:) char {mustBeMember(kwargs.components, {'x-y,u-v', 'x-z,u-w'})} = 'x-z,u-w'
         kwargs.storefilenames logical = false
     end
