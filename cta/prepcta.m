@@ -23,7 +23,7 @@ function varargout = prepcta(input, kwargs)
         kwargs.winfuncor (1,1) logical = true % spectra power correction at weighting data by window function
         kwargs.winlen double = 4096 % window function width
         kwargs.overlap double = 3072 % window function overlap
-        kwargs.offset (1,:) {mustBeA(kwargs.offset, {'double', 'cell '})} = [] % sliding window offset at performing STFT
+        kwargs.offset (1,:) {mustBeA(kwargs.offset, {'double', 'cell '})} = 0 % sliding window offset at performing STFT
         kwargs.center (1,1) logical = true % normalize data
         kwargs.fs (1,1) double = 25e3 % frequency sampling
         kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'none', 'rms'})} = 'rms' % spectra norm, `rms` means assertion sqrt(sum(spec))=rms(x)
@@ -42,19 +42,14 @@ function varargout = prepcta(input, kwargs)
         kwargs.zfit = [] % fitobj transfrom to leading edge coordinate system
         kwargs.steps (1,:) double = [50, 800, 400] % single step displacement of step motor in um
         kwargs.label (1,:) char = []
+        kwargs.ort (2,:) double = [] %% LE coordinate system reference points
+        kwargs.skew (2,:) double = [] %% skew coordinate system reference points
     end
 
     % parse inputs
     if isa(input, 'double')
         kwargs.raw = input;
     else
-
-        % todo assing
-         % f = fieldnames(structA);
-         % for i = 1:length(f)
-         %    structB.(f{i}) = structA.(f{i})
-         % end
-
         if isfield(input, 'raw'); kwargs.raw = input.raw; end
         if isfield(input, 'scan'); kwargs.scan = input.scan; end
         if isfield(input, 'fs'); kwargs.fs = input.fs; end
@@ -64,7 +59,7 @@ function varargout = prepcta(input, kwargs)
         if isfield(input, 'label'); kwargs.label = input.label; end
         if isfield(input, 'voltcal'); kwargs.voltcal = input.voltcal; else; kwargs.voltcal = []; end
         if isfield(input, 'velcal'); kwargs.velcal = input.velcal; else; kwargs.velcal = []; end
-
+        if isfield(input, 'refmarker'); kwargs.refmarker = input.refmarker; end
         if isfield(input, 'xfit'); kwargs.xfit = input.xfit; end
         if isfield(input, 'yfit'); kwargs.yfit = input.yfit; end
         if isfield(input, 'zfit'); kwargs.zfit = input.zfit; end
@@ -83,7 +78,7 @@ function varargout = prepcta(input, kwargs)
                         spectrumtype = kwargs.spectrumtype, freqrange = kwargs.freqrange);
                 case 'manual'
                     [spec, f] = procspecn(kwargs.raw, winfun = kwargs.winfun, winlen = kwargs.winlen, ...
-                        overlap = kwargs.overlap, fs = kwargs.fs, ftdim = 1, chdim = 2, output = 'cell', ...
+                        overlap = kwargs.overlap, fs = kwargs.fs, ftdim = 1, chdim = 2, ans = 'cell', ...
                         norm = true, center = kwargs.center, offset = kwargs.offset);
             end
             df = f(2)-f(1);
@@ -159,12 +154,16 @@ function varargout = prepcta(input, kwargs)
                                     kwargs.skew = [0, 0; 0, 2e4; 1e3, 2e4; 1e3, 0]; % count
                                     
                             end
+                        end
+
+                        if ~isempty(kwargs.skew) && ~isempty(kwargs.ort)
                             % fit 
                             [xf,yf,zf] = prepareSurfaceData(kwargs.skew(:,1),kwargs.skew(:,2),kwargs.ort(:,1));
                             kwargs.xfit = fit([xf,yf],zf,'poly11');
                             [xf,yf,zf] = prepareSurfaceData(kwargs.skew(:,1),kwargs.skew(:,2),kwargs.ort(:,2));
                             kwargs.zfit = fit([xf,yf],zf,'poly11');
                         end
+
                         % transform to LE coordinate system
                         if ~isempty(kwargs.xfit); xtemp = kwargs.xfit(x,z); else; xtemp = x/kwargs.steps(1); end
                         if ~isempty(kwargs.zfit); ztemp = kwargs.zfit(x,z); else; ztemp = z/kwargs.steps(3); end
@@ -212,7 +211,7 @@ function varargout = prepcta(input, kwargs)
         case 'film'
             % calculate auto/cross spectra
             result = struct;
-            [spec, f] = procspec(kwargs.raw, wintype = kwargs.wintype, winlen = kwargs.winlen, ...
+            [spec, f] = procspec(kwargs.raw, winfun = kwargs.winfun, winlen = kwargs.winlen, ...
                 overlap = kwargs.overlap, fs = kwargs.fs, norm = kwargs.norm, ans = 'double');
             df = f(2)-f(1);
 

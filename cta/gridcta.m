@@ -29,6 +29,9 @@ function varargout = gridcta(varargin, kwargs)
         kwargs.filename (1,:) char = []
         kwargs.extention (1,:) char = '.txt'
         kwargs.delimiter (1,:) char {mustBeMember(kwargs.delimiter, {',', 'comma', ' ', 'space', '\t', 'tab', ';', 'semi', '|', 'bar'})} = '\t'
+        %%
+        kwargs.ort (:,2) double = [] %% LE coordinate system reference points
+        kwargs.skew (:,2) double = [] %% skew coordinate system reference points
     end
 
     arguments (Output, Repeating)
@@ -132,7 +135,7 @@ function varargout = gridcta(varargin, kwargs)
     % transform units
     switch kwargs.unit
         case 'mm'
-            if kwargs.refmarker ~= "none"
+           if kwargs.refmarker ~= "none"
                 switch kwargs.refmarker
                     case 'n2'
                         kwargs.ort = [113.9, 63.7; 113.9, 112.4; 126.8, 118.9; 126.7, 70.2]; % mm
@@ -144,6 +147,9 @@ function varargout = gridcta(varargin, kwargs)
                         kwargs.ort = [429.76, 209.95; 429.43, 260.50; 474.0, 283.03; 474.0, 233.36]; % mm
                         kwargs.skew = [0, 0; 0, 2e4; 1e3, 2e4; 1e3, 0]; % count
                 end
+            end
+
+            if ~isempty(kwargs.skew) && ~isempty(kwargs.ort)
                 % fit 
                 [xf,yf,zf] = prepareSurfaceData(kwargs.skew(:,1),kwargs.skew(:,2),kwargs.ort(:,1));
                 kwargs.xfit = fit([xf,yf],zf,'poly11');
@@ -181,7 +187,7 @@ function varargout = gridcta(varargin, kwargs)
 
     % show a scan grid
     if kwargs.show 
-        if kwargs.docked; figure(WindowStyle = 'Docked'); else; figure; end
+        if kwargs.docked; figure(WindowStyle = 'Docked'); else; clf; end
         tile = tiledlayout('flow');
         ax = nexttile(tile); hold(ax, 'on'); box(ax, 'on'); grid(ax, 'on'); axis(ax, 'square')
         colors = colororder;

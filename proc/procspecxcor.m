@@ -10,11 +10,21 @@ function [xcor, t] = procspecxcor(sxy, kwargs)
 
     if ~isempty(kwargs.omitfreq); sxy(kwargs.omitfreq,:) = 0; end
     switch kwargs.type
-        case 'norm'
-            sxy = sxy./(sum(kwargs.sxx,1).*sum(kwargs.syy,1));
-        case 'tf'
-            sxy = sxy./sqrt(kwargs.syy);
+        case 'norm' % normalized cross-covariation function
+            sz = size(kwargs.sxx);
+            ind = fix(sz(1)/2);
+
+            cxx = fftshift(real(ifft(kwargs.sxx,[],1)),1);
+            cyy = fftshift(real(ifft(kwargs.syy,[],1)),1);
+
+            cxx0 = reshape(cxx(ind,:), [1, sz(2:end)]);
+            cyy0 = reshape(cyy(ind,:), [1, sz(2:end)]);
+
+            sxy = sxy./sqrt(cxx0.*cyy0);
+        case 'tf' % transfer function
+            sxy = sxy./kwargs.syy;
     end
+
     xcor = fftshift(real(ifft(sxy,[],1)),1);
 
     n = size(xcor, 1);

@@ -15,7 +15,17 @@ function data = procxcorcta(data, kwargs)
     data.csd = data.spec{1,3}; % cross-spectra density
     data.coh = abs(data.spec{1,3})./sqrt(data.spec{1,1}.*data.spec{3,3}); % coherence
     data.tf = data.spec{1,3}./sqrt(data.spec{3,3}); % transfer function
-    data.csdn = data.spec{1,3}./sqrt(data.spec{1,1}.*data.spec{3,3}); % normalized cross-spectra density
+
+    sz = size(data.spec{1,1});
+    ind = fix(sz(1)/2);
+
+    cxx = fftshift(real(ifft(data.spec{1,1},[],1)),1);
+    cyy = fftshift(real(ifft(data.spec{3,3},[],1)),1);
+
+    cxx0 = reshape(cxx(ind,:), [1, sz(2:end)]);
+    cyy0 = reshape(cyy(ind,:), [1, sz(2:end)]);
+
+    data.csdn = data.spec{1,3}./sqrt(cxx0.*cyy0); % normalized cross-spectra density
 
     switch kwargs.varcs
         case 'coh'
@@ -42,13 +52,12 @@ function data = procxcorcta(data, kwargs)
         case 'sum'
             kwargs.intspec = @(spec, freq) reshape(df*sum(spec(freq2ind(data.f,freq), :), 1), size(spec, 2:ndims(spec)));
         case 'mean'
-            df = sqrt(df);
             kwargs.intspec = @(spec, freq) reshape(df*mean(spec(freq2ind(data.f,freq), :), 1), size(spec, 2:ndims(spec)));  
         case 'struct'
             kwargs.intspec = data.intspec;
     end
 
-    % phase rotation of cross-spectra: [x-axis, z-axis, frequency band, phase shift];
+    % phase rotation of cross-spectra: [x/y/z-axis, x/y/z-axis, frequency band, phase shift];
     data.fgrid = kwargs.fgrid;
     data.df = kwargs.df;
     data.rcsd = shiftdim(real(shiftdim(temp,-1).*exp(1j*deg2rad(kwargs.phi)')),1);
