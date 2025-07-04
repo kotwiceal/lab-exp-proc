@@ -107,3 +107,74 @@ x = cat(3, x, x);
 y = cat(3, y, y);
 v = rand(3,3,2);
 [x, y, v] = splitdatcell(x, y, v, dims = 1:2)
+%% cell notation input
+%% 1D plot, 1D cell data, generate grid
+clc
+v = rand(3,1);
+arg = {v};
+[x, v] = splitdatcell(arg{:}, dims = 1)
+%% 1D plot, 2D cell data, generate grid
+clc
+v = rand(3,2);
+arg = {v};
+[x, v] = splitdatcell(arg{:}, dims = 1)
+%% 1D plot, 3D cell data, generate grid
+clc
+v = rand(3,2,2);
+arg = {v};
+[x, v] = splitdatcell(arg{:}, dims = 1)
+%% 1D plot, 1D data, custom grid
+clc
+x = rand(3,1);
+v = rand(3,1);
+arg = {x, v};
+[x, v] = splitdatcell(arg{:}, dims = 1)
+%% 1D plot, 2D data, custom grid
+clc
+x = rand(3,1);
+v = rand(3,2);
+arg = {x, v};
+[x, v] = splitdatcell(arg{:}, dims = 1)
+%% 1D plot, 3D data, custom grid
+clc
+x = rand(3,1);
+v = rand(3,2,2);
+arg = {x, v};
+[x, v] = splitdatcell(arg{:}, dims = 1)
+%% cell notation input-output
+%% 1D plot, 1D cell data, generate grid
+clc
+v = rand(3,1);
+arg = {v};
+res = cell(2,1);
+[res{:}] = splitdatcell(arg{:}, dims = 1)
+%% 1D plot, 2D cell data, generate grid
+clc
+v = rand(3,2);
+arg = {v};
+[x, v] = splitdatcell(arg{:}, dims = 1)
+%% 1D plot, 3D cell data, generate grid
+clc
+v = rand(3,2,2);
+arg = {v};
+[x, v] = splitdatcell(arg{:}, dims = 1)
+%% 1D plot, 1D data, custom grid
+clc
+x = rand(3,1);
+v = rand(3,1);
+arg = {x, v};
+[x, v] = splitdatcell(arg{:}, dims = 1)
+%% 1D plot, 2D data, custom grid
+clc
+x = rand(3,1);
+v = rand(3,2);
+arg = {x, v};
+[x, v] = splitdatcell(arg{:}, dims = 1)
+%% 1D plot, 3D data, custom grid
+clc
+x = rand(3,1);
+v = rand(3,2,2);
+arg = {x, v};
+[x, v] = splitdatcell(arg{:}, dims = 1)
+%% test
+[x, v] = splitdatcell((1:35)', rand(35, 4), dims = 1)

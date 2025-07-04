@@ -1,30 +1,9 @@
 function varargout = loadcta(path, kwargs)
     %% Import hot-wire data from specified folder with/without subfolders.
-    %% The function takes following arguments:
-    %   folder:             [1×n char]          - folder path
-    %   subfolders:         [1×1 logical]       - search files in subfolders
-    %   rawtype:            [1×m char]          - type of raw file reading
-    %   numch:              [1×1 double]        - number of ADC channels
-    %% The function returns following results:
-    %   scan:               [n×10×m×... double] 
-    %   data:               [k×11×m×... double]
-    %   raw:                [l×3×k double]
-    
-    % n - number of samples at spectra processing, k - number of measurements, l - number of measurement samples
-    %% Examples:
-    %% 1. Get scan, data, raw from specified folder:
-    % [scan, data, raw] = loadcta('\turb_jet_noise\test')
-    %% 2. Get scan, data, raw from specified folder with subfolders:
-    % [scan, data, raw] = loadcta('\turb_jet_noise\test2', subfolders = true)
-    %% 3. Get structure contained scan, data, raw from specified folder with subfolders:
-    % data = loadcta('\turb_jet_noise\test2', subfolders = true, output = 'struct')
-    
-    %% 4. Load raw data by LCard vendor
-    % data = loadcta('data.dat', vendor = 'lcard')
 
     arguments
         path (1,:) {mustBeA(path, {'char', 'string'})}
-        kwargs.vendor (1,:) char {mustBeMember(kwargs.vendor, {'labview', 'lcard'})} = 'labview'
+        kwargs.vendor (1,:) char {mustBeMember(kwargs.vendor, {'labview', 'lcard'})} = 'labview' % specify data import algorithm for vendor software export format
         %% labview settigns
         kwargs.subfolders (1,1) logical = false
         kwargs.datadelimiter (1,:) char = '\t'

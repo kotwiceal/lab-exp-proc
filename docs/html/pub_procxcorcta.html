@@ -1,0 +1,196 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      -->
+<title>Description</title>
+<meta name="generator" content="MATLAB 23.2">
+<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+<meta name="DC.date" content="2024-11-28">
+<meta name="DC.source" content="pub_procxcorcta.m">
+<style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style>
+</head>
+<body>
+<div class="content">
+<h1>Description</h1>
+<!--introduction-->
+<p>This MATLAB function, `procxcorcta`, performs cross-spectra analysis on a given dataset. Cross-spectra analysis is a technique used to analyze the relationship between two signals in both time and frequency domains.</p>
+<p>Here's a breakdown of the function:</p>
+<p>
+<b>*Input Arguments:</b>*</p>
+<div>
+<ul>
+<li>`data`: A structure containing spectral estimates for different frequencies.</li>
+<li>`kwargs`: An optional parameter that allows users to customize the output.</li>
+</ul>
+</div>
+<p>The input arguments include: + `df` (default value 50): The sample spacing. + `fgrid` (default value [100:25:900]): The frequency grid points. + `phi` (default value 0:5:360): The phase shift values. + `varcs`: A character vector specifying the type of cross-spectra analysis to perform: - 'coh' : Coherence - 'csd' : Cross-spectra density - 'csdn' : Normalized cross-spectra density - 'tf' : Transfer function - 'csdn1' : Non-normalized transfer function + `intspec`: A character vector specifying the type of inter-specification: - 'sum' : Summation-based - 'struct': Structured</p>
+<p>
+<b>*Computations:</b>*</p>
+<p>The function performs the following computations:</p>
+<p>1. Extracts the cross-spectra density from the input data structure and assigns it to `data.csd`. 2. Calculates coherence, transfer function, and normalized cross-spectra density values based on the input frequencies. 3. Selects the appropriate cross-spectra value depending on the `varcs` argument. 4. If specified, performs inter-specification using either summation-based or structured methods.</p>
+<p>
+<b>*Phase Rotation:</b>*</p>
+<p>The function performs phase rotation of the selected cross-spectra values:</p>
+<p>1. Applies a shift to the frequency axis using `shiftdim`. 2. Rotates the complex values by adding a phase shift value (`kwargs.phi`) in degrees. 3. Normalizes the rotated values by dividing by the magnitude of the corresponding component.</p>
+<p>
+<b>*Inter-Specification:</b>*</p>
+<p>The function applies inter-specification to the rotated cross-spectra values:</p>
+<p>1. If `intspec` is set to 'sum', calculates the sum of each component along the time axis using a custom function (`freq2ind`). 2. If `intspec` is set to 'struct', uses a predefined structure (`data.intspec`) for inter-specification.</p>
+<p>
+<b>*Output:</b>*</p>
+<p>The function returns the modified data structure with additional fields containing the transformed cross-spectra values, frequency grid points, sample spacing, and phase shift values.</p>
+<p>In summary, this function provides a flexible framework for performing various types of cross-spectra analysis on a given dataset, allowing users to customize the output according to their specific needs.</p>
+<!--/introduction-->
+<h2>Contents</h2>
+<div>
+<ul>
+<li>
+<a href="#1">Examples</a>
+</li>
+<li>
+<a href="#2">Process a coherence, transfer function, phase shifted cross-spectra in frequencies band [100, 300, 500]+[0,15]'</a>
+</li>
+</ul>
+</div>
+<h2 id="1">Examples</h2>
+<p>This section presents several examples of the usage of cross-spectra analysis</p>
+<h2 id="2">Process a coherence, transfer function, phase shifted cross-spectra in frequencies band [100, 300, 500]+[0,15]'</h2>
+<p>data = procxcorcta(data, fgrid = [100, 300, 500], df = 15)</p>
+<p class="footer">
+<br>
+<a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2023b</a>
+<br>
+</p>
+</div>
+<!--
+##### SOURCE BEGIN #####
+%% Description
+% This MATLAB function, `procxcorcta`, performs cross-spectra analysis on a given dataset. Cross-spectra analysis is a technique used to analyze the relationship between two signals in both time and frequency domains.
+% 
+% Here's a breakdown of the function:
+% 
+% **Input Arguments:**
+% 
+% * `data`: A structure containing spectral estimates for different frequencies.
+% * `kwargs`: An optional parameter that allows users to customize the output.
+% 
+% The input arguments include:
+% 	+ `df` (default value 50): The sample spacing.
+% 	+ `fgrid` (default value [100:25:900]): The frequency grid points.
+% 	+ `phi` (default value 0:5:360): The phase shift values.
+% 	+ `varcs`: A character vector specifying the type of cross-spectra analysis to perform:
+% 		- 'coh' : Coherence
+% 		- 'csd' : Cross-spectra density
+% 		- 'csdn' : Normalized cross-spectra density
+% 		- 'tf' : Transfer function
+% 		- 'csdn1' : Non-normalized transfer function
+% 	+ `intspec`: A character vector specifying the type of inter-specification:
+% 		- 'sum' : Summation-based
+% 		- 'struct': Structured
+% 
+% **Computations:**
+% 
+% The function performs the following computations:
+% 
+% 1. Extracts the cross-spectra density from the input data structure and assigns it to `data.csd`.
+% 2. Calculates coherence, transfer function, and normalized cross-spectra density values based on the input frequencies.
+% 3. Selects the appropriate cross-spectra value depending on the `varcs` argument.
+% 4. If specified, performs inter-specification using either summation-based or structured methods.
+% 
+% **Phase Rotation:**
+% 
+% The function performs phase rotation of the selected cross-spectra values:
+% 
+% 1. Applies a shift to the frequency axis using `shiftdim`.
+% 2. Rotates the complex values by adding a phase shift value (`kwargs.phi`) in degrees.
+% 3. Normalizes the rotated values by dividing by the magnitude of the corresponding component.
+% 
+% **Inter-Specification:**
+% 
+% The function applies inter-specification to the rotated cross-spectra values:
+% 
+% 1. If `intspec` is set to 'sum', calculates the sum of each component along the time axis using a custom function (`freq2ind`).
+% 2. If `intspec` is set to 'struct', uses a predefined structure (`data.intspec`) for inter-specification.
+% 
+% **Output:**
+% 
+% The function returns the modified data structure with additional fields containing the transformed cross-spectra values, frequency grid points, sample spacing, and phase shift values.
+% 
+% In summary, this function provides a flexible framework for performing various types of cross-spectra analysis on a given dataset, allowing users to customize the output according to their specific needs.
+% 
+
+%% Examples
+% This section presents several examples of the usage of cross-spectra
+% analysis
+%% Process a coherence, transfer function, phase shifted cross-spectra in frequencies band [100, 300, 500]+[0,15]'
+% data = procxcorcta(data, fgrid = [100, 300, 500], df = 15)
+
+##### SOURCE END #####
+-->
+</body>
+</html>

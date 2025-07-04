@@ -7,7 +7,7 @@ fs = 1/(t(2)-t(1));
 
 f1 = 1000;
 
-x = sin(f1/(pi/2)*t)+2;
+x = sin(f1/(pi/2)*t)*2+5;
 
 % show signal
 clf; tiledlayout('flow');

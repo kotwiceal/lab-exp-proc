@@ -106,6 +106,8 @@ function varargout = guipointdist_dev(varargin, kwargs, kwargsplt, figparam, axp
 
     addlistener(rois{1}{1}, 'ROIMoved', @moving);
 
+    % moving();
+
     varargout = rois;
 
     function prepslice()

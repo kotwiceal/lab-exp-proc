@@ -16,20 +16,20 @@ function varargout = gridcta(varargin, kwargs)
         kwargs.fit (1,:) {mustBeA(kwargs.fit, {'char', 'cell'})} = 'linearinterp' % fit type at applying offset
         %% basis
         kwargs.unit (1,:) char {mustBeMember(kwargs.unit, {'mm', 'count'})} = 'count'
-        kwargs.refmarker (1,:) char {mustBeMember(kwargs.refmarker, {'none', 'n2', 'n8', 'n9'})} = 'none' % point considered as origin
+        kwargs.refmarker (1,:) char {mustBeMember(kwargs.refmarker, {'none', 'n2', 'n8', 'n9'})} = 'none' % legacy skew-orthogonal coonrdinate transformation using specified hot-wire CTA base location
         kwargs.steps (1,:) double = [50, 400, 800] % single step displacement of step motor in um
         kwargs.xfit = [] % fitobj transfrom to leading edge coordinate system
         kwargs.yfit = [] % fitobj to reverse a correction of vectical scanning component
         kwargs.zfit = [] % fitobj transfrom to leading edge coordinate system
         %% appearance
         kwargs.show (1,1) logical = true % display a grid scan
-        kwargs.docked (1,1) logical = false % dock figure
+        kwargs.docked (1,1) logical = false % docked figure
         kwargs.markersize (1,1) double = 10
         %% export
         kwargs.filename (1,:) char = []
         kwargs.extention (1,:) char = '.txt'
         kwargs.delimiter (1,:) char {mustBeMember(kwargs.delimiter, {',', 'comma', ' ', 'space', '\t', 'tab', ';', 'semi', '|', 'bar'})} = '\t'
-        %%
+        %% coordinate transformation
         kwargs.ort (:,2) double = [] %% LE coordinate system reference points
         kwargs.skew (:,2) double = [] %% skew coordinate system reference points
     end

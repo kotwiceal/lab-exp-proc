@@ -21,8 +21,8 @@ function varargout = prepcta(input, kwargs)
         kwargs.freqrange (1,:) char {mustBeMember(kwargs.freqrange, {'onesided', 'twosided', 'centered'})} = 'onesided' % half, total and total centered spectra
         kwargs.winfun (1,:) char {mustBeMember(kwargs.winfun, {'uniform', 'hanning', 'hamming'})} = 'hanning' % window function
         kwargs.winfuncor (1,1) logical = true % spectra power correction at weighting data by window function
-        kwargs.winlen double = 4096 % window function width
-        kwargs.overlap double = 3072 % window function overlap
+        kwargs.winlen double = 4096 % FFT window length
+        kwargs.overlap double = 3072 % FFT window overlay
         kwargs.offset (1,:) {mustBeA(kwargs.offset, {'double', 'cell '})} = 0 % sliding window offset at performing STFT
         kwargs.center (1,1) logical = true % normalize data
         kwargs.fs (1,1) double = 25e3 % frequency sampling
@@ -42,8 +42,8 @@ function varargout = prepcta(input, kwargs)
         kwargs.zfit = [] % fitobj transfrom to leading edge coordinate system
         kwargs.steps (1,:) double = [50, 800, 400] % single step displacement of step motor in um
         kwargs.label (1,:) char = []
-        kwargs.ort (2,:) double = [] %% LE coordinate system reference points
-        kwargs.skew (2,:) double = [] %% skew coordinate system reference points
+        kwargs.ort (:,2) double = [] %% LE coordinate system reference points
+        kwargs.skew (:,2) double = [] %% skew coordinate system reference points
     end
 
     % parse inputs
@@ -63,6 +63,8 @@ function varargout = prepcta(input, kwargs)
         if isfield(input, 'xfit'); kwargs.xfit = input.xfit; end
         if isfield(input, 'yfit'); kwargs.yfit = input.yfit; end
         if isfield(input, 'zfit'); kwargs.zfit = input.zfit; end
+        if isfield(input, 'ort'); kwargs.ort = input.ort; end
+        if isfield(input, 'skew'); kwargs.skew = input.skew; end
     end
 
     % handler to select mask index by given frequency range
@@ -120,7 +122,8 @@ function varargout = prepcta(input, kwargs)
                     if isempty(kwargs.permute); kwargs.raw = permute(kwargs.raw, [3:ndims(kwargs.raw), 1:2]); end
                 end
             end
-        
+            
+            % permute spectra, scanning points and velocity
             if ~isempty(kwargs.permute)
                 for i = 1:size(spec, 1)
                     for j = i:size(spec, 2)
@@ -142,6 +145,7 @@ function varargout = prepcta(input, kwargs)
                     case 'mm'
                         y = y/kwargs.steps(2);
                         if kwargs.refmarker ~= "none"
+                            % legacy markers
                             switch kwargs.refmarker
                                 case 'n2'
                                     kwargs.ort = [113.9, 63.7; 113.9, 112.4; 126.8, 118.9; 126.7, 70.2]; % mm
@@ -152,7 +156,6 @@ function varargout = prepcta(input, kwargs)
                                 case 'n9'
                                     kwargs.ort = [429.76, 209.95; 429.43, 260.50; 474.0, 283.03; 474.0, 233.36]; % mm
                                     kwargs.skew = [0, 0; 0, 2e4; 1e3, 2e4; 1e3, 0]; % count
-                                    
                             end
                         end
 

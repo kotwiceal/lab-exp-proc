@@ -1,30 +1,34 @@
 %% Description
-% This is a MATLAB function named `gridcta` that generates a scanning grid to measure using a single hot-wire sensor moved by 3-axis traverse. The function takes several input arguments and optional keyword arguments to customize its behavior.
+% This is a MATLAB script that appears to be part of a larger workflow for processing and analyzing data from a scanner. Here's a high-level overview of the script:
 % 
-% Here's a breakdown of the function's functionality:
+% 1. The script takes in several input parameters, including:
+% 	* `scan`: a matrix representing the scanned data
+% 	* `show`: a logical flag indicating whether to display a visual representation of the scan
+% 	* `filename` and `extention`: strings specifying the output file name and extension
+% 	* `delimiter` (optional): a character string specifying the delimiter used in the output file
+% 2. The script performs several operations on the input data:
+% 	* It applies a coordinate transformation to transform the scanned data into a more suitable format for further analysis.
+% 	* If `show` is `true`, it displays a 3D scatter plot of the original scan, with optional offset and base markers added.
+% 	* It writes the transformed data to an output file (if specified) in a matrix format.
+% 3. The script also exports the following outputs:
+% 	* `scan`: the original scanned data
+% 	* `scanoffset`: the transformed coordinates of the scanned data
+% 4. If the output file name includes an extension, it saves the `fitobj` structure to a separate file.
 % 
-% 1. **Input arguments**: The function accepts two types of input arguments:
-% 	* `varargin`: a vector of position vectors for each axis, which defines the scanning grid.
-% 	* `kwargs`: an optional set of key-value pairs that can be used to customize the behavior of the function.
-% 2. **Keyword arguments**:
-% 	* `order`: specifies the order of the axes in the scanning grid (default: 1:nargin).
-% 	* `orderflip`: flips the axis order (default: true).
-% 	* `offset`: a cell array containing offsetting points for each axis (default: empty).
-% 	* `offsetdim`: specifies the dimension to apply the offset (default: 3).
-% 	* `show`: shows the scan grid plot.
-% 	* `dock`: docks the figure window (default: false).
-% 	* `markersize`: sets the marker size for the scatter plot (default: 5).
-% 	* `delimiter`: sets the delimiter for exporting data to a matrix file (default: ',').
-% 3. **Function body**:
-% 	* The function first checks if the `show` keyword argument is set to true.
-% 	* If `show` is true, it creates a figure window and displays the scan grid plot using `tiledlayout`, `scatter3`, and other plotting functions.
-% 	* It also adds some visual elements to the plot, such as labels, legend, and axis limits.
-% 	* The function then parses the output values into separate variables and exports them to a matrix file or saves them to a MAT file.
-% 4. **Output**:
-% 	* The function returns three output variables:
-% 		+ `scan`: the scanning grid data in 3D format (a matrix).
-% 		+ `scanoffset`: the offsetted scan data in 3D format (a matrix).
-% 		+ `fitobj` (optional): a fit object containing the results of the curve or surface fitting.
+% Some notable aspects of the script:
 % 
-% The function is designed to be flexible and customizable, allowing users to adjust various parameters to suit their specific needs. However, its complexity and number of options may make it challenging for casual users to fully understand and use effectively.
+% * It uses the `tiledlayout` function to create a 3D scatter plot with multiple axes.
+% * It applies a coordinate transformation using functions like `prepareSurfaceData`, which is not shown in this snippet.
+% * It uses MATLAB's built-in functions for plotting, such as `scatter3` and `xlabel`.
+% * The script uses optional parameters and default values, making it more flexible and user-friendly.
+% 
+% To write a similar script from scratch, you would need to:
+% 
+% 1. Define the input parameters and their expected data types.
+% 2. Perform the necessary coordinate transformation using your own functions or MATLAB's built-in functions.
+% 3. Create a 3D scatter plot with multiple axes using `tiledlayout` and other plotting functions.
+% 4. Write the transformed data to an output file in a matrix format.
+% 5. Export the outputs, including any additional structures or values.
+% 
+% Keep in mind that this script is likely part of a larger workflow, so you may need to consult other scripts and documentation for more information on the specific requirements and assumptions made here.
 % 
