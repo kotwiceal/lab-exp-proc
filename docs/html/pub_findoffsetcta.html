@@ -1,0 +1,225 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      -->
+<title>Description</title>
+<meta name="generator" content="MATLAB 23.2">
+<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+<meta name="DC.date" content="2024-11-28">
+<meta name="DC.source" content="pub_findoffsetcta.m">
+<style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style>
+</head>
+<body>
+<div class="content">
+<h1>Description</h1>
+<!--introduction-->
+<p>This is a MATLAB function named `findoffsetcta` that takes several input parameters and performs various operations to find the offset vertical coordinates by specified velocity isoline level. Here's a breakdown of the function:</p>
+<p>
+<b>*Input Parameters</b>*</p>
+<p>The function accepts several input parameters:</p>
+<div>
+<ul>
+<li>`filename`: The path to a scan.txt file or folder.</li>
+<li>`kwargs`: A structure containing various keyword arguments.</li>
+</ul>
+</div>
+<p>The `kwargs` structure has the following fields:</p>
+<div>
+<ul>
+<li>`scandelimiter`: The delimiter used in the scan file (default: `\t`).</li>
+<li>`scanseparator`: The separator used in the scan file (default: `,`).</li>
+<li>`numch`: The number of channels (default: 3).</li>
+<li>`isovel`: The cutoff velocity (default: 10).</li>
+<li>`y`: A vertical vector (optional).</li>
+<li>`yi`: An initial approximation for the offset vertical coordinates (optional).</li>
+<li>`ratio`: A dimensionless velocity at which the vertical position is assumed to be zero (optional).</li>
+<li>`reshape`: The reshape of the scan data (optional, default: `[numel(unique(y)), numel(unique(z)), numel(unique(x))]`).</li>
+<li>`smooth`: The smoothing method used (optional, default: `'none'`).</li>
+<li>`span`: The number of data points for calculating the smoothed value (optional).</li>
+<li>`show`: A flag indicating whether to display results (default: `true`).</li>
+<li>`docked`: A flag indicating whether to dock the figure (default: `false`).</li>
+</ul>
+</div>
+<p>
+<b>*Function Flow</b>*</p>
+<p>The function performs the following steps:</p>
+<p>1. Checks if the input file is a folder or a file and loads the data accordingly. 2. Extracts the x, z, and v values from the data. 3. Reshapes the data according to the specified reshape value. 4. Excludes near wall points by setting velocity and vertical coordinates to NaN where velocity is less than the cutoff velocity. 5. Smooths the profiles using the specified smoothing method (if not `none`). 6. Performs piecewise linear interpolation on each channel using the `fit` function. 7. Finds the offset vertical coordinates using the `fsolve` function, which minimizes the difference between the interpolated values and the desired isoline level. 8. Displays the results in a figure if the `show` flag is set.</p>
+<p>
+<b>*Output</b>*</p>
+<p>The function returns three output values:</p>
+<div>
+<ul>
+<li>`y0`: The offset vertical coordinates.</li>
+<li>`z0`: The z-coordinate of the point where the velocity is assumed to be zero (if specified).</li>
+<li>`x0`: The x-coordinate of the point where the velocity is assumed to be zero (if specified).</li>
+</ul>
+</div>
+<p>Overall, this function appears to be designed to find the offset vertical coordinates for a given scan data file, taking into account various smoothing and interpolation techniques.</p>
+<!--/introduction-->
+<h2>Contents</h2>
+<div>
+<ul>
+<li>
+<a href="#1">Examples</a>
+</li>
+<li>
+<a href="#2">Generate a scan grid to measure vertical velocity profiles, import measurements, find offset vertical position</a>
+</li>
+</ul>
+</div>
+<h2 id="1">Examples</h2>
+<p>This section presents a example of the usage of finding offset by measured velocity profiles.</p>
+<h2 id="2">Generate a scan grid to measure vertical velocity profiles, import measurements, find offset vertical position</h2>
+<pre class="codeinput">scangridzeros = gridcta([-4050, -3550, -3050], 0:5e3:20e3, flip([-400:50:200, 300:200:2500, 3000, 4000]-300),<span class="keyword">...</span>
+    filename = <span class="string">'docs\src\findoffsetcta\scan_zeros'</span>)
+
+[ax30, ax20, ax10] = findoffsetcta(<span class="string">'docs\src\findoffsetcta\data'</span>,<span class="keyword">...</span>
+    isovel = 12, ratio = 0.7, y = scangridzeros(:,3), smooth = <span class="string">'moving'</span>, span = 3)
+</pre>
+<pre class="codeoutput">
+scangridzeros =
+
+       -4050           0        3700
+       -4050           0        2700
+       -4050           0        2200
+       -4050           0        2000
+       -4050           0        1800
+       -4050           0        1600
+       -4050           0        1400
+...</pre>
+<img vspace="5" hspace="5" src="pub_findoffsetcta_01.png" alt=""> <img vspace="5" hspace="5" src="pub_findoffsetcta_02.png" alt=""> <p class="footer">
+<br>
+<a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2023b</a>
+<br>
+</p>
+</div>
+<!--
+##### SOURCE BEGIN #####
+%% Description
+% This is a MATLAB function named `findoffsetcta` that takes several input parameters and performs various operations to find the offset vertical coordinates by specified velocity isoline level. Here's a breakdown of the function:
+% 
+% **Input Parameters**
+% 
+% The function accepts several input parameters:
+% 
+% * `filename`: The path to a scan.txt file or folder.
+% * `kwargs`: A structure containing various keyword arguments.
+% 
+% The `kwargs` structure has the following fields:
+% 
+% * `scandelimiter`: The delimiter used in the scan file (default: `\t`).
+% * `scanseparator`: The separator used in the scan file (default: `,`).
+% * `numch`: The number of channels (default: 3).
+% * `isovel`: The cutoff velocity (default: 10).
+% * `y`: A vertical vector (optional).
+% * `yi`: An initial approximation for the offset vertical coordinates (optional).
+% * `ratio`: A dimensionless velocity at which the vertical position is assumed to be zero (optional).
+% * `reshape`: The reshape of the scan data (optional, default: `[numel(unique(y)), numel(unique(z)), numel(unique(x))]`).
+% * `smooth`: The smoothing method used (optional, default: `'none'`).
+% * `span`: The number of data points for calculating the smoothed value (optional).
+% * `show`: A flag indicating whether to display results (default: `true`).
+% * `docked`: A flag indicating whether to dock the figure (default: `false`).
+% 
+% **Function Flow**
+% 
+% The function performs the following steps:
+% 
+% 1. Checks if the input file is a folder or a file and loads the data accordingly.
+% 2. Extracts the x, z, and v values from the data.
+% 3. Reshapes the data according to the specified reshape value.
+% 4. Excludes near wall points by setting velocity and vertical coordinates to NaN where velocity is less than the cutoff velocity.
+% 5. Smooths the profiles using the specified smoothing method (if not `none`).
+% 6. Performs piecewise linear interpolation on each channel using the `fit` function.
+% 7. Finds the offset vertical coordinates using the `fsolve` function, which minimizes the difference between the interpolated values and the desired isoline level.
+% 8. Displays the results in a figure if the `show` flag is set.
+% 
+% **Output**
+% 
+% The function returns three output values:
+% 
+% * `y0`: The offset vertical coordinates.
+% * `z0`: The z-coordinate of the point where the velocity is assumed to be zero (if specified).
+% * `x0`: The x-coordinate of the point where the velocity is assumed to be zero (if specified).
+% 
+% Overall, this function appears to be designed to find the offset vertical coordinates for a given scan data file, taking into account various smoothing and interpolation techniques.
+% 
+
+%% Examples
+% This section presents a example of the usage of finding offset by
+% measured velocity profiles.
+%% Generate a scan grid to measure vertical velocity profiles, import measurements, find offset vertical position
+scangridzeros = gridcta([-4050, -3550, -3050], 0:5e3:20e3, flip([-400:50:200, 300:200:2500, 3000, 4000]-300),...
+    filename = 'docs\src\findoffsetcta\scan_zeros')
+
+[ax30, ax20, ax10] = findoffsetcta('docs\src\findoffsetcta\data',...
+    isovel = 12, ratio = 0.7, y = scangridzeros(:,3), smooth = 'moving', span = 3)
+
+##### SOURCE END #####
+-->
+</body>
+</html>

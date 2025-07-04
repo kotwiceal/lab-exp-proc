@@ -1,14 +1,17 @@
 function saf(path, kwargs, options)
     %%  Save all figures as `*.fig` and `*.{extension}`.
     arguments
-        path {mustBeTextScalar} = []
+        path {mustBeTextScalar} = [] % folder to 
         kwargs.resolution (1,1) = 300
         kwargs.extension (1,:) char = '.png'
-        kwargs.md {mustBeTextScalar}  = ""
+        kwargs.md {mustBeTextScalar}  = "" % markdown file to paste plots link
         kwargs.units {mustBeMember(kwargs.units, {'pixels', 'normalized', 'inches', 'centimeters', 'points', 'characters'})} = 'centimeters'
         kwargs.fontsize (1,:) double = []
         kwargs.fontunits {mustBeMember(kwargs.fontunits, {'points', 'inches', 'centimeters', 'normalized', 'pixels'})} = 'centimeters'
-        kwargs.size (1,:) double = [] 
+        kwargs.size (1,:) double = [] % set figure size
+        kwargs.pause (1,1) = 2 % delay for successful figure appearances changing and saving
+        kwargs.mdsize = 400 % set image size in the markdown file
+        kwargs.mdfig (1,1) logical = true % paste .fig file link to markdown file
         options.?matlab.ui.Figure
     end
     
@@ -35,7 +38,7 @@ function saf(path, kwargs, options)
 
         if ~isempty(kwargs.size)
             set(fighandle, WindowStyle = 'normal')
-            pause(2)
+            pause(kwargs.pause)
             % set(fighandle, options{:}); % advance options
             set(fighandle, Units = kwargs.units, Position = [0, 0, kwargs.size]);
         end
@@ -44,10 +47,10 @@ function saf(path, kwargs, options)
         savefig(fighandle, strcat(filename, '.fig'));
 
         try
-            obscontpast(kwargs.md, strcat(figname, kwargs.extension));
+            obscontpast(kwargs.md, strcat(figname, kwargs.extension), size = kwargs.mdsize, fig = kwargs.mdfig);
         catch
         end
 
-      set(fighandle, WindowStyle = 'docked')
+        set(fighandle, WindowStyle = 'docked')
     end
 end

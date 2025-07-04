@@ -1,0 +1,249 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      -->
+<title>Description</title>
+<meta name="generator" content="MATLAB 23.2">
+<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+<meta name="DC.date" content="2024-11-28">
+<meta name="DC.source" content="pub_calibcta.m">
+<style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style>
+</head>
+<body>
+<div class="content">
+<h1>Description</h1>
+<!--introduction-->
+<p>This is a MATLAB function named `calibcta` that performs calibration and analysis of hot-wire/film sensors. Here's a breakdown of the function:</p>
+<p>
+<b>*Function signature</b>*</p>
+<p>The function takes two types of input arguments:</p>
+<p>1. `varargin`: a variable-length argument list containing sensor data, which can be either `wire` or `film`. 2. `kwargs`: a set of keyword arguments that control the processing and display of the results.</p>
+<p>
+<b>*Keyword arguments</b>*</p>
+<p>The function accepts several keyword arguments:</p>
+<div>
+<ul>
+<li>`sensor`: a character array indicating whether to process `wire` or `film` data.</li>
+<li>`y`: an optional input matrix representing wall positions (default is empty).</li>
+<li>`u0`: an optional input matrix representing inflow velocities (default is empty).</li>
+<li>`index`: an optional integer vector specifying node indices for polynomial fitting (default is 1:2).</li>
+<li>`show`: a logical scalar controlling whether to display results (default is true).</li>
+<li>`docked`: a logical scalar controlling whether to dock the figure window (default is false).</li>
+</ul>
+</div>
+<p>
+<b>*Processing</b>*</p>
+<p>Depending on the value of `sensor`, the function performs different processing steps:</p>
+<div>
+<ul>
+<li>For `wire` data: + Extracts probe, velocity, and filename from the input arguments. + Reads the file containing the sensor data and converts it to a numerical format. + Writes the processed data back to the file with a tab delimiter. + Calculates the dot by comma replacement in the file contents.</li>
+<li>For `film` data: + Extracts wire and film data from the input arguments. + Calculates mean values for wire and film data. + Sets default values for `yunit` and `u0isloc`. + If `y` is empty, sets it to a default value (1:2). + If `u0` is empty, sets it to the maximum value in the wire data.</li>
+</ul>
+</div>
+<p>
+<b>*Display</b>*</p>
+<p>If `show` is true, the function displays several plots:</p>
+<div>
+<ul>
+<li>For `wire` data: + Plots velocity profiles with y-axis labels. + Displays title and legend.</li>
+<li>For `film` data: + Plots piecewise linear fits for each channel. + Displays title and legend.</li>
+</ul>
+</div>
+<p>
+<b>*Output</b>*</p>
+<p>The function returns a cell array of fitted curves, which is stored in the first element of `varargout`.</p>
+<p>Overall, this function appears to be designed to calibrate and analyze hot-wire/film sensors, with options for displaying results and customizing processing.</p>
+<!--/introduction-->
+<h2>Contents</h2>
+<div>
+<ul>
+<li>
+<a href="#1">Examples</a>
+</li>
+<li>
+<a href="#2">Create calibration file for hot-wire CTA, specify voltage and velocity vector correspondily, save to calib_wire.txt</a>
+</li>
+<li>
+<a href="#3">Calibrate hot-film CTA:</a>
+</li>
+</ul>
+</div>
+<h2 id="1">Examples</h2>
+<p>This section presents several examples of the usage of calibration hot-wire/film CTA</p>
+<h2 id="2">Create calibration file for hot-wire CTA, specify voltage and velocity vector correspondily, save to calib_wire.txt</h2>
+<pre class="codeinput">calibcta(<span class="string">"1,44266 1,84532 1,9464 2,06614 2,12695 2,20549 2,24979 2,31243 2,39973 2,47017 2,53081 2,58417 2,60222"</span>, <span class="keyword">...</span>
+    [0 2.1 3.6 5.8 7.3 9.6 11.2 13.4 17.3 21.3 25.2 29.1 30.4], <span class="keyword">...</span>
+    <span class="string">'docs\src\calibcta\calib_wire.txt'</span>)
+</pre>
+<h2 id="3">Calibrate hot-film CTA:</h2>
+<p>import vertical velocity profiles measured by hot-wire CTA in the vicinity location of hot-film CTA at various inflow veclity in the test section; import hot-film CTA measurements performed same time</p>
+<pre class="codeinput">load(<span class="string">'docs\src\calibcta\calib_film.mat'</span>)
+
+<span class="comment">% dins of wire: 1 - samples, 2 - vertical posisiotn, 3 - inflow velocity;</span>
+<span class="comment">% dins of film: 1 - samples, 2 - sensor channel, 3 - inflow velocity;</span>
+
+calib = calibcta(wire, film, sensor = <span class="string">'film'</span>, y = y, index=3:4)
+</pre>
+<pre class="codeoutput">Warning: Removing NaN and Inf from data 
+Warning: 2-channel isn`t calibrated 
+Warning: Removing NaN and Inf from data 
+Warning: 11-channel isn`t calibrated 
+Warning: Removing NaN and Inf from data 
+Warning: 12-channel isn`t calibrated 
+Warning: Removing NaN and Inf from data 
+Warning: 15-channel isn`t calibrated 
+
+calib =
+...</pre>
+<img vspace="5" hspace="5" src="pub_calibcta_01.png" alt=""> <img vspace="5" hspace="5" src="pub_calibcta_02.png" alt=""> <p class="footer">
+<br>
+<a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2023b</a>
+<br>
+</p>
+</div>
+<!--
+##### SOURCE BEGIN #####
+%% Description
+% This is a MATLAB function named `calibcta` that performs calibration and analysis of hot-wire/film sensors. Here's a breakdown of the function:
+% 
+% **Function signature**
+% 
+% The function takes two types of input arguments:
+% 
+% 1. `varargin`: a variable-length argument list containing sensor data, which can be either `wire` or `film`.
+% 2. `kwargs`: a set of keyword arguments that control the processing and display of the results.
+% 
+% **Keyword arguments**
+% 
+% The function accepts several keyword arguments:
+% 
+% * `sensor`: a character array indicating whether to process `wire` or `film` data.
+% * `y`: an optional input matrix representing wall positions (default is empty).
+% * `u0`: an optional input matrix representing inflow velocities (default is empty).
+% * `index`: an optional integer vector specifying node indices for polynomial fitting (default is 1:2).
+% * `show`: a logical scalar controlling whether to display results (default is true).
+% * `docked`: a logical scalar controlling whether to dock the figure window (default is false).
+% 
+% **Processing**
+% 
+% Depending on the value of `sensor`, the function performs different processing steps:
+% 
+% * For `wire` data:
+% 	+ Extracts probe, velocity, and filename from the input arguments.
+% 	+ Reads the file containing the sensor data and converts it to a numerical format.
+% 	+ Writes the processed data back to the file with a tab delimiter.
+% 	+ Calculates the dot by comma replacement in the file contents.
+% * For `film` data:
+% 	+ Extracts wire and film data from the input arguments.
+% 	+ Calculates mean values for wire and film data.
+% 	+ Sets default values for `yunit` and `u0isloc`.
+% 	+ If `y` is empty, sets it to a default value (1:2).
+% 	+ If `u0` is empty, sets it to the maximum value in the wire data.
+% 
+% **Display**
+% 
+% If `show` is true, the function displays several plots:
+% 
+% * For `wire` data:
+% 	+ Plots velocity profiles with y-axis labels.
+% 	+ Displays title and legend.
+% * For `film` data:
+% 	+ Plots piecewise linear fits for each channel.
+% 	+ Displays title and legend.
+% 
+% **Output**
+% 
+% The function returns a cell array of fitted curves, which is stored in the first element of `varargout`.
+% 
+% Overall, this function appears to be designed to calibrate and analyze hot-wire/film sensors, with options for displaying results and customizing processing.
+% 
+
+%% Examples
+% This section presents several examples of the usage of calibration
+% hot-wire/film CTA
+%% Create calibration file for hot-wire CTA, specify voltage and velocity vector correspondily, save to calib_wire.txt
+calibcta("1,44266 1,84532 1,9464 2,06614 2,12695 2,20549 2,24979 2,31243 2,39973 2,47017 2,53081 2,58417 2,60222", ...
+    [0 2.1 3.6 5.8 7.3 9.6 11.2 13.4 17.3 21.3 25.2 29.1 30.4], ... 
+    'docs\src\calibcta\calib_wire.txt')
+%% Calibrate hot-film CTA: 
+% import vertical velocity profiles measured by hot-wire CTA in the
+% vicinity location of hot-film CTA at various inflow veclity in the test
+% section;
+% import hot-film CTA measurements performed same time
+
+load('docs\src\calibcta\calib_film.mat')
+
+% dins of wire: 1 - samples, 2 - vertical posisiotn, 3 - inflow velocity;
+% dins of film: 1 - samples, 2 - sensor channel, 3 - inflow velocity;
+
+calib = calibcta(wire, film, sensor = 'film', y = y, index=3:4)
+
+##### SOURCE END #####
+-->
+</body>
+</html>

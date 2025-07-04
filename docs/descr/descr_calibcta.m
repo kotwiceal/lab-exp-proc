@@ -1,50 +1,54 @@
 %% Description
-% This is a MATLAB function named `calibcta` that calibrates hot-wire/film sensors. The function takes several input arguments, including sensor type, wall position, inflow velocity, and node index for poly1 fit. It also has optional arguments to display results and dock the figure.
+% This is a MATLAB function named `calibcta` that performs calibration and analysis of hot-wire/film sensors. Here's a breakdown of the function:
 % 
-% Here's a breakdown of the function:
+% **Function signature**
 % 
-% **Input Arguments**
+% The function takes two types of input arguments:
 % 
-% * `varargin`: A cell array containing the input values.
-% * `kwargs.sensor`: The type of sensor (either 'wire' or 'film').
-% * `kwargs.y`: The wall position.
-% * `kwargs.u0`: The inflow velocity.
-% * `kwargs.index`: The node index for poly1 fit.
-% * `kwargs.show`: Whether to display results.
-% * `kwargs.docked`: Whether to dock the figure.
+% 1. `varargin`: a variable-length argument list containing sensor data, which can be either `wire` or `film`.
+% 2. `kwargs`: a set of keyword arguments that control the processing and display of the results.
 % 
-% **Function Body**
+% **Keyword arguments**
 % 
-% The function uses a `switch` statement to determine which sensor type is selected. For each sensor type, it performs the following steps:
+% The function accepts several keyword arguments:
 % 
-% ### Wire Sensor
-% 
-% * Extracts the probe value, velocity value, and filename from `varargin`.
-% * Converts the probe value to a numeric value by removing commas.
-% * Writes the probe value and velocity to a matrix file using `writematrix`.
-% * Reads the contents of the file and replaces dots with commas.
-% * Replaces the delimiter in the file with tabs.
-% 
-% ### Film Sensor
-% 
-% * Extracts the wire and film values from `varargin`.
-% * Calculates the mean of the wire and film values along the first dimension.
-% * Sets default values for `yunit` and `u0isloc` if they are not provided.
-% * If `kwargs.y` is empty, sets it to a range of values based on the size of the wire array.
-% * If `kwargs.u0` is empty, sets it to the maximum value in the wire array.
+% * `sensor`: a character array indicating whether to process `wire` or `film` data.
+% * `y`: an optional input matrix representing wall positions (default is empty).
+% * `u0`: an optional input matrix representing inflow velocities (default is empty).
+% * `index`: an optional integer vector specifying node indices for polynomial fitting (default is 1:2).
+% * `show`: a logical scalar controlling whether to display results (default is true).
+% * `docked`: a logical scalar controlling whether to dock the figure window (default is false).
 % 
 % **Processing**
 % 
-% For the film sensor, the function performs the following steps:
+% Depending on the value of `sensor`, the function performs different processing steps:
 % 
-% 1. Shows velocity profiles using `plot`.
-% 2. Calculates the derivative of the film values with respect to the y-axis for each node using `prepareCurveData`, `fit`, and `poly1`.
-% 3. Performs a piecewise linear fit on the derivatives.
-% 4. Displays the calibration results using `plot`.
+% * For `wire` data:
+% 	+ Extracts probe, velocity, and filename from the input arguments.
+% 	+ Reads the file containing the sensor data and converts it to a numerical format.
+% 	+ Writes the processed data back to the file with a tab delimiter.
+% 	+ Calculates the dot by comma replacement in the file contents.
+% * For `film` data:
+% 	+ Extracts wire and film data from the input arguments.
+% 	+ Calculates mean values for wire and film data.
+% 	+ Sets default values for `yunit` and `u0isloc`.
+% 	+ If `y` is empty, sets it to a default value (1:2).
+% 	+ If `u0` is empty, sets it to the maximum value in the wire data.
+% 
+% **Display**
+% 
+% If `show` is true, the function displays several plots:
+% 
+% * For `wire` data:
+% 	+ Plots velocity profiles with y-axis labels.
+% 	+ Displays title and legend.
+% * For `film` data:
+% 	+ Plots piecewise linear fits for each channel.
+% 	+ Displays title and legend.
 % 
 % **Output**
 % 
-% The function returns the calibrated film data as an output argument in `varargout`.
+% The function returns a cell array of fitted curves, which is stored in the first element of `varargout`.
 % 
-% Overall, this function seems to be designed for calibrating hot-wire/film sensors in a specific application, likely related to fluid dynamics or particle tracking.
+% Overall, this function appears to be designed to calibrate and analyze hot-wire/film sensors, with options for displaying results and customizing processing.
 % 

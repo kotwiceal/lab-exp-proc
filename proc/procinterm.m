@@ -101,6 +101,7 @@ function result = procinterm(data, kwargs)
         kwargs.usefiledatastore (1, 1) logical = false
         kwargs.useparallel (1,1) logical = false
         kwargs.extract {mustBeMember(kwargs.extract, {'readall', 'writeall'})} = 'readall'
+        kwargs.poolsize = {16, 16}
     end
 
     function [result, fitdistcoef] = procfitdistfilt(data, kwargs)
@@ -139,24 +140,36 @@ function result = procinterm(data, kwargs)
             result = nonlinfilt(nlkernel, data, fitdistcoef, ...
                 kernel = kwargs.kernel, stride = kwargs.stride, padval = padval, ...
                     resources = kwargs.resources, usefiledatastore = kwargs.usefiledatastore, ...
-                    useparallel = kwargs.useparallel, extract = kwargs.extract);
+                    useparallel = kwargs.useparallel, extract = kwargs.extract, poolsize = kwargs.poolsize);
         else
             nlkernel = @(x, ~) fitdistfilt(x, method = kwargs.method, norm = kwargs.norm, binedge = kwargs.binedge, root = kwargs.root, ...
                 quantile = kwargs.quantile, distname = kwargs.distname, x0 = kwargs.x0, ...
                 lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
 
-            if ~isvector(data)
-                m = numel(kwargs.kernel);
-                n = ndims(data) - numel(kwargs.kernel);
+            m = numel(kwargs.kernel);
+            n = ndims(data) - numel(kwargs.kernel);
+
+            if isscalar(kwargs.kernel) 
                 kwargs.kernel = [kwargs.kernel, nan(1, n)];
-                kwargs.stride = [kwargs.stride, ones(1, n)];
-    
-                padval = cat(2, repmat({kwargs.padval}, 1, m), repmat({false}, 1, n));
+            else
+                kernel = kwargs.kernel;
             end
 
-            result = nonlinfilt(nlkernel, data, kernel = kwargs.kernel, stride = kwargs.stride, padval = padval, ...
+            if isscalar(kwargs.stride)
+                stride = [kwargs.stride, ones(1, n)];
+            else
+                stride = kwargs.stride;
+            end
+
+            if isscalar(kwargs.padval)   
+                padval = cat(2, repmat({kwargs.padval}, 1, m), repmat({false}, 1, n));
+            else
+                padval = kwargs.padval;
+            end 
+
+            result = nonlinfilt(nlkernel, data, kernel = kernel, stride = stride, padval = padval, ...
                 resources = kwargs.resources, usefiledatastore = kwargs.usefiledatastore, ...
-                useparallel = kwargs.useparallel, extract = kwargs.extract);
+                useparallel = kwargs.useparallel, extract = kwargs.extract, poolsize = kwargs.poolsize);
         end
         if kwargs.method ~= "integral-ratio"
             result = imfilt(result, filt = kwargs.prefilt, filtker = kwargs.prefiltker, padval = kwargs.padval);
@@ -211,6 +224,8 @@ function result = procinterm(data, kwargs)
         kwargs.nonlcon = @(x) nonlconfitdist(x, distname = kwargs.distname, mean1 = kwargs.mean1, mode1 = kwargs.mode1, ...
             var1 = kwargs.var1, amp1 = kwargs.amp1, mean2 = kwargs.mean2, mode2 = kwargs.mode2, var2 = kwargs.var2, amp2 = kwargs.amp2);
     end
+
+    if isa(kwargs.padval,'char'); kwargs.padval = string(kwargs.padval); end
 
     timerVal = tic;
 

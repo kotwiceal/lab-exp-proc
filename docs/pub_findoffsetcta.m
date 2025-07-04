@@ -1,41 +1,50 @@
 %% Description
-% This is a MATLAB function named `findoffsetcta` that appears to be used for analyzing scan data from a CT scanner. The function takes several input arguments and returns three output values: `y0`, `z0`, and `x0`.
+% This is a MATLAB function named `findoffsetcta` that takes several input parameters and performs various operations to find the offset vertical coordinates by specified velocity isoline level. Here's a breakdown of the function:
 % 
-% **Input Arguments**
+% **Input Parameters**
 % 
-% The function accepts the following input arguments:
+% The function accepts several input parameters:
 % 
-% * `filename`: the path to a file or folder containing the scan data (e.g., a CSV or text file).
-% * `kwargs` (optional): an optional structure that contains various parameters controlling the analysis.
+% * `filename`: The path to a scan.txt file or folder.
+% * `kwargs`: A structure containing various keyword arguments.
 % 
-% Some of the key input arguments include:
+% The `kwargs` structure has the following fields:
 % 
-% * `scandelimiter` and `scanseparator`: character strings specifying how the scan data is separated.
-% * `numch`: an integer specifying the number of channels in the scan data.
-% * `isovel`: a scalar value representing the cutoff velocity for exclusion.
-% * `y`, `yi`, `ratio`: vectors or arrays controlling the analysis, such as initial approximations and dimensionless velocity values.
-% * `reshape`: a vector specifying how to reshape the scan data into a gridwise format.
-% * `show` and `docked`: logical values controlling whether to display results.
+% * `scandelimiter`: The delimiter used in the scan file (default: `\t`).
+% * `scanseparator`: The separator used in the scan file (default: `,`).
+% * `numch`: The number of channels (default: 3).
+% * `isovel`: The cutoff velocity (default: 10).
+% * `y`: A vertical vector (optional).
+% * `yi`: An initial approximation for the offset vertical coordinates (optional).
+% * `ratio`: A dimensionless velocity at which the vertical position is assumed to be zero (optional).
+% * `reshape`: The reshape of the scan data (optional, default: `[numel(unique(y)), numel(unique(z)), numel(unique(x))]`).
+% * `smooth`: The smoothing method used (optional, default: `'none'`).
+% * `span`: The number of data points for calculating the smoothed value (optional).
+% * `show`: A flag indicating whether to display results (default: `true`).
+% * `docked`: A flag indicating whether to dock the figure (default: `false`).
 % 
 % **Function Flow**
 % 
-% Here's a high-level overview of the function flow:
+% The function performs the following steps:
 % 
-% 1. **Input validation**: The function checks if the input file or folder exists, and loads the scan data accordingly.
-% 2. **Data extraction**: The function extracts relevant columns from the scan data (e.g., `y`, `z`, `v`).
-% 3. **Exclusion**: The function excludes points with velocities below the specified cutoff value (`isovel`).
-% 4. **Piecewise linear interpolation**: The function applies piecewise linear interpolation to each column of the remaining data.
-% 5. **Offset calculation**: The function calculates the offset values using the `fsolve` function, which requires initial approximations (`yi`) and dimensionless velocity values (`ratio`).
-% 6. **Result output**: The function returns the offset values (`y0`, `z0`, `x0`) along with other optional output parameters.
-% 7. **Display results**: If the `show` flag is set, the function displays a plot of the original scan data, including the fitted curves and offset points.
+% 1. Checks if the input file is a folder or a file and loads the data accordingly.
+% 2. Extracts the x, z, and v values from the data.
+% 3. Reshapes the data according to the specified reshape value.
+% 4. Excludes near wall points by setting velocity and vertical coordinates to NaN where velocity is less than the cutoff velocity.
+% 5. Smooths the profiles using the specified smoothing method (if not `none`).
+% 6. Performs piecewise linear interpolation on each channel using the `fit` function.
+% 7. Finds the offset vertical coordinates using the `fsolve` function, which minimizes the difference between the interpolated values and the desired isoline level.
+% 8. Displays the results in a figure if the `show` flag is set.
 % 
-% **Notes**
+% **Output**
 % 
-% * The function assumes that the input file or folder contains tab-delimited text files, and uses the `table2array` function to load the data.
-% * The `fit` function is used for piecewise linear interpolation, which may not be the most efficient approach for large datasets.
-% * The function relies on user-provided initial approximations (`yi`) and dimensionless velocity values (`ratio`), which may require careful tuning for optimal results.
+% The function returns three output values:
 % 
-% Overall, this function appears to be designed for analyzing scan data from a CT scanner, with an emphasis on extracting offset values and visualizing the results.
+% * `y0`: The offset vertical coordinates.
+% * `z0`: The z-coordinate of the point where the velocity is assumed to be zero (if specified).
+% * `x0`: The x-coordinate of the point where the velocity is assumed to be zero (if specified).
+% 
+% Overall, this function appears to be designed to find the offset vertical coordinates for a given scan data file, taking into account various smoothing and interpolation techniques.
 % 
 
 %% Examples
@@ -46,4 +55,4 @@ scangridzeros = gridcta([-4050, -3550, -3050], 0:5e3:20e3, flip([-400:50:200, 30
     filename = 'docs\src\findoffsetcta\scan_zeros')
 
 [ax30, ax20, ax10] = findoffsetcta('docs\src\findoffsetcta\data',...
-    isovel = 12, ratio = 0.7, y = scangridzeros(:,3))
+    isovel = 12, ratio = 0.7, y = scangridzeros(:,3), smooth = 'moving', span = 3)

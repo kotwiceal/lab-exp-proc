@@ -1,52 +1,54 @@
 %% Description
-% This is a MATLAB function named `procxcorcta` that performs various analysis on cross-spectra data. Here's a breakdown of the code:
+% This MATLAB function, `procxcorcta`, performs cross-spectra analysis on a given dataset. Cross-spectra analysis is a technique used to analyze the relationship between two signals in both time and frequency domains.
 % 
-% **Function signature**
+% Here's a breakdown of the function:
 % 
-% The function takes two inputs:
+% **Input Arguments:**
 % 
-% * `data`: a single-cell array of structure, which contains the raw data.
-% * `kwargs`: an optional input that allows for customization of the analysis.
+% * `data`: A structure containing spectral estimates for different frequencies.
+% * `kwargs`: An optional parameter that allows users to customize the output.
 % 
-% **Keyword arguments**
+% The input arguments include:
+% 	+ `df` (default value 50): The sample spacing.
+% 	+ `fgrid` (default value [100:25:900]): The frequency grid points.
+% 	+ `phi` (default value 0:5:360): The phase shift values.
+% 	+ `varcs`: A character vector specifying the type of cross-spectra analysis to perform:
+% 		- 'coh' : Coherence
+% 		- 'csd' : Cross-spectra density
+% 		- 'csdn' : Normalized cross-spectra density
+% 		- 'tf' : Transfer function
+% 		- 'csdn1' : Non-normalized transfer function
+% 	+ `intspec`: A character vector specifying the type of inter-specification:
+% 		- 'sum' : Summation-based
+% 		- 'struct': Structured
 % 
-% The `kwargs` argument is used to customize the analysis. It has four fields:
+% **Computations:**
 % 
-% * `df`: a double value (default=50) that specifies the frequency band.
-% * `fgrid`: a vector of doubles (default=[100:25:900]) that specifies the frequency grid.
-% * `phi`: a vector of doubles (default=0:5:360) that specifies the phase values.
-% * `varcs`: a character string (required) that selects which cross-spectra component to analyze. The valid options are 'csdn', 'csd', 'tf', and 'csdn1'.
+% The function performs the following computations:
 % 
-% **Analysis**
+% 1. Extracts the cross-spectra density from the input data structure and assigns it to `data.csd`.
+% 2. Calculates coherence, transfer function, and normalized cross-spectra density values based on the input frequencies.
+% 3. Selects the appropriate cross-spectra value depending on the `varcs` argument.
+% 4. If specified, performs inter-specification using either summation-based or structured methods.
 % 
-% The function performs the following steps:
+% **Phase Rotation:**
 % 
-% 1. Extracts the cross-spectra density from the input data (`data.csd = data.spec{1,3};`).
-% 2. Computes the coherence, transfer function, and normalized cross-spectra density using various formulas.
-% 3. Applies a phase rotation to the cross-spectra based on the `phi` value.
+% The function performs phase rotation of the selected cross-spectra values:
 % 
-% **Phase rotation**
+% 1. Applies a shift to the frequency axis using `shiftdim`.
+% 2. Rotates the complex values by adding a phase shift value (`kwargs.phi`) in degrees.
+% 3. Normalizes the rotated values by dividing by the magnitude of the corresponding component.
 % 
-% The phase rotation is applied in two steps:
+% **Inter-Specification:**
 % 
-% 1. Shifts the data along the z-axis (second dimension) by one element (`real(shiftdim(temp,-1).*exp(1j*deg2rad(kwargs.phi)),1)`).
-% 2. Applies a Fourier transform to the rotated data (`shiftdim` and `cellfun`).
+% The function applies inter-specification to the rotated cross-spectra values:
 % 
-% **Post-processing**
+% 1. If `intspec` is set to 'sum', calculates the sum of each component along the time axis using a custom function (`freq2ind`).
+% 2. If `intspec` is set to 'struct', uses a predefined structure (`data.intspec`) for inter-specification.
 % 
-% The function applies additional post-processing to the rotated data:
+% **Output:**
 % 
-% 1. Reshapes the output into a cell array with dimensions `[sz(2:3), numel(kwargs.fgrid), sz(4:end)]`.
+% The function returns the modified data structure with additional fields containing the transformed cross-spectra values, frequency grid points, sample spacing, and phase shift values.
 % 
-% **Output**
-% 
-% The function returns an output structure `data` that contains the following fields:
-% 
-% * `csd`: the cross-spectra density.
-% * `coh`: the coherence.
-% * `tf`: the transfer function.
-% * `csdn1`: the normalized cross-spectra density (alternative to `csdn`).
-% * `rcsd`: the rotated data, which is a cell array with dimensions `[sz(2:3), numel(kwargs.fgrid), sz(4:end)].
-% 
-% Overall, this function appears to be designed for analyzing cross-spectra data in the context of signal processing or communication systems.
+% In summary, this function provides a flexible framework for performing various types of cross-spectra analysis on a given dataset, allowing users to customize the output according to their specific needs.
 % 
