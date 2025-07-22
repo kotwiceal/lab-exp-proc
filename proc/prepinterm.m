@@ -40,7 +40,8 @@ function result = prepinterm(data, kwargs)
         % postfilter
         kwargs.postfiltker (1,:) double = [15, 15] % postfilter kernel size
         %% optional
-        kwargs.resources {mustBeA(kwargs.resources, {'cell'}), mustBeMember(kwargs.resources, {'Processes', 'Threads'})} = {'Threads', 'Threads'}
+        kwargs.resources {mustBeA(kwargs.resources, {'char', 'string', 'cell'}), mustBeMember(kwargs.resources, {'Processes', 'Threads'})} = 'Threads'
+        kwargs.poolsize (1,:) double = 16
         kwargs.usefiledatastore (1, 1) logical = false
         kwargs.useparallel (1,1) logical = false
         kwargs.extract {mustBeMember(kwargs.extract, {'readall', 'writeall'})} = 'readall'
@@ -108,23 +109,24 @@ function result = prepinterm(data, kwargs)
 
             handl = @(x,~) squeeze(tensorprod(diffilt(:), x, 1, kwargs.dirdim)).^kwargs.pow;
             arg{1} = v;
-
-            % time differentiation
-            result = nonlinfilt(handl, arg{:}, kernel = kernel, padval = padval, ...
-                resources = kwargs.resources, usefiledatastore = kwargs.usefiledatastore, ...
-                useparallel = kwargs.useparallel, extract = kwargs.extract);
-
-            % post filtering
-            result = nonlinfilt(@(x, ~) median(x, kwargs.dirdim), result, ...
-                kernel = kernel, padval = padval,...
-                resources = kwargs.resources, usefiledatastore = kwargs.usefiledatastore, ...
-                useparallel = kwargs.useparallel, extract = kwargs.extract);
     end
 
     result = nonlinfilt(handl, arg{:}, kernel = kernel, padval = padval, ...
-        resources = kwargs.resources, usefiledatastore = kwargs.usefiledatastore, ...
+        resources = kwargs.resources, poolsize = kwargs.poolsize, ....
+        usefiledatastore = kwargs.usefiledatastore, ...
         useparallel = kwargs.useparallel, extract = kwargs.extract);
 
+    % postprocessing
+    switch kwargs.type
+        case 'dt'
+            kernel(kwargs.dirdim) = kwargs.postfiltker;
+            result = nonlinfilt(@(x, ~) median(x, kwargs.dirdim), result, ...
+                kernel = kernel, padval = padval,...
+                resources = kwargs.resources, poolsize = kwargs.poolsize, ...
+                usefiledatastore = kwargs.usefiledatastore, ...
+                useparallel = kwargs.useparallel, extract = kwargs.extract);
+    end
+    
     clearAllMemoizedCaches
     
 end

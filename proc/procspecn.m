@@ -20,8 +20,8 @@ function [spec, f] = procspecn(data, kwargs)
         kwargs.usefiledatastore (1, 1) logical = false
         kwargs.useparallel (1,1) logical = false
         kwargs.extract {mustBeMember(kwargs.extract, {'readall', 'writeall'})} = 'writeall'
-        kwargs.poolsize = {16, 16}
-        kwargs.resources {mustBeA(kwargs.resources, {'cell'}), mustBeMember(kwargs.resources, {'Processes', 'Threads'})} = {'Threads', 'Processes'}
+        kwargs.poolsize (1,:) double = 16
+        kwargs.resources {mustBeA(kwargs.resources, {'char', 'string', 'cell'}), mustBeMember(kwargs.resources, {'Processes', 'Threads'})} = 'Processes'
     end
 
     szd = size(data); nd = ndims(data); ndw = numel(kwargs.winlen);

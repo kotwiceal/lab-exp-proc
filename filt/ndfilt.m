@@ -16,8 +16,8 @@ function data = ndfilt(data, kwargs, opts)
         opts.usefiledatastore (1, 1) logical = false
         opts.useparallel (1,1) logical = false
         opts.extract {mustBeMember(opts.extract, {'readall', 'writeall'})} = 'readall'
-        opts.poolsize = {16, 16}
-        opts.resources {mustBeA(opts.resources, {'cell'}), mustBeMember(opts.resources, {'Processes', 'Threads'})} = {'Threads', 'Threads'}
+        opts.poolsize (1,:) double = 16
+        opts.resources {mustBeA(opts.resources, {'char', 'string', 'cell'}), mustBeMember(opts.resources, {'Processes', 'Threads'})} = 'Threads'
     end
 
     arguments (Output)
@@ -25,7 +25,6 @@ function data = ndfilt(data, kwargs, opts)
     end
 
     if isa(kwargs.padval, 'char'); kwargs.padval = string(kwargs.padval); end
-
     if isscalar(kwargs.padval); kwargs.padval = repmat({kwargs.padval}, 1, numel(kwargs.filtdims)); end
 
     kernel = nan(1, ndims(data));
@@ -42,20 +41,18 @@ function data = ndfilt(data, kwargs, opts)
                 if kwargs.zero2nan; data(data==0) = nan; end
                 switch numel(kwargs.filtdims)
                     case 1
-                        kerfunc = @(x, ~) fillmissing1(x, kwargs.method);
-                        kernel = nan;
+                        kerfunc = @(x, ~) fillmissing1(squeeze(x), kwargs.method);
                     case 2
-                        kerfunc = @(x, ~) fillmissing2(x, kwargs.method);
-                        kernel = [nan, nan];
+                        kerfunc = @(x, ~) fillmissing2(squeeze(x), kwargs.method);
                 end
+                kernel = ones(1, ndims(data));
+                kernel(kwargs.filtdims) = nan;
                 padval = false;
             end
         otherwise
             if kwargs.filt ~= "none"
                 kernelmat = fspecial(kwargs.filt, kwargs.filtker);
                 kerfunc = @(x, ~) squeeze(tensorprod(kernelmat, x, 1:numel(kernelmat), kwargs.filtdims));
-
-                % data = imfilter(data, fspecial(kwargs.filt, kwargs.filtker), kwargs.padval);
             end
     end
 
@@ -67,7 +64,8 @@ function data = ndfilt(data, kwargs, opts)
         usefiledatastore = opts.usefiledatastore, ...
         useparallel = opts.useparallel, ...
         extract = opts.extract, ...
-        resources = opts.resources);
+        resources = opts.resources, ...
+        poolsize = opts.poolsize);
 
     clearAllMemoizedCaches;
 

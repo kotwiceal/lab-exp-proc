@@ -5,7 +5,8 @@ function varargout = guiplot(varargin, kwargs, kwargsplt, figparam, axparamset, 
     end
     arguments (Input)
         kwargs.dims (1,:) {mustBeInteger, mustBePositive} = []
-        kwargs.ax {mustBeMember(kwargs.ax, {'1-1', '1-n'})} = '1-1'
+        kwargs.ax {mustBeMember(kwargs.ax, {'1-1', '1-n'})} = '1-1' % figure-subplot
+        kwargs.tile2fig (1,1) logical = false % convert tiles to standalone figures
         kwargs.roi {mustBeMember(kwargs.roi, {'1-1', '1-n'})} = '1-1'
         kwargsplt.plot char {mustBeMember(kwargsplt.plot, {'plot', 'imagesc', 'contour', 'contourf', 'mesh'})} = 'plot'
         kwargsplt.title {mustBeA(kwargsplt.title, {'char', 'string', 'cell'})} = ''
@@ -103,7 +104,7 @@ function varargout = guiplot(varargin, kwargs, kwargsplt, figparam, axparamset, 
     data = cell(numel(kwargs.dims) + 1, 1);
     [data{:}] = splitdatcell(varargin{:}, dims = kwargs.dims);
 
-    if figparam.docked; figure(WindowStyle = 'docked'); else; clf; end
+    if figparam.docked; fg = figure(WindowStyle = 'docked'); else; clf; fg = gcf; end
     tl = tiledlayout(figparam.arrangement, TileSpacing = figparam.TileSpacing, Padding = figparam.Padding);
 
     switch kwargs.ax
@@ -119,6 +120,18 @@ function varargout = guiplot(varargin, kwargs, kwargsplt, figparam, axparamset, 
 
     % plot data
     [plts, axs] = plotdatcell(data{:}, arg{:});
+
+    % convert tiles to standalone figures
+    if kwargs.tile2fig
+        hax = findobj('type', 'axes');
+        hclb = findobj('type','colorbar');
+        for i = 1:length(hax)
+            if figparam.docked; f = figure(WindowStyle = 'docked'); else; f = figure; end
+            copyobj([hclb(i), hax(i)], f)
+            set(gca, Units = 'normalized', Position = [0.1 0.2 0.7 0.6])
+        end
+        delete(fg)
+    end
 
     % create roi instances
     if roiparam.draw ~= "none"

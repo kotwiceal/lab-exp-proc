@@ -67,10 +67,10 @@ verbose = true, cdf = true, binedge = binedge, interaction = 'translate', aspect
 
 ```octave
 % decompose statistics and apply integral-ratio method
-data.gumbel.intrel = procinterm(data.dudtf, method = 'integral-ratio', distname = 'gumbel2', mode1 = mode1, mode2 = mode2, var1 = var1, binedge = binedge,
-x0 = x0, lb = lb, ub = ub, stride = [1, 1, 1, 1], kernel = [1, 1, 1, nan], padval = {false,false,false,false}, fitdistinit = false, prefilt = 'none', postfilt = 'none', verbose = true, resources = {'Processes', 'Processes'}, poolsize = {4,4});
+data.gumbel.intrel = procinterm(data.dudt, method = 'integral-ratio', distname = 'gumbel2', mode1 = mode1, mode2 = mode2, var1 = var1, binedge = binedge,
+x0 = x0, lb = lb, ub = ub, stride = [1, 1, 1, 1], kernel = [1, 1, 1, nan], padval = false, fitdistinit = false, prefilt = 'none', postfilt = 'none', verbose = true, resources = 'Processes', poolsize = 4);
 
 % decompose statistics and apply cdf-intersection method
-data.gumbel.cdfint = procinterm(data.dudtf, method = 'cdf-intersection', distname = 'gumbel2', mode1 = mode1, mode2 = mode2, var1 = var1, binedge = binedge, x0 = x0, lb = lb, ub = ub, stride = [1, 1, 1, 1], kernel = [1, 1, 1, nan], padval = {false,false,false,false}, fitdistinit = false, prefilt = 'none', postfilt = 'none', verbose = true,
-resources = {'Processes', 'Processes'}, poolsize = {4,4});
+data.gumbel.cdfint = procinterm(data.dudt, method = 'cdf-intersection', distname = 'gumbel2', mode1 = mode1, mode2 = mode2, var1 = var1, binedge = binedge, x0 = x0, lb = lb, ub = ub, stride = [1, 1, 1, 1], kernel = [1, 1, 1, nan], padval = false, fitdistinit = false, prefilt = 'none', postfilt = 'none', verbose = true,
+resources = 'Processes', poolsize = 4);
 ```

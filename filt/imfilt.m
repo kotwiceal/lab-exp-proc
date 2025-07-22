@@ -14,8 +14,8 @@ function data = imfilt(data, kwargs, opts)
         opts.usefiledatastore (1, 1) logical = false
         opts.useparallel (1,1) logical = false
         opts.extract {mustBeMember(opts.extract, {'readall', 'writeall'})} = 'readall'
-        opts.poolsize = {16, 16}
-        opts.resources {mustBeA(opts.resources, {'cell'}), mustBeMember(opts.resources, {'Processes', 'Threads'})} = {'Threads', 'Threads'}
+        opts.poolsize (1,:) double = 16
+        opts.resources {mustBeA(opts.resources, {'char', 'string', 'cell'}), mustBeMember(opts.resources, {'Processes', 'Threads'})} = 'Threads'
     end
 
     arguments (Output)

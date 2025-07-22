@@ -87,14 +87,20 @@ function result = nonlinfilt(method, varargin, kwargs, opts, pool)
         % than apply `method`; `writeall` slicing load data from datastore
         % and save result in the buffer new filedatastore
         opts.extract {mustBeMember(opts.extract, {'readall', 'writeall'})} = 'readall'
-        pool.poolsize = {16, 16}
-        pool.resources {mustBeA(pool.resources, {'cell'}), mustBeMember(pool.resources, {'Processes', 'Threads'})} = {'Processes', 'Threads'}
+        pool.poolsize (1,:) double = 16
+        pool.resources {mustBeA(pool.resources, {'char', 'string', 'cell'}), mustBeMember(pool.resources, {'Processes', 'Threads'})} = 'Threads'
     end
 
     arguments (Output)
         result
     end
 
+    % parse pool parameters
+    if isa(pool.poolsize, 'double'); pool.poolsize = num2cell(pool.poolsize); end
+    if isscalar(pool.poolsize); pool.poolsize = repmat(pool.poolsize, 1, 2); end
+    if isa(pool.resources, 'char'); pool.resources = string(pool.resources); end
+    if isscalar(pool.resources); pool.resources = repmat(pool.resources, 1, 2); end
+    if ~isa(pool.resources, 'cell'); pool.resources = cellstr(pool.resources); end
     % prepare pool
     poolarg = cellfun(@(x,y){x,y}, pool.resources, pool.poolsize, UniformOutput = false);
     poolswitcher(poolarg{1}{:});

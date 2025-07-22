@@ -97,11 +97,11 @@ function result = procinterm(data, kwargs)
         %% support parameters
         kwargs.verbose (1,1) logical = true % show logger
         %% optional
-        kwargs.resources {mustBeA(kwargs.resources, {'cell'}), mustBeMember(kwargs.resources, {'Processes', 'Threads'})} = {'Processes', 'Processes'}
+        kwargs.resources {mustBeA(kwargs.resources, {'char', 'string', 'cell'}), mustBeMember(kwargs.resources, {'Processes', 'Threads'})} = 'Threads'
         kwargs.usefiledatastore (1, 1) logical = false
         kwargs.useparallel (1,1) logical = false
         kwargs.extract {mustBeMember(kwargs.extract, {'readall', 'writeall'})} = 'readall'
-        kwargs.poolsize = {16, 16}
+        kwargs.poolsize (1,:) double = 16
     end
 
     function [result, fitdistcoef] = procfitdistfilt(data, kwargs)
