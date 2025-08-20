@@ -74,3 +74,24 @@ x0 = x0, lb = lb, ub = ub, stride = [1, 1, 1, 1], kernel = [1, 1, 1, nan], padva
 data.gumbel.cdfint = procinterm(data.dudt, method = 'cdf-intersection', distname = 'gumbel2', mode1 = mode1, mode2 = mode2, var1 = var1, binedge = binedge, x0 = x0, lb = lb, ub = ub, stride = [1, 1, 1, 1], kernel = [1, 1, 1, nan], padval = false, fitdistinit = false, prefilt = 'none', postfilt = 'none', verbose = true,
 resources = 'Processes', poolsize = 4);
 ```
+
+
+## PIV signal
+---
+Considers 2D PIV measurements carried out by scaninng `x-z` plane. Spatial grid is $[41\times 61]$, time grid is $10^5$ points. Following structure `data` presents typical data format, where `raw` filed is signal realizatrion, `x`, `z` longitudunal and spanwise coordinate grid respectivelty.  
+```octave
+data = 
+
+  struct with fields:
+
+    raw: [41×61×100000 double]
+      x: [41×61 double]
+      z: [41×61 double]
+
+```
+Indicator and criteria function is processing by time differentiating using [[prepinterm]] fucntion with followign parameters. 
+```octave
+data.dwdl = prepinterm(data, type = 'dt', diffilt = '4ordgauss', pow = 2);
+```
+Follwing table clarify parameters.
+

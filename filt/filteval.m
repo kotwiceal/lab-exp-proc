@@ -1,12 +1,12 @@
 function varargout = filteval(param)
     %% Evaluate sliding window passing indexes.
-    %% Syntax
-
-    %% Description
 
     arguments (Input)
         % double/cell array containing size of filtering data
         param.szarg {mustBeA(param.szarg, {'double', 'cell'})} = []
+
+        % data dimension to apply filter
+        param.filtdim {mustBeA(param.filtdim, {'double', 'cell'})} = []
 
         % sliding window size
         param.kernel {mustBeA(param.kernel, {'double', 'cell'})} = []
@@ -23,6 +23,10 @@ function varargout = filteval(param)
         % cast indexes to specific type
         param.cast {mustBeMember(param.cast, {'int8', 'int16', 'int32', 'int64'})} = 'int32'
         
+        % enable multi dimensional slicing
+        % if is not empty `param.filtdim` than `param.kernel` will be modified like `param.kernel = [nan, ..., param.filtdim, ..., nan]`
+        param.slice (1,1) logical = false
+
         % evaluate filter passing
         param.isfiltpass (1,1) logical = false
 
@@ -64,7 +68,13 @@ function varargout = filteval(param)
             if isscalar(ndimsarg) && numel(param.padval) == ndimsarg{1}
                 param.padval = {param.padval};
             end
-            if numel(param.padval) ~= narg; error('`numel(padval)` must be equal `narg`'); end
+            if numel(param.padval) ~= narg
+                param.padval = repmat({param.padval}, 1, narg);
+                for i = 1:narg
+                    if numel(param.padval{i}) ~= ndimsarg{i}; error('`numel(padval)` must be equal `narg`'); end    
+                end
+            end
+            % if numel(param.padval) ~= narg; error('`numel(padval)` must be equal `narg`'); end
             for i = 1:narg
                 if numel(param.padval{i}) ~= ndimsarg{i}; error('`numel(padval{i})` must be equal ndimsarg{i}'); end
                 for j = 1:ndimsarg{i}
@@ -90,7 +100,7 @@ function varargout = filteval(param)
             param.kernel = {param.kernel};
         end
     end
-    if narg ~= numel(param.kernel); error('number of filter param.kernel must be equal one or correspond to number of filtering array'); end
+    if narg ~= numel(param.kernel); error('number of filter `param.kernel` must be equal one or correspond to number of filtering array'); end
     for i = 1:narg
         if isvector(param.kernel{i})
             param.kernel{i}(isnan(param.kernel{i})) = param.szarg{i}(isnan(param.kernel{i}));
@@ -109,7 +119,7 @@ function varargout = filteval(param)
             param.stride = {param.stride};
         end
     end
-    if narg ~= numel(param.stride); error('param.kernel and param.stride dimensions must be equal'); end
+    if narg ~= numel(param.stride); error('`param.kernel` and `param.stride` dimensions must be equal'); end
     param.stride = cellfun(@(x) cast(x, param.cast), param.stride, UniformOutput = false);
 
     % offset validation
@@ -123,8 +133,52 @@ function varargout = filteval(param)
             param.offset = {param.offset};
         end
     end
-    if narg ~= numel(param.offset); error('param.kernel and param.offset dimensions must be equal'); end
+    if narg ~= numel(param.offset); error('`param.kernel` and `param.offset` dimensions must be equal'); end
     param.offset = cellfun(@(x) cast(x, param.cast), param.offset, UniformOutput = false);
+
+    % filter dimension validation
+    if isempty(param.filtdim)
+        param.filtdim = repmat({[]}, 1, narg);
+    end
+    if isa(param.filtdim, 'double')
+        if isvector(param.filtdim)
+            param.filtdim = repmat({param.filtdim}, 1, narg);
+        else
+            param.filtdim = {param.filtdim};
+        end
+    end
+    if narg ~= numel(param.filtdim); error('number of filter `param.filtdim` must be correspond to number of filtering array'); end
+    for i = 1:narg
+        if ~isempty(param.filtdim{i})
+            if isvector(param.kernel{i})
+                if param.slice
+                    kernel = nan(1, numel(param.szarg{i}));
+                else
+                    kernel = ones(1, numel(param.szarg{i}), param.cast);
+                end
+                kernel(param.filtdim{i}) = param.kernel{i};
+                param.kernel{i} = kernel;
+                param.kernel{i}(isnan(param.kernel{i})) = param.szarg{i}(isnan(param.kernel{i}));
+                param.kernel{i} = cast(param.kernel{i}, param.cast);
+            end
+
+            if isvector(param.stride{i})
+                stride = ones(1, numel(param.szarg{i}), param.cast);
+                stride(param.filtdim{i}) = param.stride{i};
+                param.stride{i} = stride;
+            end
+
+            if isvector(param.offset{i})
+                offset = zeros(1, numel(param.szarg{i}), param.cast);
+                offset(param.filtdim{i}) = param.offset{i};
+                param.offset{i} = offset;
+            end
+
+            padval = num2cell(false(1, numel(param.szarg{i})));
+            padval(param.filtdim{i}) = [param.padval{i}(param.filtdim{i})];
+            param.padval{i} = padval;
+        end
+    end
 
     % adjust filter parameters
     tempfunc = @(x) x*(x > 0);
@@ -162,10 +216,10 @@ function varargout = filteval(param)
     
     % check a consistency of filtered data size
     szfnumel = cell2mat(cellfun(@numel, szfilt, UniformOutput = false));
-    if numel(unique(szfnumel)) ~= 1; error(strcat("inconsistent dimensions of filter param.strides: ", jsonencode(szfnumel))); end
+    if numel(unique(szfnumel)) ~= 1; error(strcat("inconsistent dimensions of filter `param.strides`: ", jsonencode(szfnumel))); end
     szfval = zeros(numel(szfilt), szfnumel(1));
     for i = 1:numel(szfilt); szfval(i,:) = szfilt{i}; end
-    if ~isvector(unique(szfval, 'row')); error(strcat("inconsistent grid of filter param.strides: ", jsonencode(szfval))); end
+    if ~isvector(unique(szfval, 'row')); error(strcat("inconsistent grid of filter `param.strides`: ", jsonencode(szfval))); end
     szfilt = szfilt{1};
     numfilt = prod(szfilt);
 
@@ -194,9 +248,9 @@ function varargout = filteval(param)
 
     % size validation
     for i = 1:narg
-        if ndimsarg{i} < size(param.kernel{i}, 1); error('param.kernel dimension number must not exceed data dimension number'); end
-        if size(param.kernel{i}) ~= size(param.stride{i}); error('param.kernel and param.stride dimensions must be equal'); end
-        if size(param.kernel{i}) ~= size(param.offset{i}); error('param.kernel and param.offset dimensions must be equal'); end
+        if ndimsarg{i} < size(param.kernel{i}, 1); error('`param.kernel` dimension number must not exceed data dimension number'); end
+        if size(param.kernel{i}) ~= size(param.stride{i}); error('`param.kernel` and `param.stride` dimensions must be equal'); end
+        if size(param.kernel{i}) ~= size(param.offset{i}); error('`param.kernel` and `param.offset` dimensions must be equal'); end
     end
 
     % cumulate strides
@@ -228,12 +282,12 @@ function varargout = filteval(param)
         param.kernel{i} = param.kernel{i} - 1;
         param.kernel{i}(param.kernel{i}<0) = 0;
     end
-
+    
     % evaluate outbound index slices
     outbound = cell(1, narg);
     for i = 1:narg
         [minval, maxval] = bounds(reshape(cat(ndims(param.kernel{i}) + 1, zeros(size(param.kernel{i}), param.cast), ...
-            param.kernel{i}) + param.stride{i}+param.offset{i}, [numel(param.szarg{i}), prod(szfilt), 2]), [2, 3]);
+            param.kernel{i}) + param.stride{i} + param.offset{i}, [numel(param.szarg{i}), prod(szfilt), 2]), [2, 3]);
         outbound{i} = [minval, maxval];
 
         % evaluate paddings

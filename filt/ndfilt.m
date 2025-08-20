@@ -3,11 +3,10 @@ function data = ndfilt(data, kwargs, opts)
 
     arguments (Input)
         data
-        kwargs.filtdims (1,:) double = 1
-        kwargs.filtdimsdef {mustBeMember(kwargs.filtdimsdef, {'manual', '1d', '2d'})} = 'manual'
         % filter name
-        kwargs.filt (1,:) char {mustBeMember(kwargs.filt, {'none', 'gaussian', 'average', 'median', 'fillmiss'})} = 'gaussian'
-        kwargs.filtker double = 3 % kernel size
+        kwargs.filt (1,:) char {mustBeMember(kwargs.filt, {'none', 'gaussian', 'average', 'median', 'fillmiss', 'griddatan'})} = 'gaussian'
+        kwargs.filtker (1,:) double = [] % kernel size
+        kwargs.filtdim (1,:) double = []
         kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string', 'logical', 'cell'})} = 'symmetric' % padding value
         kwargs.method (1,:) char {mustBeMember(kwargs.method, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'nearest' % at specifying `filtker=fillmiss`
         kwargs.zero2nan (1,1) logical = true
@@ -24,48 +23,79 @@ function data = ndfilt(data, kwargs, opts)
         data
     end
 
-    if isa(kwargs.padval, 'char'); kwargs.padval = string(kwargs.padval); end
-    if isscalar(kwargs.padval); kwargs.padval = repmat({kwargs.padval}, 1, numel(kwargs.filtdims)); end
-
-    kernel = nan(1, ndims(data));
-    padval = num2cell(nan(1, ndims(data)));
-
-    kernel(kwargs.filtdims) = kwargs.filtker(1:numel(kwargs.filtdims));
-    padval(kwargs.filtdims) = kwargs.padval;
+    if isempty(kwargs.filtker); return; end
 
     switch kwargs.filt
         case 'median'
-            kerfunc = @(x, ~) squeeze(median(x, kwargs.filtdims), 'omitmissing');
+            if isempty(kwargs.filtdim)
+                filtdim = 1:numel(kwargs.filtker);
+                filtdim(kwargs.filtker == 1) = [];
+            else
+                filtdim = kwargs.filtdim;
+            end
+            kerfunc = @(x, ~) squeeze(median(x, filtdim, 'omitmissing'));
         case 'fillmiss'
             if kwargs.method ~= "none"
                 if kwargs.zero2nan; data(data==0) = nan; end
-                switch numel(kwargs.filtdims)
+                switch numel(kwargs.filtdim)
                     case 1
                         kerfunc = @(x, ~) fillmissing1(squeeze(x), kwargs.method);
                     case 2
                         kerfunc = @(x, ~) fillmissing2(squeeze(x), kwargs.method);
                 end
-                kernel = ones(1, ndims(data));
-                kernel(kwargs.filtdims) = nan;
-                padval = false;
+                kwargs.filtker = ones(1, ndims(data));
+                kwargs.filtker(kwargs.filtdim) = nan;
+                kwargs.filtdim = [];
+                kwargs.padval = false;
             end
+        case 'griddatan'
+            kwargs.filt = 'none';
+            szd = size(data);
+
+            if isempty(kwargs.filtdim)
+                tempfunc = @(x) x*(x > 0);
+                kwargs.filtker = padarray(kwargs.filtker, [0, tempfunc(ndims(data)-numel(kwargs.filtker))], nan, 'post');
+
+            else
+                kernel = nan(1, ndims(data));
+                kernel(kwargs.filtdim) = kwargs.filtker;
+                kwargs.filtker = kernel;
+            end
+            kwargs.filtker(isnan(kwargs.filtker)) = szd(isnan(kwargs.filtker));
+
+            temp = cellfun(@(x) 1:x, num2cell(szd), UniformOutput = false);
+            subind = cell(1, numel(temp));
+            [subind{:}] = ndgrid(temp{:});
+            subind = cell2arr(cellfun(@(x) x(:), subind, UniformOutput = false));
+                        
+            temp = cellfun(@(x, y) linspace(1, x, y), num2cell(szd), num2cell(kwargs.filtker), UniformOutput = false);
+
+            subindq = cell(1, numel(temp));
+            [subindq{:}] = ndgrid(temp{:});
+            subindq = cell2arr(cellfun(@(x) x(:), subindq, UniformOutput = false));
+
+            data = griddatan(subind, data(:), subindq, kwargs.method);
+            data = reshape(data, kwargs.filtker);
         otherwise
             if kwargs.filt ~= "none"
                 kernelmat = fspecial(kwargs.filt, kwargs.filtker);
-                kerfunc = @(x, ~) squeeze(tensorprod(kernelmat, x, 1:numel(kernelmat), kwargs.filtdims));
+                kerfunc = @(x, ~) squeeze(tensorprod(kernelmat, x, 1:ndims(kernelmat), kwargs.filtdim));
             end
     end
 
-    data = nonlinfilt(kerfunc, ...
-        data, ...
-        kernel = kernel, ...
-        padval = padval, ...
-        verbose = kwargs.verbose, ...
-        usefiledatastore = opts.usefiledatastore, ...
-        useparallel = opts.useparallel, ...
-        extract = opts.extract, ...
-        resources = opts.resources, ...
-        poolsize = opts.poolsize);
+    if kwargs.filt ~= "none"
+        data = nonlinfilt(kerfunc, ...
+            data, ...
+            kernel = kwargs.filtker, ...
+            padval = kwargs.padval, ...
+            filtdim = kwargs.filtdim, ...
+            verbose = kwargs.verbose, ...
+            usefiledatastore = opts.usefiledatastore, ...
+            useparallel = opts.useparallel, ...
+            extract = opts.extract, ...
+            resources = opts.resources, ...
+            poolsize = opts.poolsize);
+    end
 
     clearAllMemoizedCaches;
 

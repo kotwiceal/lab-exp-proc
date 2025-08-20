@@ -17,8 +17,10 @@ function fitdistcoef =  procfitdistcoef(data, kwargs)
         kwargs.distname (1,:) char {mustBeMember(kwargs.distname, {'gamma2', 'beta2', 'beta2l', 'gumbel2'})} = 'gumbel2'
         kwargs.fitdistcoefinit double = [] % initial fitdistcoef
         %% processing parameters
-        kwargs.kernel (1,:) double = [30, 30] % size of processing window
-        kwargs.stride (1,:) double = [5, 5] % strides of processing window
+        kwargs.filtdim (1,:) double = []
+        kwargs.kernel (1,:) double = [] % size of processing window
+        kwargs.stride (1,:) double = [] % strides of processing window
+        kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string', 'logical', 'cell'})} = 'symmetric' % padding value
         %% optimization parameters
         kwargs.objnorm (1,1) double = 2 % norm order at calculation objective function
         kwargs.nonlcon = [] % non-linear optimization constrain function
@@ -36,74 +38,63 @@ function fitdistcoef =  procfitdistcoef(data, kwargs)
         kwargs.amp2 (1,:) double = [] % constraints of amplitude value the second mode
         %% post-pocessing parameters
         % method to filter intermittency field
-        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'average', 'gaussian', 'median', 'wiener', 'mode'})} = 'median'
-        kwargs.postfiltker double = [5, 5] % kernel of filtering intermittency field
-        kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string', 'logical', 'cell'})} = 'symmetric' % padding value
+        kwargs.postfilt (1,:) char {mustBeMember(kwargs.postfilt, {'none', 'average', 'gaussian', 'median'})} = 'median'
+        kwargs.postfiltker (1,:) double = [] % kernel of filtering intermittency field
+        kwargs.postfiltdim (1,:) double = []
+        kwargs.postpadval {mustBeA(kwargs.postpadval, {'double', 'char', 'string', 'logical', 'cell'})} = false % padding value
+        kwargs.griddim (1,:) double = []
+        kwargs.griddata {mustBeMember(kwargs.griddata, {'none', 'linear', 'nearest'})} = 'nearest'
         %% support parameters
         kwargs.verbose (1,1) logical = true
         %% optional
-        kwargs.resources {mustBeA(kwargs.resources, {'cell'}), mustBeMember(kwargs.resources, {'Processes', 'Threads'})} = {'Processes', 'Processes'}
-        kwargs.usefiledatastore (1, 1) logical = false
+        kwargs.usefiledatastore (1,1) logical = false
         kwargs.useparallel (1,1) logical = false
         kwargs.extract {mustBeMember(kwargs.extract, {'readall', 'writeall'})} = 'readall'
+        kwargs.poolsize (1,:) double = 16
     end
 
     timer = tic; szd = size(data);
+
+    if isempty(kwargs.kernel); kwargs.kernel = nan(ndims(data)); end
 
     if isempty(kwargs.nonlcon)
         kwargs.nonlcon = @(x) nonlconfitdist(x, distname = kwargs.distname, mean1 = kwargs.mean1, mode1 = kwargs.mode1, ...
             var1 = kwargs.var1, amp1 = kwargs.amp1, mean2 = kwargs.mean2, mode2 = kwargs.mode2, var2 = kwargs.var2, amp2 = kwargs.amp2);
     end
 
-    if isempty(kwargs.fitdistcoefinit)
-        if ~isvector(data)
-            m = numel(kwargs.kernel);
-            n = ndims(data) - numel(kwargs.kernel);
-            kwargs.kernel = [kwargs.kernel, nan(1, n)];
-            kwargs.stride = [kwargs.stride, ones(1, n)];
-
-            padval = cat(2, repmat({kwargs.padval}, 1, m), repmat({false}, 1, n));
-        end
-    
+    if isempty(kwargs.fitdistcoefinit)  
         nlkernel = @(x, ~) fitdistfilt(x, method = 'fitdistcoef', norm = kwargs.norm, binedge = kwargs.binedge, ...
             distname = kwargs.distname, x0 = kwargs.x0, lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
-
-        fitdistcoef = nonlinfilt(nlkernel, data, kernel = kwargs.kernel, stride = kwargs.stride, padval = padval, ...
-            resources = kwargs.resources, usefiledatastore = kwargs.usefiledatastore, ...
-                useparallel = kwargs.useparallel, extract = kwargs.extract);
+        arg = {data};
     else
-        szf = size(kwargs.fitdistcoefinit);
-
-        if ~isvector(data)
-            kernel = kwargs.kernel; stride = kwargs.stride;
-            kwargs.kernel = cell(1, 2); kwargs.stride = cell(1, 2); kwargs.offset = cell(1, 2);
-            kwargs.kernel{1} = [kernel, szd(3)];
-            kwargs.stride{1} = [stride, szd(3)];
-            kwargs.offset{1} = [0, 0, 0];
-            kwargs.kernel{2} = [kernel, szf(3)];
-            kwargs.stride{2} = [stride, szf(3)];
-            kwargs.offset{2} = [0, 0, 0];
-
-            x0 = @(y) squeeze(median(y, [1, 2], 'omitmissing'));
-        else
-            x0 = @(y) median(y, 1, 'omitmissing');
-        end
-
-        nlkernel = @(x, y, ~) fitdistfilt(x, method = 'fitdistcoef', norm = kwargs.norm, binedge = kwargs.binedge, ...
+        x0 = @(y) squeeze(median(y, 1:ndims(y)-1, 'omitmissing'));
+        nlkernel = @(x, y, ~) fitdistfilt(x, method = 'fitdistcoef', ...
+            norm = kwargs.norm, binedge = kwargs.binedge, ...
             distname = kwargs.distname, x0 = x0(y), ...
             lb = kwargs.lb, ub = kwargs.ub, nonlcon = kwargs.nonlcon);
-
-        fitdistcoef = nonlinfilt(nlkernel, data, kwargs.fitdistcoefinit, ...
-            kernel = kwargs.kernel, stride = kwargs.stride, offset = kwargs.offset, padval = kwargs.padval, ...
-            resources = kwargs.resources, usefiledatastore = kwargs.usefiledatastore, ...
-                useparallel = kwargs.useparallel, extract = kwargs.extract);
+        arg = {data, kwargs.fitdistcoefinit};
     end
+
+    fitdistcoef = nonlinfilt(nlkernel, arg{:}, filtdim = kwargs.filtdim, ...
+        kernel = kwargs.kernel, stride = kwargs.stride, padval = kwargs.padval, ...
+        resources = 'Processes', usefiledatastore = kwargs.usefiledatastore, ...
+            useparallel = kwargs.useparallel, extract = kwargs.extract, poolsize = kwargs.poolsize);
 
     fitdistcoef = shiftdim(fitdistcoef, 1);
 
-    fitdistcoef = imfilt(fitdistcoef, filt = kwargs.postfilt, filtker = kwargs.postfiltker, padval = kwargs.padval);
+    % postfiltering
+    fitdistcoef = ndfilt(fitdistcoef, filtdim = kwargs.postfiltdim, filt = kwargs.postfilt, ...
+        filtker = kwargs.postfiltker, padval = kwargs.postpadval);
 
-    fitdistcoef = imdresize(fitdistcoef, szd(1:2));
+    % resize to original size
+    if isempty(kwargs.filtdim)
+        ind = ~isnan(kwargs.kernel);
+    else
+        ind = 1:ndims(data);
+        ind = ind(kwargs.filtdim(~isnan(kwargs.kernel)));
+    end
+    fitdistcoef = ndfilt(fitdistcoef, filt = 'griddatan', ...
+        filtker = szd(ind), filtdim = 1:ndims(fitdistcoef)-1, method = kwargs.griddata);
 
     if kwargs.verbose; disp(strcat("procfitdistcoef: elapsed time is ", num2str(toc(timer)), " seconds")); end
 

@@ -69,12 +69,16 @@ function result = nonlinfilt(method, varargin, kwargs, opts, pool)
     end
 
     arguments (Input)
+        kwargs.filtdim {mustBeA(kwargs.filtdim, {'double', 'cell'})} = [] % data dimension to apply filter
         kwargs.kernel {mustBeA(kwargs.kernel, {'double', 'cell'})} = [] % window size
         kwargs.stride {mustBeA(kwargs.stride, {'double', 'cell'})} = [] % window stride
         kwargs.offset {mustBeA(kwargs.offset, {'double', 'cell'})} = [] % window offset
-        kwargs.cast (1,:) char {mustBeMember(kwargs.cast, {'int8', 'int16', 'int32', 'int64'})} = 'int32'
+        kwargs.cast (1,:) char {mustBeMember(kwargs.cast, {'int8', 'int16', 'int32', 'int64'})} = 'int32' % cast type of evaluated filter indexes
         kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string', 'logical', 'cell'})} = nan % padding value
-        opts.verbose logical {mustBeScalarOrEmpty} = false % logger
+        % enable multi dimensional slicing
+        % if is not empty `param.filtdim` than `param.kernel` will be modified like `param.kernel = [nan, ..., param.filtdim, ..., nan]`
+        kwargs.slice (1,1) logical = false
+        opts.verbose logical {mustBeScalarOrEmpty} = false % enable logger
         opts.ans {mustBeMember(opts.ans, {'array', 'cell', 'filedatastore'})} = 'array' % returned data type 
         %% advance parallel processing settings
         % the main sliding window parallel loop will slice and store data 
@@ -165,6 +169,7 @@ function result = nonlinfilt(method, varargin, kwargs, opts, pool)
         dsf = fileDatastore(opts.folder, FileExtensions = '.mat', ReadFcn = @ReadFcn);
         dsft = transform(dsf, @(x) {opts.method(x{1:end-1}), x{end}});
 
+        % change pool context
         poolswitcher(poolarg{2}{:});
 
         switch opts.extract
