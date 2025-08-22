@@ -18,6 +18,7 @@ function getdata = guilinedist(data, kwargs)
         data double
         kwargs.x double = [] % spatial coordinate
         kwargs.y double = [] % spatial coordinate
+        kwargs.target % where to plot
         % type projection of distribution
         kwargs.proj (1,:) char {mustBeMember(kwargs.proj, {'horz', 'vert', 'line'})} = 'horz'
         kwargs.angle (1,1) double = -22 % rotation angle of selected frame
@@ -48,6 +49,7 @@ function getdata = guilinedist(data, kwargs)
         kwargs.mdisplayname (1,:) = [] % list of labeled curves
         kwargs.legend (1,1) logical = false % show legend flag
         kwargs.docked (1,1) logical = false % docked figure flag
+        kwargs.windowstyle (1, :) char = 'default' % windowstyles
         kwargs.colormap (1,:) char = 'turbo' % colormap name
         kwargs.colorbar (1,1) logical = false
         kwargs.clabel (1,:) char = []
@@ -292,8 +294,9 @@ function getdata = guilinedist(data, kwargs)
     if isempty(kwargs.frame); kwargs.frame = 1:prod(sz(3:end)); end
     if ndims(kwargs.clim) == 3;  cl = kwargs.clim; else; cl = repmat(kwargs.clim, 1, 1, prod(sz(3:end))); end
     if isa(kwargs.clabel, 'char'); kwargs.clabel = repmat({kwargs.clabel}, 1, numel(kwargs.frame)); end
-
-    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
+    
+    if kwargs.docked & strcmp(kwargs.docked, 'default'); figure('WindowStyle', 'docked'); else; clf; end
+    if ~strcmp(kwargs.docked, 'default'); figure('WindowStyle', windowstyle); else; clf; end
     tiledlayout(kwargs.arrangement);
     switch disptype
         case 'node'
