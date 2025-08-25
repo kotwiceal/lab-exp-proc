@@ -35,6 +35,7 @@ function getdata = guilinedist(data, kwargs)
         % region selection behaviour
         kwargs.interaction (1,:) char {mustBeMember(kwargs.interaction, {'all', 'none', 'translate'})} = 'all'
         kwargs.number (1,1) double {mustBeInteger, mustBeGreaterThanOrEqual(kwargs.number, 1)} = 1 % count of selection regions
+        kwargs.moved (1,:) {mustBeA(kwargs.moved, {'double', 'function_handle'})} = []
         kwargs.xlabel (1,:) char = 'x, mm' % y-axis label
         kwargs.ylabel (1,:) char = 'z, mm' % y-axis label
         kwargs.xlim (1,:) double = [] % x-axis limit
@@ -293,14 +294,13 @@ function getdata = guilinedist(data, kwargs)
     if ndims(kwargs.clim) == 3;  cl = kwargs.clim; else; cl = repmat(kwargs.clim, 1, 1, prod(sz(3:end))); end
     if isa(kwargs.clabel, 'char'); kwargs.clabel = repmat({kwargs.clabel}, 1, numel(kwargs.frame)); end
 
-    if kwargs.docked; figure('WindowStyle', 'Docked'); else; clf; end
-    tiledlayout(kwargs.arrangement);
+    if kwargs.docked; figure('WindowStyle', 'Docked'); tiledlayout(kwargs.arrangement); end
     switch disptype
         case 'node'
             if isempty(kwargs.xlabel); kwargs.xlabel = 'x_{n}'; end
             if isempty(kwargs.ylabel); kwargs.ylabel = 'z_{n}'; end
             for i = kwargs.frame
-                nexttile; imagesc(data(:,:,i)); xlabel(kwargs.xlabel); ylabel(kwargs.ylabel); colormap(kwargs.colormap); axis(kwargs.aspect);
+                axc = nexttile; imagesc(axc, data(:,:,i)); xlabel(kwargs.xlabel); ylabel(kwargs.ylabel); colormap(kwargs.colormap); axis(kwargs.aspect);
                 if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                 if ~isempty(kwargs.displayname); title(kwargs.displayname(i), 'FontWeight', 'Normal'); end
                 set(gca, FontSize = kwargs.fontsize);
@@ -313,7 +313,7 @@ function getdata = guilinedist(data, kwargs)
             if isempty(kwargs.ylabel); kwargs.ylabel = 'z, mm'; end
             if ismatrix(kwargs.x) && ismatrix(kwargs.y)
                 for i = kwargs.frame
-                    nexttile; contourf(kwargs.x, kwargs.y, data(:,:,i), 100, 'LineStyle', 'None'); 
+                    axc = nexttile; contourf(axc, kwargs.x, kwargs.y, data(:,:,i), 100, 'LineStyle', 'None'); 
                     xlabel(kwargs.xlabel); ylabel(kwargs.ylabel); colormap(kwargs.colormap); hold on; grid on; box on;
                     if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                     axis(kwargs.aspect);
@@ -325,7 +325,7 @@ function getdata = guilinedist(data, kwargs)
                 end
             else
                 for i = kwargs.frame
-                    nexttile; contourf(kwargs.x(:,:,i), kwargs.y(:,:,i), data(:,:,i), 100, 'LineStyle', 'None'); 
+                    axc = nexttile; contourf(axc, kwargs.x(:,:,i), kwargs.y(:,:,i), data(:,:,i), 100, 'LineStyle', 'None'); 
                     xlabel(kwargs.xlabel); ylabel(kwargs.ylabel); colormap(kwargs.colormap); hold on; grid on; box on;
                     if ~isempty(cl(:,:,i)); clim(cl(:,:,i)); end
                     axis(kwargs.aspect);
@@ -338,7 +338,7 @@ function getdata = guilinedist(data, kwargs)
             end
     end
 
-    axroi = gca; nexttile; ax = gca; hold(ax, 'on'); box(ax, 'on'); grid(ax, 'on');
+    axroi = gca; axc = nexttile; ax = axc; hold(ax, 'on'); box(ax, 'on'); grid(ax, 'on');
 
     switch kwargs.shape
         case 'line'
@@ -347,13 +347,15 @@ function getdata = guilinedist(data, kwargs)
             eventline();
         case 'rect'
             if kwargs.showrotframe && kwargs.proj == "line"
-                nexttile; axmon = gca; hold(axmon, 'on'); box(axmon, 'on'); grid(axmon, 'on');
-                nexttile; axmonrot = gca; hold(axmonrot, 'on'); box(axmonrot, 'on'); grid(axmonrot, 'on');
+                axc = nexttile; axmon = gca; hold(axmon, 'on'); box(axmon, 'on'); grid(axmon, 'on');
+                axc = nexttile; axmonrot = gca; hold(axmonrot, 'on'); box(axmonrot, 'on'); grid(axmonrot, 'on');
             end
             rois = guiselectregion(axroi, moved = @eventrect, shape = 'rect', ...
                 mask = kwargs.mask, interaction = kwargs.interaction, number = kwargs.number);
             eventrect();
     end
+
+    if ~isempty(kwargs.moved); cellfun(@(r)addlistener(r, 'ROIMoved', @kwargs.moved), rois, UniformOutput = false); end
 
     if ~isempty(kwargs.title); sgtitle(kwargs.title); end
 

@@ -133,6 +133,8 @@ function varargout = guiplot(varargin, kwargs, kwargsplt, figparam, axparamset, 
         delete(fg)
     end
 
+    varargout{1} = data;
+
     % create roi instances
     if roiparam.draw ~= "none"
 
@@ -160,7 +162,7 @@ function varargout = guiplot(varargin, kwargs, kwargsplt, figparam, axparamset, 
     
         rois = cellfun(@(arg) guiroi(arg{:}), args, UniformOutput = false);
     
-        varargout{1} = rois;
+        varargout{2} = rois;
 
     end
 
