@@ -27,7 +27,8 @@ function varargout = prepcta(input, kwargs)
         kwargs.center (1,1) logical = true % normalize data
         kwargs.fs (1,1) double = 25e3 % frequency sampling
         kwargs.norm (1,:) char {mustBeMember(kwargs.norm, {'none', 'rms'})} = 'rms' % spectra norm, `rms` means assertion sqrt(sum(spec))=rms(x)
-        kwargs.corvibr (1,1) logical = true; % suppress vibrations via cross-correlation correction technique
+        kwargs.corvibr (1,1) logical = true; % suppress vibrations by cross-spectra technique
+        kwargs.corvibrdev (1,1) logical = false; % suppress vibrations by cross-correlation technique
         kwargs.corvibrind (1,:) double = [1, 2] % indexes of correcting channel and reference channel
         kwargs.procamp (1,:) char {mustBeMember(kwargs.procamp, {'rms', 'sum', 'sel'})} = 'rms'
         kwargs.procspec (1,:) char {mustBeMember(kwargs.procspec, {'spectrogram', 'manual'})} = 'spectrogram'
@@ -72,6 +73,19 @@ function varargout = prepcta(input, kwargs)
 
     switch kwargs.type
         case 'wire'
+            
+            % to correct correrlated signal part
+            if kwargs.corvibrdev
+                u = squeeze(kwargs.raw(:,kwargs.corvibrind(1),:));
+                v = squeeze(kwargs.raw(:,kwargs.corvibrind(2),:));
+                Ruv = nonlinfilt(@(x, y, ~) x.*y, u, v, kernel = [kwargs.winlen, nan], stride = [kwargs.winlen, 1], ...
+                    padval = {{'symmetric', false}, {'symmetric', false}});
+                Ruv = mean(Ruv, 3);
+                du = nonlinfilt(@(v, Ruv, ~) conv(normalize(v, 1, 'center'), Ruv, 'same'), v, Ruv, kernel = [nan, 1], padval = false);
+                u = u - du;
+                kwargs.raw(:,kwargs.corvibrind(1),:) = u;
+            end
+
             % calculate auto/scross spectra
             switch kwargs.procspec
                 case 'spectrogram'
