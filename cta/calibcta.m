@@ -23,7 +23,6 @@ function varargout = calibcta(varargin, kwargs)
 
     switch kwargs.sensor
         case 'wire'
-            1 == 1;
             probe = varargin{1};
             velocity = varargin{2};
             filename = varargin{3};
