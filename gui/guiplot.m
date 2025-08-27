@@ -23,9 +23,9 @@ function varargout = guiplot(varargin, kwargs, kwargsplt, figparam, axparamset, 
         axparamset.colorscale {mustBeMember(axparamset.colorscale, {'linear', 'log'}), mustBeA(axparamset.colorscale, {'char', 'cell'})} = 'linear'
         axparamset.fontsize {mustBeInteger, mustBePositive} = 10
         %% parameters for `xlabel(ax, arg{:})` and so on
-        axparamfunc.xlabel {mustBeA(axparamfunc.xlabel, {'char', 'cell'})} = ''
-        axparamfunc.ylabel {mustBeA(axparamfunc.ylabel, {'char', 'cell'})} = ''
-        axparamfunc.zlabel {mustBeA(axparamfunc.zlabel, {'char', 'cell'})} = ''
+        axparamfunc.xlabel {mustBeA(axparamfunc.xlabel, {'char', 'string', 'cell'})} = ''
+        axparamfunc.ylabel {mustBeA(axparamfunc.ylabel, {'char', 'string', 'cell'})} = ''
+        axparamfunc.zlabel {mustBeA(axparamfunc.zlabel, {'char', 'string', 'cell'})} = ''
         axparamfunc.xlim {mustBeA(axparamfunc.xlim, {'char', 'double', 'cell'})} = 'auto'
         axparamfunc.ylim {mustBeA(axparamfunc.ylim, {'char', 'double', 'cell'})} = 'auto'
         axparamfunc.zlim {mustBeA(axparamfunc.zlim, {'char', 'double', 'cell'})} = 'auto'
@@ -74,7 +74,7 @@ function varargout = guiplot(varargin, kwargs, kwargsplt, figparam, axparamset, 
         lgd.linterpreter {mustBeMember(lgd.linterpreter, {'latex', 'tex', 'none'})} = 'tex'
         %% `colorbar` parmeters
         clb.colorbar (1,:) logical = false
-        clb.clabel {mustBeA(clb.clabel, {'char', 'cell'})} = ''
+        clb.clabel {mustBeA(clb.clabel, {'char', 'string', 'cell'})} = ''
         clb.corientation {mustBeMember(clb.corientation, {'vertical', 'horizontal'})} = 'vertical'
         clb.clocation (1,:) char {mustBeMember(clb.clocation, {'north','south','east','west','northeast','northwest','southeast','southwest','northoutside','southoutside','eastoutside','westoutside','northeastoutside','northwestoutside','southeastoutside','southwestoutside','bestoutside','layout','none'})} = 'eastoutside'
         clb.cExponent (1,:) double = []
@@ -99,7 +99,12 @@ function varargout = guiplot(varargin, kwargs, kwargsplt, figparam, axparamset, 
                 kwargs.dims = [1, 2];
         end
     end
-
+    
+    if isstring(axparamfunc.xlabel); axparamfunc.xlabel = convertStringsToChars(axparamfunc.xlabel); end
+    if isstring(axparamfunc.ylabel); axparamfunc.ylabel = convertStringsToChars(axparamfunc.ylabel); end
+    if isstring(axparamfunc.zlabel); axparamfunc.zlabel = convertStringsToChars(axparamfunc.zlabel); end
+    if isstring(clb.clabel); clb.clabel = convertStringsToChars(clb.clabel); end
+    
     % parse data to cell array
     data = cell(numel(kwargs.dims) + 1, 1);
     [data{:}] = splitdatcell(varargin{:}, dims = kwargs.dims);
@@ -133,6 +138,8 @@ function varargout = guiplot(varargin, kwargs, kwargsplt, figparam, axparamset, 
         delete(fg)
     end
 
+    varargout{1} = data;
+
     % create roi instances
     if roiparam.draw ~= "none"
 
@@ -160,7 +167,7 @@ function varargout = guiplot(varargin, kwargs, kwargsplt, figparam, axparamset, 
     
         rois = cellfun(@(arg) guiroi(arg{:}), args, UniformOutput = false);
     
-        varargout{1} = rois;
+        varargout{2} = rois;
 
     end
 
