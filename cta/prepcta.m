@@ -32,6 +32,7 @@ function varargout = prepcta(input, kwargs)
         kwargs.corvibrind (1,:) double = [1, 2] % indexes of correcting channel and reference channel
         kwargs.procamp (1,:) char {mustBeMember(kwargs.procamp, {'rms', 'sum', 'sel'})} = 'rms'
         kwargs.procspec (1,:) char {mustBeMember(kwargs.procspec, {'spectrogram', 'manual'})} = 'spectrogram'
+        kwargs.poolsize (1,:) double = 2
         %% organization
         kwargs.reshape double = [] % reshape data
         kwargs.permute double = [] % permute data
@@ -95,7 +96,7 @@ function varargout = prepcta(input, kwargs)
                 case 'manual'
                     [spec, f] = procspecn(kwargs.raw, winfun = kwargs.winfun, winlen = kwargs.winlen, ...
                         overlap = kwargs.overlap, fs = kwargs.fs, ftdim = 1, chdim = 2, ans = 'cell', ...
-                        norm = true, center = kwargs.center, offset = kwargs.offset);
+                        norm = true, center = kwargs.center, offset = kwargs.offset, poolsize = kwargs.poolsize);
             end
             df = f(2)-f(1);
 
