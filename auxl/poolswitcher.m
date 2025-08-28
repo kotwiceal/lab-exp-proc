@@ -2,7 +2,7 @@ function poolobj = poolswitcher(resources, poolsize)
     %% Change the current pool context if the new configuration is different from the previous one.
 
     arguments
-        resources {mustBeMember(resources, {'Processes', 'Threads'})}
+        resources {mustBeMember(resources, {'Processes', 'Threads', 'backgroundPool'})}
         poolsize
     end
 
@@ -12,8 +12,13 @@ function poolobj = poolswitcher(resources, poolsize)
     switch class(poolobj)
         case 'parallel.Pool'
             try
-                if isempty(getCurrentWorker)
-                    poolobj = parpool(resources, poolsize);
+                if resources ~= "backgroundPool"
+                    if isempty(getCurrentWorker)
+                        poolobj = parpool(resources, poolsize);
+                    end
+                else
+                    poolobj = backgroundPool;
+                    label = [];
                 end
             catch
             end

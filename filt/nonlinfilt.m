@@ -12,53 +12,53 @@ function result = nonlinfilt(method, varargin, kwargs, opts, pool)
     % 
     % `stride` takes vector or multidimensional matrix that elements correspond to a 
     % sliding window stride along each dimension of passed data. Notations are similar to `kernel`. 
-    % Specifying `stride=[s1, ..., nan, ... sn]` means middle slicing data by dimension with `nan` position. 
-    % In case `kernel(i)=nan` and `stride(i)=nan` total slicing data along i-dimension without padding is occured.
+    % In case `kernel(i)=nan` and `stride(i)=1` total slicing data along i-dimension without padding is occured.
     % 
     % `offset` takes vector or multidimensional matrix that elements correspond to a 
     % sliding window offset along each dimension of passed data. Notations
-    % are similar to `kernel`. Default is zero vector.
+    % are similar to `kernel`. Default is zeros vector.
     %
-    % `shape` correspond to two filtering mode: `shape='same'` size of filtered data
-    % is equal to passed data, ie sliding window crosses over data boundary; 
-    % `shape='valid' sliding window moves inside data boundary, ie without padding.
+    % `padval` takes scalor/vector of various data types ('char', 'string', 'cell', 'double', 'logical') 
+    % that corresponds a padding values according each dimension of given filtering signal. 
+    % In case `padval=false` it disables padding for all dimensionals, 
+    % if `padval={false, 10, false , ...}` it enables padding along 2nd dimension by value 10, rest are disabled.
 
     %% Examples:
 
     %% Filter the single 1D signal by sliding window with length 5 and stride 1.
     % x = rand(1,20);
-    % y = nonlinfilt(x, method = @rms, kernel = 5);
+    % y = nonlinfilt(@(x,~) rms(x), x, kernel = 5);
 
     %% Filter the two 1D signals by sliding window with length 5 and stride 2.
     % x1 = rand(1,20);
     % x2 = rand(1,20);
-    % y12 = nonlinfilt(x1, x2, method = @(x1,x2) rms(x1.*x2), kernel = 5, stride = 2);
+    % y12 = nonlinfilt(@(x1,x2,~) rms(x1.*x2), x1, x2, kernel = 5, stride = 2);
 
     %% Filter the single 1D signal by sliding window with length 5, stride 1 and kernel function with two outputs.
     % x = rand(1,20);
-    % y = nonlinfilt(x, method = @(x) [rms(x), mean(x)], kernel = 5);
+    % y = nonlinfilt(@(x,~) [rms(x), mean(x)], x, kernel = 5);
 
     %% Filter the single 2D signal by sliding window with size [5, 2] and strides [1, 2].
     % x = rand(20);
-    % y = nonlinfilt(x, method = @rms, kernel = [5, 2], stride = [1, 2]);
+    % y = nonlinfilt(@(x,~) rms(x), x, kernel = [5, 2], stride = [1, 2]);
 
     %% Filter the two 2D signals by sliding window with size [5, 2], strides [1, 2] and kernel function with two outputs.
     % x1 = rand(20);
     % x2 = rand(20,20);
-    % y12 = nonlinfilt(x1, x2, method = @(x1,x2) [rms(x1.*x2), mean(x1.*x2)], kernel = [5, 2], stride = [1, 2]);
+    % y12 = nonlinfilt(@(x1,x2,~) [rms(x1.*x2), mean(x1.*x2)], x1, x2, kernel = [5, 2], stride = [1, 2]);
 
     %% Filter the single 3D signal by sliding window with size [5, 2, 1] and strides [1, 1, 1].
     % x = rand(20,20,2);
-    % y = nonlinfilt(x, method = @(x)rms(x(:)), kernel = [5, 2]);
+    % y = nonlinfilt(@(x,~) rms(x(:)), x, kernel = [5, 2]);
 
     %% Filter the single 3D signal by sliding window with size [5, 2, 2] and strides [1, 1, 2].
     % x = rand(20,20,2);
-    % y = nonlinfilt(x, method = @(x)rms(x(:)), kernel = [5, 5, nan], stride = [1, 1, nan]);
+    % y = nonlinfilt(@(x,~) rms(x(:)), x, kernel = [5, 5, nan], stride = [1, 1, 2]);
 
     %% Filter the two 3D signals by sliding window with sizes [5, 2, 2], [10, 10, 2] and strides [1, 1, 2], [1, 1, 2] for first and second signals consequently.
     % x1 = rand(20,20,2);
     % x2 = rand(20,20,2);
-    % y = nonlinfilt(x1, x2, method = @(x1,x2)rms(x1(:)).*rms(x2(:)), kernel = {[5, 5, nan], [10, 10, nan]}, stride = [1, 1, nan]);
+    % y = nonlinfilt(@(x1,x2,~) rms(x1(:)).*rms(x2(:)), x1, x2, kernel = {[5, 5, nan], [10, 10, 2]}, stride = [1, 1, 2]);
 
     arguments (Input)
         method function_handle %% non-linear kernel function
@@ -92,7 +92,7 @@ function result = nonlinfilt(method, varargin, kwargs, opts, pool)
         % and save result in the buffer new filedatastore
         opts.extract {mustBeMember(opts.extract, {'readall', 'writeall'})} = 'readall'
         pool.poolsize (1,:) double = 16
-        pool.resources {mustBeA(pool.resources, {'char', 'string', 'cell'}), mustBeMember(pool.resources, {'Processes', 'Threads'})} = 'Threads'
+        pool.resources {mustBeA(pool.resources, {'char', 'string', 'cell'}), mustBeMember(pool.resources, {'Processes', 'Threads', 'backgroundPool'})} = 'Threads'
     end
 
     arguments (Output)
@@ -107,7 +107,7 @@ function result = nonlinfilt(method, varargin, kwargs, opts, pool)
     if ~isa(pool.resources, 'cell'); pool.resources = cellstr(pool.resources); end
     % prepare pool
     poolarg = cellfun(@(x,y){x,y}, pool.resources, pool.poolsize, UniformOutput = false);
-    poolswitcher(poolarg{1}{:});
+    poolobj = poolswitcher(poolarg{1}{:});
 
     timer = tic;
 
@@ -149,7 +149,7 @@ function result = nonlinfilt(method, varargin, kwargs, opts, pool)
 
     % parallel iteration
     result = cell(kwargs.numfilt, 1);
-    parfor k = 1:kwargs.numfilt
+    parfor (k = 1:kwargs.numfilt, poolobj)
         dataslice = cell(1, kwargs.narg);
         for i = 1:kwargs.narg   
             kernel = kwargs.kernel{i}(:,k);
