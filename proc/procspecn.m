@@ -24,6 +24,7 @@ function [spec, f] = procspecn(data, kwargs)
         kwargs.resources {mustBeA(kwargs.resources, {'char', 'string', 'cell'}), mustBeMember(kwargs.resources, {'Processes', 'Threads', 'backgroundPool'})} = 'backgroundPool'
     end
 
+    szd = size(data);
     dimsd = ndims(data); 
     dimsf = numel(kwargs.winlen);
 
@@ -89,6 +90,7 @@ function [spec, f] = procspecn(data, kwargs)
         extract = kwargs.extract, poolsize = kwargs.poolsize);
     dimss = ndims(spec);
     dimsb = setdiff(1:dimss, 1:dimsd);
+    if isempty(dimsb); dimsb = ndims(spec); end
     if isscalar(dimsb); kwargs.avg = logical(prod(kwargs.avg)); end
 
     if kwargs.norm;  spec = spec./prod(kwargs.winlen).^2; end % norm spectra
@@ -154,9 +156,9 @@ function [spec, f] = procspecn(data, kwargs)
             szs = size(spec);
             indg = cellfun(@(x) 1:x, num2cell(szs(1:end-2)), UniformOutput = false);
 
-            temp = cell(szs(kwargs.chdim));
-            for i = 1:szs(kwargs.chdim)
-                for j = 1:szs(kwargs.chdim)
+            temp = cell(szd(kwargs.chdim));
+            for i = 1:szd(kwargs.chdim)
+                for j = 1:szd(kwargs.chdim)
                     indt = cat(2, indg, i, j);
                     temp{i,j} = spec(indt{:});
                 end
