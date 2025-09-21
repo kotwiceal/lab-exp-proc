@@ -1,10 +1,15 @@
+---
+tags:
+  - "#MATLAB/topics"
+  - "#MATLAB/hot-wire"
+---
+
 ## Description
 ---
-Present topic explaints how to generate scannig grid for hot-wire CTA measurements.
+Present topic explains how to generate scanning grid for hot-wire CTA measurements.
 #### Generate scan grid
 ---
-Measurement scan grid generatetion carried out by [[gridcta]] funntion.
-
+Measurement scan grid generation carried out by [[gridcta]] function.
 #### Examples
 ---
 
@@ -13,8 +18,6 @@ Measurement scan grid generatetion carried out by [[gridcta]] funntion.
 > scan = gridcta(0, 0, 0:50:1000, filename = 'scan_ax1fix_ax2fix_ax3var')
 > ```
 > 
-
-
 
 
 ```octave

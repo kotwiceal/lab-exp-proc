@@ -1,12 +1,14 @@
 ---
-contex:
+description:
+files:
+tags:
+  - "#MATLAB/functions"
 ---
 ## Syntax
 ---
 ```octave
 
 ```
-
 ## Description
 ---
 
@@ -18,19 +20,18 @@ contex:
 > ```
 
 ## Input Arguments
+---
 #### Positional Arguments
 
->[!note]- argin-1
-
+>[!note]+ argin-1
 #### Name-Value Arguments
 
->[!note]- argin-name-1
-
+>[!note]+ argin-name-1
 ## Output Arguments
 ---
 
-> [!note] argout-1
-
+> [!note]+ argout-1
 ## Tips
+---
 
 >[!tip]+ tip-1

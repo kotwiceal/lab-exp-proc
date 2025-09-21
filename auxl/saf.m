@@ -2,10 +2,10 @@ function saf(path, kwargs, options)
     %%  Save all figures as `*.fig` and `*.{extension}`.
 
     arguments
-        path {mustBeTextScalar} = [] % folder to 
-        kwargs.resolution (1,1) = 300
+        path {mustBeTextScalar} = [] % image/figure storing folder
+        kwargs.resolution (1,1) = 300 % image DPI resolution
         kwargs.extension (1,:) char = '.png'
-        kwargs.md {mustBeTextScalar}  = "" % markdown file to paste plots link
+        kwargs.md {mustBeTextScalar}  = "" % markdown file to insert plot links
         kwargs.units {mustBeMember(kwargs.units, {'pixels', 'normalized', 'inches', 'centimeters', 'points', 'characters'})} = 'centimeters'
         kwargs.fontsize (1,:) double = []
         kwargs.fontunits {mustBeMember(kwargs.fontunits, {'points', 'inches', 'centimeters', 'normalized', 'pixels'})} = 'centimeters'

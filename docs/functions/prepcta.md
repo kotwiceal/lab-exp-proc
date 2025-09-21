@@ -1,16 +1,17 @@
 ---
-contex:
+description: Prepare hot-wire data
+tags:
+  - MATLAB/functions
 ---
 ## Syntax
 ---
 ```octave
 data = prepcta(data, kwargs)
 ```
-
 ## Description
 ---
-Preapare hot-wire data: 
-- transform data from pointwire to gridwise notation
+Prepare hot-wire data: 
+- transform data from pointwise to gridwise notation
 - coordinate offset correction
 - spectra processing
 - spectra correction
@@ -34,17 +35,15 @@ Preapare hot-wire data:
 >            fs: 27000
 >     refmarker: 'n8'
 > 
-> dataprep = prepcta(data, fs = 25e3, spectrumtype = 'psd', freqrange = 'onesided', winfun = 'hanning', winfuncor = true, winlen = 2048, overlap = 512, norm = 'rms', corvibr = true, corvibrind = [1, 2], procamp = 'rms')
+> dataprep = prepcta(data, spectrumtype = 'psd', freqrange = 'onesided', winfun = 'hanning', winfuncor = true, winlen = 2048, overlap = 512, norm = 'rms', corvibr = true, corvibrind = [1, 2], procamp = 'rms')
 > ```
 > 
-
 ## Input Arguments
 ---
 #### Positional Arguments
 
 >[!note] input
 >data structure from [[loadcta]]
-
 #### Name-Value Arguments
 
 > [!NOTE] spectrumtype

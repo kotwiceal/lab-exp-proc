@@ -1,5 +1,7 @@
 ---
-contex:
+description: Create pointwise scan grid for hot-wire measurements
+tags:
+  - MATLAB/functions
 ---
 ## Syntax
 ---
@@ -105,92 +107,76 @@ Create pointwise scan grid for hot-wire measurements.
 > fit = 'poly1', unit = 'mm', skew = [0, 0; 0, 2e4; 300, 2e4; 300, 0], ort = [113.9, 63.7; 113.9, 112.4; 126.8, 118.9; 126.7, 70.2])
 > ```
 >![[04-Jul-2025 14-56-34.png\|400]]
-
 ## Input Arguments
 ---
 #### Positional Arguments
 
->[!note]+ ax1, 1D double array
->longitudinal coordinate grid
+>[!note]+ varargin, 1D double array
+>longitudinal, spanwise, vertical etc. coordinate grids
 
->[!note]+ ax2, 1D double array
->spanwise coordinate grid
-
->[!note]+ ax3, 1D double array
->vertical coordinate grid
 #### Name-Value Arguments
 
->[!note] order
+>[!note] order `default: [axnumber:-1:1]`
 >double 1D array contains postition order of each axis
 
-> [!NOTE] orderflip
+> [!NOTE] orderflip `default: true`
 > logical flip axis order
 
-> [!NOTE] offset
+> [!NOTE] offset `default: []`
 > cell 1D array, axis offsetting points presented in the point/gridwise notation
 
-> [!NOTE] offsetdim
+> [!NOTE] offsetdim `default: 3`
 > axis order to apply offset
 
-> [!NOTE] pointwise
+> [!NOTE] pointwise `default: []`
 > axis order of offsetting vectors to transform from grid to pointwise notation
 
-> [!NOTE] fit
+> [!NOTE] fit `default: 'linearinterp'`
 > fit type at applying offset using [build-in methods](https://www.mathworks.com/help/curvefit/fit.html#bto2vuv-1-fitType)
 > 
 > must be a `poly1`, `poly2`, `plot01`, `poly11`, `poly02`, `poly20` etc.
-> 
-> default `linearinterp`
 
-> [!NOTE] unit
+> [!NOTE] unit `default: 'count'`
 > transform grid to coordinates 
 > must be a `mm`, `count`
 
-> [!NOTE] refmarker
-> legacy skew-orthogonal coonrdinate transformation using specified hot-wire CTA base location
+> [!NOTE] refmarker `default: 'none'`
+> legacy skew-orthogonal coordinate transformation using specified hot-wire CTA base location
 
-> [!NOTE] steps
-> 1D array contains steps in 1mm each axis
-> 
-> type `1D double`
-> 
-> default `[50, 400, 800]` - longitudinal, spanwise and vertical resolution respectively
+> [!NOTE] steps `default: [50, 400, 800]`
+> 1D array contains steps in 1mm each axis (longitudinal, spanwise and vertical resolution respectively)
 
-> [!NOTE] xfit
+> [!NOTE] xfit `default []`
 > longitudinal fit object like xfit(x,z) function
 
-> [!NOTE] yfit
+> [!NOTE] yfit `default []`
 > vertical fit object like yfit(x,z) function
 
-> [!NOTE] zfit
+> [!NOTE] zfit `default []`
 > spanwise fit object like zfit(x,z) function
 
-> [!NOTE] show
-> show figure, 
-> 
-> type `scalar logical`
+> [!NOTE] show `default true`
+> show figure of scan grid
 
-> [!NOTE] docked
+> [!NOTE] docked `default false`
 > docked figure
-> 
-> type `scalar logical`
 
-> [!NOTE] markersize
+> [!NOTE] markersize `default 10`
 > marker size
 
-> [!NOTE] filename
+> [!NOTE] filename `default []`
 > filename path
 
-> [!NOTE] extention
+> [!NOTE] extention `default '.txt'`
 > text file extention
 
-> [!NOTE] delimiter
+> [!NOTE] delimiter `default '\t'`
 > text file delimiter
 
-> [!NOTE] ort
+> [!NOTE] ort `default []`
 > coordinate system reference points
 
-> [!NOTE] skew
+> [!NOTE] skew `default []`
 > skew coordinate system reference points
 ## Output Arguments
 ---
@@ -203,4 +189,3 @@ Create pointwise scan grid for hot-wire measurements.
 
 > [!NOTE] fitobj
 > fit objects according specified `offset` `xfit`, `zfit`, `skew`, `ort` parameters
-

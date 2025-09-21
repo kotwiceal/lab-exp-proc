@@ -1,0 +1,30 @@
+views:
+  - type: table
+    name: functions
+    filters:
+      and:
+        - file.tags.contains("#MATLAB/functions")
+        - file.folder.contains("docs/functions")
+    order:
+      - description
+      - file.name
+      - file.tags
+    columnSize:
+      note.description: 220
+    rowHeight: tall
+  - type: table
+    name: topics
+    filters:
+      and:
+        - file.tags.contains("#MATLAB/topics")
+        - file.folder.contains("docs/topics")
+    order:
+      - file.name
+      - file.tags
+    sort:
+      - property: description
+        direction: ASC
+    rowHeight: tall
+    columnSize:
+      note.description: 459
+      file.name: 451

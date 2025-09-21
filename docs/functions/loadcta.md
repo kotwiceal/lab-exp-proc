@@ -1,5 +1,7 @@
 ---
-contex:
+description: Load hot-wire data
+tags:
+  - "#MATLAB/functions"
 ---
 ## Syntax
 ---

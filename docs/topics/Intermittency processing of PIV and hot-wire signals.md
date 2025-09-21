@@ -1,12 +1,17 @@
+---
+tags:
+  - "#MATLAB/topics"
+  - "#MATLAB/intermittency"
+---
 ## Description
 ---
-Intermittency processing by statitical approach consitsts a two stage: 
-- data preparing: transform raw signal to indicator function then to critiria function
-- adjusting statistical paramters: evaluate suppossed statisitcal momenth such as mode, variance etc.
-- configure and start non-linear sliding widnow filter
+Intermittency processing by statistical approach consists a two stage: 
+- data preparing: transform raw signal to indicator function then to criteria function
+- adjusting statistical parameters: evaluate supposed statistical moment such as mode, variance etc.
+- configure and start non-linear sliding window filter
 #### Hot-wire signal
 ---
-Considers hot-wire measurements carried out by scaninng `x-z` plane. Spatial grid is $[41\times 61]$, time grid is $10^5$ points. Following structure `data` presents typical data format, where `raw` filed is signal realizatrion, `x`, `z` longitudunal and spanwise coordinate grid respectivelty.  
+Considers hot-wire measurements carried out by scanning `x-z` plane. Spatial grid is $[41\times 61]$, time grid is $10^5$ points. Following structure `data` presents typical data format, where `raw` filed is signal realization, `x`, `z` longitudinal and spanwise coordinate grid respectively.  
 ```octave
 data = 
 
@@ -17,11 +22,11 @@ data =
       z: [41×61 double]
 
 ```
-Indicator and criteria function is processing by time differentiating using [[prepinterm]] fucntion with followign parameters. 
+Indicator and criteria function is processing by time differentiating using [[prepinterm]] function with following parameters. 
 ```octave
 data.dudt = prepinterm(data, type = 'dt', diffilt = '4ordgauss', dirdim = 3, pow = 2);
 ```
-Follwing table clarify parameters.
+Following table clarify parameters.
 
 | Parameters              | Description                                                                                                                                                                                                                       |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -29,7 +34,7 @@ Follwing table clarify parameters.
 | `diffilt = '4ordgauss'` | means what a kernel is used for data filtering<br>`sobel` - kernel Sobel filter<br>`4ord` - kernel of 4th order finite difference schema<br>`4ordgauss` - kernel of 4th order finite difference schema weighted by Gauss function |
 | `dirdim = 3`            | specify a dimenstion of data differentiation                                                                                                                                                                                      |
 | `pow = 2`               | power results to specified value                                                                                                                                                                                                  |
-Next step is statistical parameters estimation by intecactive mode
+Next step is statistical parameters estimation by interactive mode
 
 ```octave
 %% define statistical modes constraints
@@ -62,8 +67,7 @@ verbose = true, cdf = true, binedge = binedge, interaction = 'translate', aspect
 | `var2`                 | 2nd statistical variance                                   |
 | `mean1`                | 1st statistical variance                                   |
 | `mean2`                | 2nd statistical variance                                   |
-| `interaction`          |                                                            |
-
+| `interaction`          | interaction `roi` object                                   |
 
 ```octave
 % decompose statistics and apply integral-ratio method
@@ -74,11 +78,9 @@ x0 = x0, lb = lb, ub = ub, stride = [1, 1, 1, 1], kernel = [1, 1, 1, nan], padva
 data.gumbel.cdfint = procinterm(data.dudt, method = 'cdf-intersection', distname = 'gumbel2', mode1 = mode1, mode2 = mode2, var1 = var1, binedge = binedge, x0 = x0, lb = lb, ub = ub, stride = [1, 1, 1, 1], kernel = [1, 1, 1, nan], padval = false, fitdistinit = false, prefilt = 'none', postfilt = 'none', verbose = true,
 resources = 'Processes', poolsize = 4);
 ```
-
-
 ## PIV signal
 ---
-Considers 2D PIV measurements carried out by scaninng `x-z` plane. Spatial grid is $[41\times 61]$, time grid is $10^5$ points. Following structure `data` presents typical data format, where `raw` filed is signal realizatrion, `x`, `z` longitudunal and spanwise coordinate grid respectivelty.  
+Considers 2D PIV measurements carried out by scanning `x-z` plane. Spatial grid is $[41\times 61]$, time grid is $10^5$ points. Following structure `data` presents typical data format, where `raw` filed is signal realization, `x`, `z` longitudinal and spanwise coordinate grid respectively.
 ```octave
 data = 
 
@@ -93,5 +95,4 @@ Indicator and criteria function is processing by time differentiating using [[pr
 ```octave
 data.dwdl = prepinterm(data, type = 'dt', diffilt = '4ordgauss', pow = 2);
 ```
-Follwing table clarify parameters.
-
+Following table clarify parameters.
