@@ -1,5 +1,5 @@
 function obscontpast(filename, imagename, param)
-    %% Paste media link by markdown placeholder.
+    %% Insert markdown `wikistyle` attachment link by specified placeholder.
 
     arguments
         filename {mustBeTextScalar}
@@ -15,7 +15,7 @@ function obscontpast(filename, imagename, param)
     end
 
     [~, ~, extenstion] = fileparts(filename);
-    if param.extenstion ~= extenstion; return; end
+    if param.extenstion ~= extenstion; error("`filename` must be markdown file"); end
 
     [~, name] = fileparts(imagename);
 

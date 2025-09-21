@@ -1,5 +1,6 @@
 function saf(path, kwargs, options)
     %%  Save all figures as `*.fig` and `*.{extension}`.
+
     arguments
         path {mustBeTextScalar} = [] % folder to 
         kwargs.resolution (1,1) = 300
@@ -10,10 +11,14 @@ function saf(path, kwargs, options)
         kwargs.fontunits {mustBeMember(kwargs.fontunits, {'points', 'inches', 'centimeters', 'normalized', 'pixels'})} = 'centimeters'
         kwargs.size (1,:) double = [] % set figure size
         kwargs.pause (1,1) = 2 % delay for successful figure appearances changing and saving
-        kwargs.mdsize = 400 % set image size in the markdown file
-        kwargs.mdfig (1,1) logical = true % paste .fig file link to markdown file
+        kwargs.mdsize = 400 % markdown image attachment size
+        kwargs.mdfig (1,1) logical = true % insert `.fig` attachment link
+        kwargs.mdtable (1,1) logical = true % wrap attachment links by table
+        kwargs.mdtabheader (1,1) logical = false % insert empty row for table header
+        kwargs.mdtabalign {mustBeMember(kwargs.mdtabalign, {'left', 'center', 'right'})} = 'center' % align table cells
+        kwargs.mdtablayout {mustBeMember(kwargs.mdtablayout, {'flow', 'horizontal', 'vertical'})} = 'flow' % arrange attachment link cells
         options.?matlab.ui.Figure
-    end
+    end 
     
     if ~isempty(path); try mkdir(path); catch; end; end
 
@@ -26,6 +31,46 @@ function saf(path, kwargs, options)
     options = namedargs2cell(options);
 
     figlist = findobj(allchild(0), 'flat', 'Type', 'figure');
+
+    % wrap attachment links by table
+    if kwargs.mdtable & ~isempty(kwargs.md)
+        nfig = numel(figlist);
+        switch kwargs.mdtablayout
+            case 'flow'
+                sztab = ceil(sqrt(nfig))*[1,1];
+                if (prod(sztab)-nfig) > sztab(2) - 1
+                    sztab(2) = sztab(2) - 1;
+                end
+            case 'horizontal'
+                sztab = [1, nfig];
+            case 'vertical'
+                sztab = [nfig, 1];
+        end
+        switch kwargs.mdtabalign
+            case 'left'
+                breakline = "|:--|";
+            case 'center'
+                breakline = "|:--:|";
+            case 'right'
+                breakline = "|--:|";
+        end
+        tempoarary = repmat("| |", flip(sztab));
+        tempoarary(1:nfig) = "| %% |";
+        tempoarary = tempoarary';
+        if kwargs.mdtabheader
+            tempoarary = [repmat("| |", 1, sztab(2)); repmat(breakline,1,  sztab(2)); tempoarary];
+        else
+            tempoarary = [tempoarary(1,:); repmat(breakline, 1, sztab(2)); tempoarary(2:end,:)];
+        end
+        tempoarary(:,end) = tempoarary(:,end) + repmat(newline, size(tempoarary, 1), 1);
+        tempoarary = strjoin(tempoarary','');
+        tempoarary = strrep(tempoarary,"||","|");
+
+        text = string(fileread(kwargs.md));
+        text = strjoin(text+tempoarary);
+        writelines(text,kwargs.md);
+    end
+
     for iFig = 1:numel(figlist)
         fighandle = figlist(iFig);
         figname = strrep(string(datetime), ':', '-');
@@ -46,9 +91,8 @@ function saf(path, kwargs, options)
         exportgraphics(fighandle, strcat(filename, kwargs.extension), Resolution = kwargs.resolution)
         savefig(fighandle, strcat(filename, '.fig'));
 
-        try
+        if ~isempty(kwargs.md)
             obscontpast(kwargs.md, strcat(figname, kwargs.extension), size = kwargs.mdsize, fig = kwargs.mdfig);
-        catch
         end
 
         set(fighandle, WindowStyle = 'docked')
