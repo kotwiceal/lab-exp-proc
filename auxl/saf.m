@@ -67,7 +67,7 @@ function saf(path, kwargs, options)
         tempoarary = strrep(tempoarary,"||","|");
 
         text = string(fileread(kwargs.md));
-        text = strjoin(text+tempoarary);
+        text = strjoin(text+newline+tempoarary);
         writelines(text,kwargs.md);
     end
 
