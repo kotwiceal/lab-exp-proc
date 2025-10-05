@@ -17,6 +17,7 @@ function saf(path, kwargs, options)
         kwargs.mdtabheader (1,1) logical = false % insert empty row for table header
         kwargs.mdtabalign {mustBeMember(kwargs.mdtabalign, {'left', 'center', 'right'})} = 'center' % align table cells
         kwargs.mdtablayout {mustBeMember(kwargs.mdtablayout, {'flow', 'horizontal', 'vertical'})} = 'flow' % arrange attachment link cells
+        kwargs.save (1,1) logical = true
         options.?matlab.ui.Figure
     end 
     
@@ -33,7 +34,7 @@ function saf(path, kwargs, options)
     figlist = findobj(allchild(0), 'flat', 'Type', 'figure');
 
     % wrap attachment links by table
-    if kwargs.mdtable & ~isempty(kwargs.md)
+    if kwargs.mdtable & ~isempty(kwargs.md) & kwargs.save
         nfig = numel(figlist);
         switch kwargs.mdtablayout
             case 'flow'
@@ -88,10 +89,12 @@ function saf(path, kwargs, options)
             set(fighandle, Units = kwargs.units, Position = [0, 0, kwargs.size]);
         end
 
-        exportgraphics(fighandle, strcat(filename, kwargs.extension), Resolution = kwargs.resolution)
-        savefig(fighandle, strcat(filename, '.fig'));
+        if kwargs.save
+            exportgraphics(fighandle, strcat(filename, kwargs.extension), Resolution = kwargs.resolution)
+            savefig(fighandle, strcat(filename, '.fig'));
+        end
 
-        if ~isempty(kwargs.md)
+        if ~isempty(kwargs.md) & kwargs.save
             obscontpast(kwargs.md, strcat(figname, kwargs.extension), size = kwargs.mdsize, fig = kwargs.mdfig);
         end
 
