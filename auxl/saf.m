@@ -5,7 +5,7 @@ function saf(path, kwargs, options)
         path {mustBeTextScalar} = [] % image/figure storing folder
         kwargs.resolution (1,1) = 300 % image DPI resolution
         kwargs.extension (1,:) char = '.png'
-        kwargs.md {mustBeTextScalar}  = "" % markdown file to insert plot links
+        kwargs.md {mustBeTextScalar}  = '' % markdown file to insert plot links
         kwargs.units {mustBeMember(kwargs.units, {'pixels', 'normalized', 'inches', 'centimeters', 'points', 'characters'})} = 'centimeters'
         kwargs.fontsize (1,:) double = []
         kwargs.fontunits {mustBeMember(kwargs.fontunits, {'points', 'inches', 'centimeters', 'normalized', 'pixels'})} = 'centimeters'
@@ -18,6 +18,7 @@ function saf(path, kwargs, options)
         kwargs.mdtabalign {mustBeMember(kwargs.mdtabalign, {'left', 'center', 'right'})} = 'center' % align table cells
         kwargs.mdtablayout {mustBeMember(kwargs.mdtablayout, {'flow', 'horizontal', 'vertical'})} = 'flow' % arrange attachment link cells
         kwargs.save (1,1) logical = true
+        kwargs.theme {mustBeMember(kwargs.theme, {'light', 'dark', 'auto'})} = "light"
         options.?matlab.ui.Figure
     end 
     
@@ -74,6 +75,7 @@ function saf(path, kwargs, options)
 
     for iFig = 1:numel(figlist)
         fighandle = figlist(iFig);
+        theme(fighandle, kwargs.theme);
         figname = strrep(string(datetime), ':', '-');
         filename = fullfile(folder, figname);
         pause(1)
