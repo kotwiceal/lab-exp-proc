@@ -34,6 +34,9 @@ function saf(path, kwargs, options)
 
     figlist = findobj(allchild(0), 'flat', 'Type', 'figure');
 
+    [~, index] = sort([figlist.Number], 'ascend');
+    figlist = figlist(index);
+
     % wrap attachment links by table
     if kwargs.mdtable & ~isempty(kwargs.md) & kwargs.save
         nfig = numel(figlist);
@@ -75,7 +78,7 @@ function saf(path, kwargs, options)
 
     for iFig = 1:numel(figlist)
         fighandle = figlist(iFig);
-        theme(fighandle, kwargs.theme);
+        try; theme(fighandle, kwargs.theme); catch; end
         figname = strrep(string(datetime), ':', '-');
         filename = fullfile(folder, figname);
         pause(1)
@@ -87,7 +90,6 @@ function saf(path, kwargs, options)
         if ~isempty(kwargs.size)
             set(fighandle, WindowStyle = 'normal')
             pause(kwargs.pause)
-            % set(fighandle, options{:}); % advance options
             set(fighandle, Units = kwargs.units, Position = [0, 0, kwargs.size]);
         end
 
