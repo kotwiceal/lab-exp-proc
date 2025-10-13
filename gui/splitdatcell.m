@@ -13,7 +13,7 @@ function varargout = splitdatcell(varargin, kwargs)
     end
 
     % wrap to cell
-    for i = 1:nargin; if ~isa(varargin{i}, 'cell'); varargin{i} = {varargin{i}}; end; end
+    varargin = cellfun(@(v) terop(isa(v,'cell'), v, {v}), varargin, UniformOutput = false);
 
     data = varargin{nargin};
     temp = data; data = {};

@@ -4,6 +4,8 @@ guiplot(rand(35,1), ax = '1-n', dims = 1)
 guiplot(rand(35,5), ax = '1-n', dims = 1)
 %% 3D data, 1D plot, single tile
 guiplot(rand(35,5,3), ax = '1-n', dims = 1)
+%% 1D data, 1D plot, multi tile
+guiplot(rand(10,2), ax = '1-1', plot = 'plot', xlabel = {'ax_1', 'ax_2'})
 %% 2D data, 1D plot, multi tile
 guiplot(rand(35,35), ax = '1-1', dims = 1:2, plot = 'contourf', hold = 'off', ...
     aspect = 'image', linestyle = 'none', grid = 'on')
@@ -13,7 +15,7 @@ guiplot(rand(35,25,3), ax = '1-1', dims = 1:2, plot = 'imagesc', aspect = 'image
 guiplot(rand(35,1), ax = '1-n', dims = 1, draw = 'drawpoint', number = 2)
 %% 2D data, 2D plot, single tile, imagesc, drawpoint
 guiplot(rand(35,100), ax = '1-n', dims = 1:2, ...
-    plot = 'imagesc', draw = 'drawpoint', aspect = 'image', hold='off')
+    plot = 'imagesc', draw = 'drawpoint', aspect = 'image', hold ='off')
 %% 2D data, 2D plot, single tile, contourf, drawpoint
 guiplot(rand(35,100), ax = '1-n', dims = 1:2, ...
     plot = 'contourf', draw = 'drawpoint', aspect = 'image')

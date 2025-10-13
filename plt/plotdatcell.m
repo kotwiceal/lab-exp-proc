@@ -76,6 +76,31 @@ function varargout = plotdatcell(varargin, kwargs, axparamset, axparamfunc, axpa
         varargout
     end
 
+    axparams = struct( ...
+        xlabel = '', ...
+        ylabel = '', ...
+        zlabel = '', ...
+        xlim = 'auto', ...
+        ylim = 'auto', ...
+        zlim = 'auto', ...
+        clim = 'auto', ...
+        grid = 'on', ...
+        box = 'on', ...
+        pbaspect = [1,1,1], ...
+        hold = '', ...
+        colormap = 'turbo', ...
+        xticks = 'auto', ...
+        yticks = 'auto', ...
+        zticks = 'auto', ...
+        xticklabels = 'auto', ...
+        yticklabels = 'auto', ...
+        zticklabels = 'auto', ...
+        xtickangle = 0, ...
+        ytickangle = 0, ...
+        ztickangle = 0);
+
+    nplt = numel(varargin);
+
     % if isempty(pltparam.color)
     %     pltparam.color = colororder;
     %     n = size(pltparam.color, 1);
@@ -163,8 +188,11 @@ function varargout = plotdatcell(varargin, kwargs, axparamset, axparamfunc, axpa
     % set an axis appearance
     cellfun(@(ax) cellfun(@(func, arg) func(ax, arg{:}), axfunc{:}), axs)
 
+    % modify
+    % cellfun(@(ax,axfunc,axparam) cellfun(@(f,p) f(ax,p), axfunc, axparam), axs, axfuncs, axparams)
+
     if ~isa(kwargs.title, 'cell'); kwargs.title = repmat({kwargs.title}, numel(axs), 1); end
-    if isrow(kwargs.title); kwargs.title = kwargs.title'; end
+    kwargs.title = kwargs.title(:);
     cellfun(@(ax, label) title(ax, label, 'FontWeight', 'Normal', 'Interpreter', inter.tinterpreter), axs, kwargs.title)
 
     sgtitle(kwargs.sgtitle)
@@ -240,5 +268,51 @@ function setColorbar(ax, clb)
             c.Ruler.TickLabelFormat = clb.cTickLabelFormat;  
         end
         set(c.Label, String = clb.clabel, Interpreter = clb.cinterpreter, FontSize = clb.cfontsize)
+    end
+end
+
+function handle_legend(ax, param)
+    arguments
+        ax matlab.graphics.axis.Axes
+        param.show (1,1) logical = true
+        param.title {mustBeA(param.title, {'char', 'string'})} = ''
+        param.orientation {mustBeMember(param.orientation, {'vertical', 'horizontal'})} = 'vertical'
+        param.location (1,:) char {mustBeMember(param.location, {'north','south','east','west', ...
+            'northeast','northwest','southeast','southwest','northoutside','southoutside', ...
+            'eastoutside','westoutside','northeastoutside','northwestoutside', ...
+            'southeastoutside','southwestoutside','best','bestoutside','layout','none'})} = 'best'
+        param.displayname (1,:) {mustBeA(param.displayname, {'char', 'string', 'cell'})} = {}
+        param.interpreter {mustBeMember(param.interpreter, {'latex', 'tex', 'none'})} = 'tex'
+    end
+    if param.show
+        l = legend(ax, param.displayname, Location = param.location, ...
+            Orientation = param.orientation, Interpreter = param.interpreter); 
+        title(l, param.title, FontWeight = 'normal', Interpreter = param.interpreter)
+    end
+end
+
+function handle_colorbar(ax, param)
+    arguments
+        ax matlab.graphics.axis.Axes
+        param.show (1,1) logical = true
+        param.clabel {mustBeA(param.clabel, {'char', 'string'})} = ''
+        param.orientation {mustBeMember(param.orientation, {'vertical', 'horizontal'})} = 'vertical'
+        param.location (1,:) char {mustBeMember(param.location, {'north','south','east','west', ...
+            'northeast','northwest','southeast','southwest','northoutside','southoutside', ...
+            'eastoutside','westoutside','northeastoutside','northwestoutside', ...
+            'southeastoutside','southwestoutside','best','bestoutside','layout','none'})} = 'best'
+        param.Exponent (1,:) double = []
+        param.cTickLabelFormat (1,:) char = '%0.1f'
+        param.fontsize (1,:) double = []
+        param.interpreter {mustBeMember(param.interpreter, {'latex', 'tex', 'none'})} = 'tex'
+    end
+    if param.show
+        c = colorbar(ax, location = param.location, orientation = param.orientation);
+        if ~isempty(param.Exponent)
+            c.Ruler.Exponent = param.Exponent;
+            c.Ruler.TickLabelFormat = param.cTickLabelFormat;  
+        end
+        set(c.Label, String = param.clabel, Interpreter = param.interpreter, ...
+            FontSize = param.fontsize)
     end
 end
