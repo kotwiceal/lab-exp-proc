@@ -1,7 +1,7 @@
-function [spec, f] = procspecn(data, kwargs)
+function varargout = procspecn(data, kwargs)
     %% Process a multidimensional short-time Fourier transform.
 
-    arguments
+    arguments (Input)
         data double
         kwargs.ftdim (1,:) double = [] % dimensions to apply transform
         kwargs.chdim (1,:) double = [] % dimensions to process cross spectra
@@ -15,7 +15,7 @@ function [spec, f] = procspecn(data, kwargs)
         kwargs.center (1,:) logical = true % centre data at transform
         kwargs.winfun (1,:) {mustBeA(kwargs.winfun, {'char', 'string', 'cell'}), mustBeMember(kwargs.winfun, {'uniform', 'hann', 'hanning', 'hamming'})} = 'hanning' % to weight data at transform
         kwargs.norm (1,1) logical = true % norm for spectral density
-        kwargs.ans (1,:) char {mustBeMember(kwargs.ans, {'double', 'cell'})} = 'double' % output data format
+        kwargs.ans (1,:) char {mustBeMember(kwargs.ans, {'double', 'cell', 'struct'})} = 'double' % output data format
         % parallel processing settings
         kwargs.usefiledatastore (1, 1) logical = false
         kwargs.useparallel (1,1) logical = false
@@ -24,8 +24,14 @@ function [spec, f] = procspecn(data, kwargs)
         kwargs.resources {mustBeA(kwargs.resources, {'char', 'string', 'cell'}), mustBeMember(kwargs.resources, {'Processes', 'Threads', 'backgroundPool'})} = 'backgroundPool'
     end
 
+    arguments(Output,Repeating)
+        varargout 
+    end
+
     szd = size(data);
-    dimsd = ndims(data); 
+    dimsd = ndims(data);
+    kwargs.winlen(isnan(kwargs.winlen)) = szd(isnan(kwargs.winlen));
+    kwargs.overlap(isnan(kwargs.overlap)) = 0;
     dimsf = numel(kwargs.winlen);
 
     % parse arguments
@@ -152,6 +158,9 @@ function [spec, f] = procspecn(data, kwargs)
     if isscalar(f); f = f{1}; end
 
     switch kwargs.ans
+        case 'double'
+            varargout{1} = spec;
+            varargout{2} = f;
         case 'cell'
             szs = size(spec);
             indg = cellfun(@(x) 1:x, num2cell(szs(1:end-2)), UniformOutput = false);
@@ -164,6 +173,10 @@ function [spec, f] = procspecn(data, kwargs)
                 end
             end
             spec = temp; clear temp;
+            varargout{1} = spec;
+            varargout{2} = f;
+        case 'struct'
+            varargout{1} = struct(spec = spec, f = f);
     end
 
     function x = specker(x, ~)
