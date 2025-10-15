@@ -51,7 +51,7 @@ function varargout = gridcta(varargin, kwargs)
 
     % fit offset
     scanoffset = [];
-    if ~isempty(kwargs.offset)
+    if ~isempty(kwargs.offset) | isempty(kwargs.fit)
         scanoffset = scan;
 
         if size(kwargs.offset, 1) == 1; kwargs.offset = {kwargs.offset}; end
@@ -128,35 +128,36 @@ function varargout = gridcta(varargin, kwargs)
 
         end
 
-        if isscalar(fitobj); fitobj = fitobj{1}; end
-
     end
 
-    % transform units
+    % transform coordinate systems
+    if kwargs.refmarker ~= "none"
+        % rewrite by legacy map
+        switch kwargs.refmarker
+            case 'n2'
+                kwargs.ort = [113.9, 63.7; 113.9, 112.4; 126.8, 118.9; 126.7, 70.2]; % mm
+                kwargs.skew = [0, 0; 0, 2e4; 300, 2e4; 300, 0]; % count
+            case 'n8'
+                kwargs.ort = [384.6, 189.4; 294, 148.4; 294.4, 198.5; 384.6, 139.4]; % mm
+                kwargs.skew = [0, 0; -2086, 1060; -2086, 21124; 0, -20060]; % count
+            case 'n9'
+                kwargs.ort = [429.76, 209.95; 429.43, 260.50; 474.0, 283.03; 474.0, 233.36]; % mm
+                kwargs.skew = [0, 0; 0, 2e4; 1e3, 2e4; 1e3, 0]; % count
+        end
+    end
+
+    % create fit objects
+    if ~isempty(kwargs.skew) && ~isempty(kwargs.ort)
+        [xf,yf,zf] = prepareSurfaceData(kwargs.skew(:,1),kwargs.skew(:,2),kwargs.ort(:,1));
+        kwargs.xfit = fit([xf,yf],zf,'poly11');
+        
+        [xf,yf,zf] = prepareSurfaceData(kwargs.skew(:,1),kwargs.skew(:,2),kwargs.ort(:,2));
+        kwargs.zfit = fit([xf,yf],zf,'poly11');
+    end
+
+    % transform units    
     switch kwargs.unit
         case 'mm'
-           if kwargs.refmarker ~= "none"
-                switch kwargs.refmarker
-                    case 'n2'
-                        kwargs.ort = [113.9, 63.7; 113.9, 112.4; 126.8, 118.9; 126.7, 70.2]; % mm
-                        kwargs.skew = [0, 0; 0, 2e4; 300, 2e4; 300, 0]; % count
-                    case 'n8'
-                        kwargs.ort = [384.6, 189.4; 294, 148.4; 294.4, 198.5; 384.6, 139.4]; % mm
-                        kwargs.skew = [0, 0; -2086, 1060; -2086, 21124; 0, -20060]; % count
-                    case 'n9'
-                        kwargs.ort = [429.76, 209.95; 429.43, 260.50; 474.0, 283.03; 474.0, 233.36]; % mm
-                        kwargs.skew = [0, 0; 0, 2e4; 1e3, 2e4; 1e3, 0]; % count
-                end
-            end
-
-            if ~isempty(kwargs.skew) && ~isempty(kwargs.ort)
-                % fit 
-                [xf,yf,zf] = prepareSurfaceData(kwargs.skew(:,1),kwargs.skew(:,2),kwargs.ort(:,1));
-                kwargs.xfit = fit([xf,yf],zf,'poly11');
-                [xf,yf,zf] = prepareSurfaceData(kwargs.skew(:,1),kwargs.skew(:,2),kwargs.ort(:,2));
-                kwargs.zfit = fit([xf,yf],zf,'poly11');
-            end
-
             if isempty(kwargs.xfit); kwargs.xfit = @(x,z) x/kwargs.steps(1); end
             if isempty(kwargs.yfit); kwargs.yfit = @(y) y/kwargs.steps(3); end
             if isempty(kwargs.zfit); kwargs.zfit = @(x,z) z/kwargs.steps(2); end
@@ -182,7 +183,6 @@ function varargout = gridcta(varargin, kwargs)
             end
 
             [scan, scanoffset, kwargs.offset] = deal(args{:});
-
     end
 
     % show a scan grid
@@ -223,9 +223,15 @@ function varargout = gridcta(varargin, kwargs)
     if ~isempty(kwargs.filename)
         if isempty(scanoffset); tab = scan; else; tab = scanoffset; end
         writematrix(tab, strcat(kwargs.filename, kwargs.extention), Delimiter = kwargs.delimiter);
+        varnames = {};
         if exist('fitobj', 'var')
-            save(strcat(kwargs.filename, '.mat'), 'fitobj')
+            yfit = fitobj{kwargs.offsetdim == 3}; varnames = cat(1, varnames, 'yfit');
+            if isscalar(fitobj); fitobj = fitobj{1}; end
+            varnames = cat(1, varnames, 'fitobj');
         end
+        if isfield(kwargs,'xfit'); xfit = kwargs.xfit; varnames = cat(1, varnames, 'xfit'); end
+        if isfield(kwargs,'zfit'); zfit = kwargs.zfit; varnames = cat(1, varnames, 'zfit'); end
+        save(strcat(kwargs.filename, '.mat'), varnames{:})
     end
 
     if exist('fitobj', 'var')
