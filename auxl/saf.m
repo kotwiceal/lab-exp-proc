@@ -17,6 +17,7 @@ function saf(path, kwargs, options)
         kwargs.mdtabheader (1,1) logical = false % insert empty row for table header
         kwargs.mdtabalign {mustBeMember(kwargs.mdtabalign, {'left', 'center', 'right'})} = 'center' % align table cells
         kwargs.mdtablayout {mustBeMember(kwargs.mdtablayout, {'flow', 'horizontal', 'vertical'})} = 'flow' % arrange attachment link cells
+        kwargs.mdtabsz (1,:) double = [] % markdown table size
         kwargs.save (1,1) logical = true
         kwargs.theme {mustBeMember(kwargs.theme, {'light', 'dark', 'auto'})} = "light"
         kwargs.docked (1,1) logical = true
@@ -41,16 +42,20 @@ function saf(path, kwargs, options)
     % wrap attachment links by table
     if kwargs.mdtable & ~isempty(kwargs.md) & kwargs.save
         nfig = numel(figlist);
-        switch kwargs.mdtablayout
-            case 'flow'
-                sztab = ceil(sqrt(nfig))*[1,1];
-                if (prod(sztab)-nfig) > sztab(2) - 1
-                    sztab(2) = sztab(2) - 1;
-                end
-            case 'horizontal'
-                sztab = [1, nfig];
-            case 'vertical'
-                sztab = [nfig, 1];
+        if isempty(kwargs.mdtabsz)
+            switch kwargs.mdtablayout
+                case 'flow'
+                    sztab = ceil(sqrt(nfig))*[1,1];
+                    if (prod(sztab)-nfig) > sztab(2) - 1
+                        sztab(2) = sztab(2) - 1;
+                    end
+                case 'horizontal'
+                    sztab = [1, nfig];
+                case 'vertical'
+                    sztab = [nfig, 1];
+            end
+        else
+            sztab = kwargs.mdtabsz;
         end
         switch kwargs.mdtabalign
             case 'left'
