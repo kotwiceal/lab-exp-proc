@@ -84,13 +84,13 @@ function saf(path, kwargs, options)
         pause(1)
         
         if ~isempty(kwargs.fontsize)
-            set(fighandle.Children, fontsize = kwargs.fontsize, fontunits = kwargs.fontunits);
+            fontsize(fighandle, kwargs.fontsize, kwargs.fontunits)
         end
 
         if ~isempty(kwargs.size)
             set(fighandle, WindowStyle = 'normal')
-            pause(kwargs.pause)
             set(fighandle, Units = kwargs.units, Position = [0, 0, kwargs.size]);
+            pause(kwargs.pause)
         end
 
         if kwargs.save

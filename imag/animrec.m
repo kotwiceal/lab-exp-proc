@@ -3,7 +3,7 @@ function animrec(varargin, kwargs)
 
     %% Examples:
     %% 1. Record animation of set 2D multi-frame
-    % animrec(rand(120, 140, 10), filename = 'test.gif', clim = [-1, 1], axis = 'equal')
+    % animrec(rand(120, 140, 10), filename = 'test.gif', clim = [-1, 1], aspect = 'equal')
     %% 2. Record animation by means custom scene
     % animrec(plotfunc = @(axis,index) handle(axis,index,data), range = 1:size(data,3), ...
     %   filename = 'test.gif')
@@ -50,6 +50,7 @@ function animrec(varargin, kwargs)
         kwargs.figunits {mustBeMember(kwargs.figunits, {'points', 'pixels', 'inches', 'centimeters'})} = 'centimeters'
         kwargs.md (1,:) char = []
         kwargs.framesz (1,1) = 400
+        kwargs.theme {mustBeMember(kwargs.theme, {'light', 'dark', 'auto'})} = "light"
     end
 
     if nargin == 0
@@ -173,6 +174,8 @@ function animrec(varargin, kwargs)
         set(fig, WindowStyle = 'normal')
         set(fig, Units = kwargs.figunits, Position = [0, 0, kwargs.figsize])
     end
+
+    try; theme(fig, kwargs.theme); catch; end
 
     tf = true;
     for i = kwargs.range
