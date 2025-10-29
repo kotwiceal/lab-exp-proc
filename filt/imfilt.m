@@ -15,7 +15,7 @@ function data = imfilt(data, kwargs, opts)
         opts.useparallel (1,1) logical = false
         opts.extract {mustBeMember(opts.extract, {'readall', 'writeall'})} = 'readall'
         opts.poolsize (1,:) double = 16
-        opts.resources {mustBeA(opts.resources, {'char', 'string', 'cell'}), mustBeMember(opts.resources, {'Processes', 'Threads'})} = 'Threads'
+        opts.resources {mustBeA(opts.resources, {'char', 'string', 'cell'}), mustBeMember(opts.resources, {'Processes', 'Threads', 'backgroundPool'})} = 'backgroundPool'
     end
 
     arguments (Output)

@@ -19,6 +19,7 @@ function saf(path, kwargs, options)
         kwargs.mdtablayout {mustBeMember(kwargs.mdtablayout, {'flow', 'horizontal', 'vertical'})} = 'flow' % arrange attachment link cells
         kwargs.save (1,1) logical = true
         kwargs.theme {mustBeMember(kwargs.theme, {'light', 'dark', 'auto'})} = "light"
+        kwargs.docked (1,1) logical = true
         options.?matlab.ui.Figure
     end 
     
@@ -102,6 +103,6 @@ function saf(path, kwargs, options)
             obscontpast(kwargs.md, strcat(figname, kwargs.extension), size = kwargs.mdsize, fig = kwargs.mdfig);
         end
 
-        set(fighandle, WindowStyle = 'docked')
+        if kwargs.docked; set(fighandle, WindowStyle = 'docked'); end
     end
 end
