@@ -40,7 +40,7 @@ function result = prepinterm(data, kwargs)
         % postfilter
         kwargs.postfiltker (1,:) double = [15, 15] % postfilter kernel size
         %% optional
-        kwargs.resources {mustBeA(kwargs.resources, {'char', 'string', 'cell'}), mustBeMember(kwargs.resources, {'Processes', 'Threads'})} = 'Threads'
+        kwargs.resources {mustBeA(kwargs.resources, {'char', 'string', 'cell'}), mustBeMember(kwargs.resources, {'Processes', 'Threads', 'backgroundPool'})} = 'Threads'
         kwargs.poolsize (1,:) double = 16
         kwargs.usefiledatastore (1, 1) logical = false
         kwargs.useparallel (1,1) logical = false

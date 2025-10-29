@@ -12,7 +12,7 @@ function poolobj = poolswitcher(resources, poolsize)
     switch class(poolobj)
         case 'parallel.Pool'
             try
-                if resources ~= "backgroundPool"
+                if strcmp(resources, "backgroundPool")
                     if isempty(getCurrentWorker)
                         poolobj = parpool(resources, poolsize);
                     end
