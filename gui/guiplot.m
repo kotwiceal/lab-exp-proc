@@ -17,26 +17,26 @@ function varargout = guiplot(varargin, kwargs, kwargsplt, figparam, axparamset, 
         figparam.TileSpacing {mustBeMember(figparam.TileSpacing , {'loose', 'compact', 'tight', 'none'})} = 'loose'
         figparam.Padding {mustBeMember(figparam.Padding, {'loose', 'compact', 'tight'})} = 'loose'
         %% parameters for `set(ax, arg{:})`
-        axparamset.xscale {mustBeMember(axparamset.xscale, {'linear', 'log'}), mustBeA(axparamset.xscale, {'char', 'cell'})} = 'linear'
-        axparamset.yscale {mustBeMember(axparamset.yscale, {'linear', 'log'}), mustBeA(axparamset.yscale, {'char', 'cell'})} = 'linear'
-        axparamset.zscale {mustBeMember(axparamset.zscale, {'linear', 'log'}), mustBeA(axparamset.zscale, {'char', 'cell'})} = 'linear'
-        axparamset.colorscale {mustBeMember(axparamset.colorscale, {'linear', 'log'}), mustBeA(axparamset.colorscale, {'char', 'cell'})} = 'linear'
+        axparamset.xscale {mustBeMember(axparamset.xscale, {'linear', 'log'}), mustBeA(axparamset.xscale, {'char', 'string', 'cell'})} = 'linear'
+        axparamset.yscale {mustBeMember(axparamset.yscale, {'linear', 'log'}), mustBeA(axparamset.yscale, {'char', 'string', 'cell'})} = 'linear'
+        axparamset.zscale {mustBeMember(axparamset.zscale, {'linear', 'log'}), mustBeA(axparamset.zscale, {'char', 'string', 'cell'})} = 'linear'
+        axparamset.colorscale {mustBeMember(axparamset.colorscale, {'linear', 'log'}), mustBeA(axparamset.colorscale, {'char', 'string', 'cell'})} = 'linear'
         axparamset.fontsize {mustBeInteger, mustBePositive} = 10
         %% parameters for `xlabel(ax, arg{:})` and so on
-        axparamfunc.xlabel {mustBeA(axparamfunc.xlabel, {'char', 'cell'})} = ''
-        axparamfunc.ylabel {mustBeA(axparamfunc.ylabel, {'char', 'cell'})} = ''
-        axparamfunc.zlabel {mustBeA(axparamfunc.zlabel, {'char', 'cell'})} = ''
-        axparamfunc.xlim {mustBeA(axparamfunc.xlim, {'char', 'double', 'cell'})} = 'auto'
-        axparamfunc.ylim {mustBeA(axparamfunc.ylim, {'char', 'double', 'cell'})} = 'auto'
-        axparamfunc.zlim {mustBeA(axparamfunc.zlim, {'char', 'double', 'cell'})} = 'auto'
-        axparamfunc.clim {mustBeA(axparamfunc.clim, {'char', 'double', 'cell'})} = 'auto'
-        axparamfunc.grid {mustBeMember(axparamfunc.grid, {'off', 'on'}), mustBeA(axparamfunc.grid, {'char', 'cell'})} = 'on'
-        axparamfunc.box {mustBeMember(axparamfunc.box, {'off', 'on'}), mustBeA(axparamfunc.box, {'char', 'cell'})} = 'on'
+        axparamfunc.xlabel {mustBeA(axparamfunc.xlabel, {'char', 'string', 'cell'})} = ''
+        axparamfunc.ylabel {mustBeA(axparamfunc.ylabel, {'char', 'string', 'cell'})} = ''
+        axparamfunc.zlabel {mustBeA(axparamfunc.zlabel, {'char', 'string', 'cell'})} = ''
+        axparamfunc.xlim {mustBeA(axparamfunc.xlim, {'char', 'string', 'double', 'cell'})} = 'auto'
+        axparamfunc.ylim {mustBeA(axparamfunc.ylim, {'char', 'string', 'double', 'cell'})} = 'auto'
+        axparamfunc.zlim {mustBeA(axparamfunc.zlim, {'char', 'string', 'double', 'cell'})} = 'auto'
+        axparamfunc.clim {mustBeA(axparamfunc.clim, {'char', 'string', 'double', 'cell'})} = 'auto'
+        axparamfunc.grid {mustBeMember(axparamfunc.grid, {'off', 'on'}), mustBeA(axparamfunc.grid, {'char', 'string', 'cell'})} = 'on'
+        axparamfunc.box {mustBeMember(axparamfunc.box, {'off', 'on'}), mustBeA(axparamfunc.box, {'char', 'string', 'cell'})} = 'on'
         axparamfunc.pbaspect (1,3) {mustBePositive, mustBeNumeric} = [1, 1, 1]
-        axparamfunc.hold {mustBeMember(axparamfunc.hold, {'off', 'on'}), mustBeA(axparamfunc.hold, {'char', 'cell'})} = 'off'
+        axparamfunc.hold {mustBeMember(axparamfunc.hold, {'off', 'on'}), mustBeA(axparamfunc.hold, {'char', 'string', 'cell'})} = 'off'
         axparamfunc.colormap {mustBeMember(axparamfunc.colormap, {'parula','turbo','hsv','hot','cool','spring','summer','autumn',...
             'winter','gray','bone','copper','pink','sky','abyss','jet','lines','colorcube','prism','flag','white'}), ...
-            mustBeA(axparamfunc.colormap, {'char', 'cell'})} = 'turbo'
+            mustBeA(axparamfunc.colormap, {'char', 'string', 'cell'})} = 'turbo'
         axparamfunc.xticks (1,:) = 'auto'
         axparamfunc.yticks (1,:) = 'auto'
         axparamfunc.zticks (1,:) = 'auto'
@@ -47,24 +47,24 @@ function varargout = guiplot(varargin, kwargs, kwargsplt, figparam, axparamset, 
         axparamfunc.ytickangle (1,1) = 0
         axparamfunc.ztickangle (1,1) = 0
         %% parameters for `axis(ax, arg{:})`
-        axparamaxis.aspect {mustBeMember(axparamaxis.aspect, {'auto', 'equal', 'image', 'square'}), mustBeA(axparamaxis.aspect, {'char', 'cell'})} = 'auto'
+        axparamaxis.aspect {mustBeMember(axparamaxis.aspect, {'auto', 'equal', 'image', 'square'}), mustBeA(axparamaxis.aspect, {'char', 'string', 'cell'})} = 'auto'
         axparamaxis.limits (1,:) {mustBeNumeric} = []
         %% parameters for `plot(ax, data{:}, arg{:})` and so on
-        pltparam.marker {mustBeMember(pltparam.marker, {'none', 'o', 's', '<', '>', '^', 'd', '.'}), mustBeA(pltparam.marker, {'char', 'cell'})} = 'none'
-        pltparam.linestyle {mustBeMember(pltparam.linestyle, {'none', '-', '--', '.-', ':'}), mustBeA(pltparam.linestyle, {'char', 'cell'})} = '-'
+        pltparam.marker {mustBeMember(pltparam.marker, {'none', 'o', 's', '<', '>', '^', 'd', '.'}), mustBeA(pltparam.marker, {'char', 'string', 'cell'})} = 'none'
+        pltparam.linestyle {mustBeMember(pltparam.linestyle, {'none', '-', '--', '.-', ':'}), mustBeA(pltparam.linestyle, {'char', 'string', 'cell'})} = '-'
         pltparam.linewidth (1,1) double = 0.75
         pltparam.levels (1,:) double = 50
         pltparam.alphadata (1,1) double = 1
         pltparam.color (:,:) = []
         %% ROI parameters
         roiparam.draw {mustBeMember(roiparam.draw, {'none', 'drawpoint', 'drawline', 'drawrectangle', 'drawpolygon', 'drawpolyline'}), ...
-            mustBeA(roiparam.draw, {'char', 'cell'})} = 'none'
+            mustBeA(roiparam.draw, {'char', 'string', 'cell'})} = 'none'
         roiparam.target (1,:) cell = {}
         roiparam.interaction {mustBeMember(roiparam.interaction, {'all', 'none', 'translate'}), ...
-            mustBeA(roiparam.interaction, {'char', 'cell'})} = 'all'
+            mustBeA(roiparam.interaction, {'char', 'string', 'cell'})} = 'all'
         roiparam.position (1,:) cell = {}
         roiparam.number (1,:) cell = {}
-        roiparam.label {mustBeA(roiparam.label, {'char', 'cell'})} = ''
+        roiparam.label {mustBeA(roiparam.label, {'char', 'string', 'cell'})} = ''
         %% `legend` parameters
         lgd.legend (1,:) logical = false
         lgd.ltitle (1,:) {mustBeA(lgd.ltitle, {'char', 'string'})} = ''
@@ -74,7 +74,7 @@ function varargout = guiplot(varargin, kwargs, kwargsplt, figparam, axparamset, 
         lgd.linterpreter {mustBeMember(lgd.linterpreter, {'latex', 'tex', 'none'})} = 'tex'
         %% `colorbar` parmeters
         clb.colorbar (1,:) logical = false
-        clb.clabel {mustBeA(clb.clabel, {'char', 'cell'})} = ''
+        clb.clabel {mustBeA(clb.clabel, {'char', 'string', 'cell'})} = ''
         clb.corientation {mustBeMember(clb.corientation, {'vertical', 'horizontal'})} = 'vertical'
         clb.clocation (1,:) char {mustBeMember(clb.clocation, {'north','south','east','west','northeast','northwest','southeast','southwest','northoutside','southoutside','eastoutside','westoutside','northeastoutside','northwestoutside','southeastoutside','southwestoutside','bestoutside','layout','none'})} = 'eastoutside'
         clb.cExponent (1,:) double = []
