@@ -127,7 +127,12 @@ function varargout = guiplot(varargin, kwargs, kwargsplt, figparam, axparamset, 
         hclb = findobj('type','colorbar');
         for i = 1:length(hax)
             if figparam.docked; f = figure(WindowStyle = 'docked'); else; f = figure; end
-            copyobj([hclb(i), hax(i)], f)
+            if i <= numel(hclb)
+                obj = [hclb(i), hax(i)];
+            else
+                obj = [hax(i)];
+            end
+            copyobj(obj, f)
             set(gca, Units = 'normalized', Position = [0.1 0.2 0.7 0.6])
         end
         delete(fg)
