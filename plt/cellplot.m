@@ -9,6 +9,7 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
         popt.axpos (1,:) double = []
         popt.docked (1,1) logical = false
         popt.figstand (1,1) logical = false
+        popt.probe (1,:) double = []
         % axis properties
         pax.axis {mustBeMember(pax.axis, {'tight', 'normal', 'manual', 'padded', 'tickaligned', ...
             'auto', 'auto x', 'auto y', 'auto xy', 'fill', 'equal', 'image', 'square', 'vis3d', ...
@@ -87,6 +88,15 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
     pltfunc = cellfun(@(p) str2func(p), plotname, UniformOutput = false);
 
     % parse data
+    if ~isempty(popt.probe)
+        probe = cell(1, numel(varargin));
+        for i = 1:numel(probe)
+            for j = popt.probe
+                probe{i} = cat(2, probe{i}, varargin{i}{j});
+                varargin{i}{j} = [];
+            end
+        end
+    end
     [data, dg] = wraparrbycell(varargin{:}, dims = dims);
     dgn = splitapply(@numel, dg, dg);
 
