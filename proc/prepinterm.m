@@ -26,6 +26,10 @@ function result = prepinterm(data, kwargs)
         kwargs.fillmiss (1,:) char {mustBeMember(kwargs.fillmiss, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'none'
         kwargs.pow (1,1) double = 2 % raise to the power
         kwargs.abs (1,1) logical = false % calculate an absolute value
+        %% core velocity processing
+        kwargs.corefilt (1,:) char {mustBeMember(kwargs.corefilt, {'none', 'gaussian', 'average', 'median', 'wiener', 'wiener-median', 'mode'})} = 'none'
+        kwargs.corefiltker (1,:) double = [3, 3] % prefilter kernel size
+        kwargs.corepadval {mustBeA(kwargs.corepadval, {'double', 'char', 'string', 'logical', 'cell'})} = 'symmetric' % padding value        
         %% dirgrad parameters
         kwargs.angle double = deg2rad(-22) % anlge of directed gradient, [rad]
         % derivative component at spatial differentiation
@@ -53,13 +57,25 @@ function result = prepinterm(data, kwargs)
         u = data.u; w = data.w;
     
         % norm velocity
-        if kwargs.norm && isfield(data, 'U') && isfield(data, 'W')
+        if kwargs.norm
+            if ~(isfield(data, 'U') && isfield(data, 'W'))
+                data.U = u(:,:,:,end);
+                data.W = w(:,:,:,end);
+                u = u(:,:,:,1:end-1);
+                w = w(:,:,:,1:end-1);
+            end
+
             if kwargs.fillmiss ~= "none"
                 data.U = imfilt(data.U, filt = 'fillmiss', method = kwargs.fillmiss, zero2nan = true);
                 data.W = imfilt(data.W, filt = 'fillmiss', method = kwargs.fillmiss, zero2nan = true);
+
+                data.U = imfilt(data.U, filt = kwargs.corefilt, ...
+                    filtker = kwargs.corefiltker, padval = kwargs.corepadval);
+                data.W = imfilt(data.W, filt = kwargs.corefilt, ...
+                    filtker = kwargs.corefiltker, padval = kwargs.corepadval);
             end
             Vm = hypot(data.U, data.W);
-            if ~ismatrix(Vm); Vm = mean(Vm, 3); end
+            if ~ismatrix(Vm); Vm = mean(Vm, 3, 'omitmissing'); end
             u = u./Vm;
             w = w./Vm;
         end

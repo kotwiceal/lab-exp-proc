@@ -82,6 +82,8 @@ function saf(path, kwargs, options)
         writelines(text,kwargs.md);
     end
 
+    try; ctr = theme; catch; end
+
     for iFig = 1:numel(figlist)
         fighandle = figlist(iFig);
         try; theme(fighandle, kwargs.theme); catch; end
@@ -104,9 +106,13 @@ function saf(path, kwargs, options)
             savefig(fighandle, strcat(filename, '.fig'));
         end
 
+        % insert markdown links
         if ~isempty(kwargs.md) & kwargs.save
             obscontpast(kwargs.md, strcat(figname, kwargs.extension), size = kwargs.mdsize, fig = kwargs.mdfig);
         end
+
+        % rollback theme
+        try; theme(fighandle, crt.BaseColorStyle); catch; end
 
         if kwargs.docked; set(fighandle, WindowStyle = 'docked'); end
     end

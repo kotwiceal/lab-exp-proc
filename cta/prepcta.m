@@ -96,7 +96,7 @@ function varargout = prepcta(input, kwargs)
                 case 'manual'
                     [spec, f] = procspecn(kwargs.raw, winfun = kwargs.winfun, winlen = kwargs.winlen, ...
                         overlap = kwargs.overlap, fs = kwargs.fs, ftdim = 1, chdim = 2, ans = 'cell', ...
-                        norm = true, center = kwargs.center, offset = kwargs.offset, poolsize = kwargs.poolsize);
+                        norm = true, center = kwargs.center, offset = kwargs.offset, poolsize = kwargs.poolsize, avg = true);
             end
             df = f(2)-f(1);
 

@@ -1,5 +1,5 @@
 %% Get started
-% The `lab-exp-proc` library provides tools for signal processing, 
+% The `matlab-funcs` library provides tools for signal processing, 
 % preparing of experimental measurements and pre/post processing results.
 %% Topics
 %% CTA sensors measurement and post processing

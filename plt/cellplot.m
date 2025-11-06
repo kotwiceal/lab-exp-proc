@@ -1,6 +1,6 @@
 function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, plin, proi)
     arguments (Input)
-        plotname {mustBeMember(plotname, {'plot', 'contour', 'contourf', 'imagesc', 'surf'})}
+        plotname {mustBeMember(plotname, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor'})}
     end
     arguments (Input, Repeating)
         varargin {mustBeA(varargin, {'double', 'cell'})}
@@ -43,7 +43,8 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
         pax.subtitle (1,:) {mustBeA(pax.subtitle, {'char', 'string', 'cell'})} = ''
         pax.colororder {mustBeMember(pax.colororder, {'gem', 'gem12', ...
             'glow', 'glow12', 'sail', 'reef', 'meandow', 'dye', 'earth'})} = 'gem'
-        pax.linestyleorder {mustBeMember(pax.linestyleorder, {'mixedstyles', 'mixedmarkers'})} = 'mixedstyles'
+        pax.linestyleorder {mustBeMember(pax.linestyleorder, {'.', 'o', 's', ...
+            '<', '>', '^', 'd', '*', 'mixedstyles', 'mixedmarkers'})} = 'mixedstyles'
         % `set(ax,...)` properties
         pset.layer {mustBeMember(pset.layer, {'bottom', 'top'})} = 'top'
         pset.colorscale {mustBeMember(pset.colorscale, {'linear', 'log'})} = 'linear'
@@ -70,18 +71,20 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
         plin.linestyle {mustBeMember(plin.linestyle, {'-', '--', ':', '-.', 'none'})} = '-'
         plin.levels (1,:) double = []
         plin.labelcolor (1,:) double = []
+        plin.facecolor {mustBeMember(plin.facecolor, {'flat', 'interp', 'none'})} = 'flat'
         % plin.displayname (1,:) = []
         % roi properties
         proi.draw {mustBeMember(proi.draw, {'none', 'drawpoint', 'drawline', ...
             'drawrectangle', 'drawpolygon', 'drawpolyline', 'drawxrange', 'drawyrange'})} = 'none'
         proi.target (1,:) = []
         proi.number (1,:) = []
+        proi.rposition (1,:) {mustBeA(proi.rposition, {'double', 'cell'})} = []
     end
     %% plot
 
     if ~isa(plotname, 'cell'); plotname = {plotname}; end
     if isscalar(plotname) & isa(varargin{1}, 'cell'); plotname = repmat(plotname, 1, numel(varargin{1})); end
-    plt = struct(plot = 1, contour = 2, contourf = 2, imagesc = 2, surf = 2);
+    plt = struct(plot = 1, contour = 2, contourf = 2, imagesc = 2, surf = 2, pcolor = 2);
     dims = cellfun(@(p) plt.(p), plotname);
 
     pltfunc = cellfun(@(p) str2func(p), plotname, UniformOutput = false);
@@ -89,6 +92,14 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
     % parse data
     [data, dg] = wraparrbycell(varargin{:}, dims = dims);
     dgn = splitapply(@numel, dg, dg);
+
+    % index = cellfun(@(p) strcmp(p, 'imagesc'), plotname);
+    % 
+    % temp = data(index);
+    % temp = temp{:};
+    % temp = temp(:,end);
+    % % data(index) = temp;
+    % data(index) = {temp(:)};
 
     % create data-axis map 
     ag = zeros(1, numel(data));
@@ -163,6 +174,7 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
     fplin.levels = @(obj, value) fcond(obj, 'LevelList', value);
     fplin.labelcolor = @(obj, value) fcond(obj, 'LabelColor', value);
     % fplin.displayname = @(obj, value) fcond2(obj, 'Displayname', value);
+    fplin.facecolor = @(obj, value) fcond(obj, 'FaceColor', value);
     cellapply(axs, fplin, plin)
 
     %% roi

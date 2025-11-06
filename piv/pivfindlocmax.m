@@ -23,7 +23,7 @@ function [X, matind] = pivfindlocmax(data, kwargs)
             matind = data > imdilate(data, mask);
             linind = find(matind);
         case 'max'
-            [~, linind] = max(data, [], 'all');
+            [~, linind] = max(data, [], 'all', 'omitmissing');
             matind = [];
     end
     
