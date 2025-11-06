@@ -42,7 +42,7 @@ function varargout = prepcta(input, kwargs)
         kwargs.xfit = [] % fitobj transfrom to leading edge coordinate system
         kwargs.yfit = [] % fitobj to reverse a correction of vectical scanning component
         kwargs.zfit = [] % fitobj transfrom to leading edge coordinate system
-        kwargs.steps (1,:) double = [50, 800, 400] % single step displacement of step motor in um
+        kwargs.steps (1,:) double = [50, 800, 400] % single step displacement of step motor in um (x,y,z)
         kwargs.label (1,:) char = []
         kwargs.ort (:,2) double = [] %% LE coordinate system reference points
         kwargs.skew (:,2) double = [] %% skew coordinate system reference points
@@ -67,6 +67,7 @@ function varargout = prepcta(input, kwargs)
         if isfield(input, 'zfit'); kwargs.zfit = input.zfit; end
         if isfield(input, 'ort'); kwargs.ort = input.ort; end
         if isfield(input, 'skew'); kwargs.skew = input.skew; end
+        if isfield(input, 'step'); kwargs.step = input.step; end
     end
 
     % handler to select mask index by given frequency range

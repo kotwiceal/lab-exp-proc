@@ -8,20 +8,20 @@ function varargout = procspecn(data, kwargs)
         kwargs.winlen (1,:) double = 1024 % transform window lengths
         kwargs.overlap (1,:) double = 512 % transform window strides
         kwargs.offset (1,:) {mustBeA(kwargs.offset, {'double', 'cell '})} = 0 % sliding window offset at performing STFT
-        kwargs.side (1,:) {mustBeA(kwargs.side, {'char', 'string', 'cell'}), mustBeMember(kwargs.side, {'single', 'double'})} = 'single' % spectra process mode
-        kwargs.type (1,:) char {mustBeMember(kwargs.type, {'amp', 'power', 'psd'})} = 'power' % spectra process mode
+        kwargs.side {mustBeMember(kwargs.side, {'single', 'double'})} = 'single' % spectra process mode
+        kwargs.type {mustBeMember(kwargs.type, {'amp', 'power', 'psd'})} = 'power' % spectra process mode
         kwargs.avg (1,:) logical = false % averaging by statistics of spectra
         kwargs.fs (1,:) double = [] % sampling frequency
-        kwargs.center (1,:) logical = true % centre data at transform
-        kwargs.winfun (1,:) {mustBeA(kwargs.winfun, {'char', 'string', 'cell'}), mustBeMember(kwargs.winfun, {'uniform', 'hann', 'hanning', 'hamming'})} = 'hanning' % to weight data at transform
+        kwargs.center (1,1) logical = true % centre data at transform
+        kwargs.winfun {mustBeMember(kwargs.winfun, {'uniform', 'hann', 'hanning', 'hamming'})} = 'hanning' % to weight data at transform
         kwargs.norm (1,1) logical = true % norm for spectral density
-        kwargs.ans (1,:) char {mustBeMember(kwargs.ans, {'double', 'cell', 'struct'})} = 'double' % output data format
+        kwargs.ans {mustBeMember(kwargs.ans, {'double', 'cell', 'struct'})} = 'double' % output data format
         % parallel processing settings
         kwargs.usefiledatastore (1, 1) logical = false
         kwargs.useparallel (1,1) logical = false
         kwargs.extract {mustBeMember(kwargs.extract, {'readall', 'writeall'})} = 'writeall'
         kwargs.poolsize (1,:) double = 16
-        kwargs.resources {mustBeA(kwargs.resources, {'char', 'string', 'cell'}), mustBeMember(kwargs.resources, {'Processes', 'Threads', 'backgroundPool'})} = 'backgroundPool'
+        kwargs.resources {mustBeMember(kwargs.resources, {'Processes', 'Threads', 'backgroundPool'})} = 'backgroundPool'
     end
 
     arguments(Output,Repeating)

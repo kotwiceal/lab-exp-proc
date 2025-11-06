@@ -1,6 +1,6 @@
 function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, plin, proi)
     arguments (Input)
-        plotname {mustBeMember(plotname, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor'})}
+        plotname {mustBeMember(plotname, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
     end
     arguments (Input, Repeating)
         varargin {mustBeA(varargin, {'double', 'cell'})}
@@ -84,7 +84,7 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
 
     if ~isa(plotname, 'cell'); plotname = {plotname}; end
     if isscalar(plotname) & isa(varargin{1}, 'cell'); plotname = repmat(plotname, 1, numel(varargin{1})); end
-    plt = struct(plot = 1, contour = 2, contourf = 2, imagesc = 2, surf = 2, pcolor = 2);
+    plt = struct(plot = 1, contour = 2, contourf = 2, imagesc = 2, surf = 2, pcolor = 2, plot3 = 2);
     dims = cellfun(@(p) plt.(p), plotname);
 
     pltfunc = cellfun(@(p) str2func(p), plotname, UniformOutput = false);
