@@ -202,8 +202,12 @@ function result = nonlinfilt(method, varargin, kwargs, opts, pool)
         case 'array'
             tf = isscalar(result);
             result = cell2arr(result);
-            if isvector(result)
-                shape = kwargs.szfilt;
+            if isrow(result) || iscolumn(result)
+                if kwargs.numfilt == 1
+                    shape = size(result);
+                else
+                    shape = kwargs.szfilt;
+                end
             else
                 szout = size(result);
                 if ~tf; szout = szout(1:end-1); end

@@ -89,7 +89,7 @@ function [y0, z0, x0] = findoffsetcta(filename, kwargs)
 
     % show results
     if kwargs.show
-        if kwargs.docked; figure(WindowStyle = 'docked'); else; figure; end
+        if kwargs.docked; figure(WindowStyle = 'docked'); else; clf; end
         hold on; grid on; box on; axis square;
         plt = plot(y,v,'.-');
         l = legend(plt, "("+string(split(num2str(x0)))+";"+string(split(num2str(z0)))+")"); 

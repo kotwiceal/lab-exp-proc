@@ -9,6 +9,7 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
         popt.axpos (1,:) double = []
         popt.docked (1,1) logical = false
         popt.figstand (1,1) logical = false
+        popt.merge (1,1) logical = false % merge axes children to one axis
         % axis properties
         pax.axis {mustBeMember(pax.axis, {'tight', 'normal', 'manual', 'padded', 'tickaligned', ...
             'auto', 'auto x', 'auto y', 'auto xy', 'fill', 'equal', 'image', 'square', 'vis3d', ...
@@ -72,6 +73,7 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
         plin.levels (1,:) double = []
         plin.labelcolor (1,:) double = []
         plin.facecolor {mustBeMember(plin.facecolor, {'flat', 'interp', 'none'})} = 'flat'
+        plin.view {mustBeA(plin.view, {'double', 'cell'})} = [0, 90]
         % plin.displayname (1,:) = []
         % roi properties
         proi.draw {mustBeMember(proi.draw, {'none', 'drawpoint', 'drawline', ...
@@ -173,6 +175,7 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
     fplin.linestyle = @(obj, value) fcond(obj, 'LineStyle', value);
     fplin.levels = @(obj, value) fcond(obj, 'LevelList', value);
     fplin.labelcolor = @(obj, value) fcond(obj, 'LabelColor', value);
+    fplin.view = @(obj, value) set(obj, 'View', value);
     % fplin.displayname = @(obj, value) fcond2(obj, 'Displayname', value);
     fplin.facecolor = @(obj, value) fcond(obj, 'FaceColor', value);
     cellapply(axs, fplin, plin)
@@ -201,6 +204,11 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
             set(gca, Units = 'normalized', Position = [0.1 0.2 0.7 0.6])
         end
         delete(fig)
+    else
+        if popt.merge
+            axs = {nexttile(tl)};
+            copyobj(plts, axs{1});
+        end
     end
 
 end

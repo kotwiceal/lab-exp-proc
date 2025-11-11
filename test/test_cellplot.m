@@ -55,7 +55,7 @@ clc
 cellplot({'contourf','plot','contourf'},[0,0,0],{rand(10,10,3),rand(20,5),rand(10,10,3)})
 %%
 clc
-[plts, axs] = cellplot({'contourf','plot','contourf'},[],{rand(10,10,3),rand(20,5),rand(10,10,3)})
+[plts, axs] = cellplot({'contourf','plot','contour'},{rand(10,10,3),rand(20,5),rand(10,10,3)},merge=true)
 %%
 %%
 clc
