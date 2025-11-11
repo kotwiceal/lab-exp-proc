@@ -5,7 +5,7 @@ function roisnaphandler(roi, target, options)
         options.snap (1,1) logical = true
     end
 
-    chs = roi.Parent.Children;
+    chs = flip(roi.Parent.Children);
 
     if isa(target, 'double')
         try
@@ -31,9 +31,13 @@ function roisnaphandler(roi, target, options)
 
     k = dsearchn(pos, vrt);
     roi.UserData.linind = k;
-    [in, on] = inpolygon(pos(:,1), pos(:,2), vrt(:,1), vrt(:,2));
-    ind = in | on;
-    roi.UserData.linindr = find(ind);
+    if isa(roi, 'images.roi.Point')
+        roi.UserData.linindr = roi.UserData.linind;
+    else
+        [in, on] = inpolygon(pos(:,1), pos(:,2), vrt(:,1), vrt(:,2));
+        ind = in | on;
+        roi.UserData.linindr = find(ind);        
+    end
     vrt = pos(k,:);
 
     if options.snap

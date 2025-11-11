@@ -6,10 +6,14 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
         varargin {mustBeA(varargin, {'double', 'cell'})}
     end
     arguments (Input)
+        popt.parent = []
         popt.axpos (1,:) double = []
         popt.docked (1,1) logical = false
         popt.figstand (1,1) logical = false
         popt.merge (1,1) logical = false % merge axes children to one axis
+        popt.probe (1,:) double = []
+        popt.addax = []
+        popt.customize (1,1) logical = true
         % axis properties
         pax.axis {mustBeMember(pax.axis, {'tight', 'normal', 'manual', 'padded', 'tickaligned', ...
             'auto', 'auto x', 'auto y', 'auto xy', 'fill', 'equal', 'image', 'square', 'vis3d', ...
@@ -67,20 +71,32 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
             'southeastoutside','southwestoutside','best','bestoutside','layout','none'})} = 'best'
         plgd.lorientation {mustBeMember(plgd.lorientation , {'vertical', 'horizontal'})} = 'vertical'
         plgd.linterpreter {mustBeMember(plgd.linterpreter , {'latex', 'tex', 'none'})} = 'tex'
+        plgd.lbackgroundalpha {mustBeA(plgd.lbackgroundalpha, {'double', 'cell'})} = 1
+        plgd.lnumcolumns {mustBeA(plgd.lnumcolumns, {'double', 'cell'})} = 1
         % line properties
         plin.cyclingmethod {mustBeMember(plin.cyclingmethod, {'withcolor', 'beforecolor', 'aftercolor'})} = 'withcolor'
         plin.linestyle {mustBeMember(plin.linestyle, {'-', '--', ':', '-.', 'none'})} = '-'
-        plin.levels (1,:) double = []
-        plin.labelcolor (1,:) double = []
+        plin.levels {mustBeA(plin.levels, {'double', 'cell'})} = []
+        plin.labelcolor {mustBeA(plin.labelcolor, {'double', 'char', 'string', 'cell'})} = []
         plin.facecolor {mustBeMember(plin.facecolor, {'flat', 'interp', 'none'})} = 'flat'
         plin.view {mustBeA(plin.view, {'double', 'cell'})} = [0, 90]
         % plin.displayname (1,:) = []
         % roi properties
         proi.draw {mustBeMember(proi.draw, {'none', 'drawpoint', 'drawline', ...
             'drawrectangle', 'drawpolygon', 'drawpolyline', 'drawxrange', 'drawyrange'})} = 'none'
-        proi.target (1,:) = []
-        proi.number (1,:) = []
-        proi.rposition (1,:) {mustBeA(proi.rposition, {'double', 'cell'})} = []
+        proi.target (1,:) = 1
+        proi.number (1,:) = 1
+        proi.rposition {mustBeA(proi.rposition, {'double', 'cell'})} = []
+        proi.rlabel {mustBeA(proi.rlabel, {'char', 'string', 'cell'})} = ''
+        proi.rinteraction {mustBeMember(proi.rinteraction , {'all', 'none', 'translate'})} = 'all' % region selection behaviour
+        proi.rstripecolor = 'none'
+        proi.ralpha (1,1) double = 1
+        proi.rtag {mustBeA(proi.rtag, {'char', 'string', 'cell'})} = ''
+        proi.rmarkersize = []
+        proi.rlinewidth = []
+        proi.rvisible {mustBeMember(proi.rvisible, {'on', 'off'})} = 'on'
+        proi.rcolororder {mustBeMember(proi.rcolororder, {'on', 'off'})} = 'on'
+        proi.rlinealign {mustBeMember(proi.rlinealign, {'on', 'off'})} = 'off'
     end
     %% plot
 
@@ -92,6 +108,15 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
     pltfunc = cellfun(@(p) str2func(p), plotname, UniformOutput = false);
 
     % parse data
+    if ~isempty(popt.probe)
+        probe = cell(1, numel(varargin));
+        for i = 1:numel(probe)
+            for j = popt.probe
+                probe{i} = cat(2, probe{i}, varargin{i}{j});
+                varargin{i}{j} = [];
+            end
+        end
+    end
     [data, dg] = wraparrbycell(varargin{:}, dims = dims);
     dgn = splitapply(@numel, dg, dg);
 
@@ -122,69 +147,141 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
     [dg; ag];
 
     % create axes
-    if popt.docked; fig = figure(WindowStyle = 'docked'); else; clf; fig = gcf; end
-    tl = tiledlayout(fig, 'flow');
-    axs = cellfun(@(~) nexttile(tl), num2cell(1:max(ag(:))), UniformOutput = false);
+    switch class(popt.parent)
+        case 'matlab.graphics.layout.TiledChartLayout'
+            tl = popt.parent;
+            axs = cellfun(@(~) nexttile(tl), num2cell(1:max(ag(:))), UniformOutput = false);
+            fig = tl.Parent;
+        case 'cell'
+            if prod(cellfun(@(a) isa(a, 'matlab.graphics.axis.Axes'), popt.parent)) == 1
+                axs = popt.parent;
+                fig = axs{1}.Parent.Parent;
+            end
+        case 'double'
+            if isempty(popt.parent)
+                if popt.docked; fig = figure(WindowStyle = 'docked'); else; clf; fig = gcf; end
+                tl = tiledlayout(fig, 'flow');
+                axs = cellfun(@(~) nexttile(tl), num2cell(1:max(ag(:))), UniformOutput = false);
+            end
+    end
 
     % plot
     cellfun(@(a) hold(a,'on'), axs, UniformOutput = false)
-    cellfun(@(a,d,g) {pltfunc{g}(axs{a}, d{:}), colorbar(axs{a}), legend(axs{a})}, ...
+    cellfun(@(a,d,g) pltfunc{g}(axs{a}, d{:}), ...
         num2cell(ag), data, num2cell(dg), UniformOutput = false);
  
     % gather axes children
     plts = setdiff(findobj('-depth',4), findobj('-depth',3), 'stable');
 
+    if ~isempty(popt.addax); axs = cat(2, axs, cellfun(@(~) nexttile(tl), num2cell(popt.addax), UniformOutput = false)); end
+
     %% customize
-    % customize axes appearance
-    % define specific name functions (`xlabel(ax, ...)` et al.)
-    fax = cellfun(@(s) str2func(s), fieldnames(pax), UniformOutput = false);
-    % define `set(ax, ...)` functions
-    fset = cellfun(@(param) @(ax, val) set(ax, param, val), fieldnames(pset), UniformOutput = false);
-    % collect functions
-    fax = cell2struct(cat(1, fax, fset), cat(1, fieldnames(pax), fieldnames(pset)));
-    % merge structures
-    pax = cat(2, namedargs2cell(pax), namedargs2cell(pset));
-    pax = cell2struct(pax(2:2:end), pax(1:2:end), 2);
-    cellapply(axs, fax, pax)
+    if popt.customize
 
-    % customize colorbars appearance
-    fclb = pclb;
-    fclb.colorbar = @(obj, value) set(obj, 'Visible', value);
-    fclb.clabel = @(obj, value) set(obj.Label, 'String', value);
-    fclb.clocation = @(obj, value) set(obj, 'Location', value);
-    fclb.corientation = @(obj, value) set(obj, 'Orientation', value);
-    fclb.cinterpreter = @(obj, value) set(obj.Label, 'Interpreter', value);
-    fclb.cexponent = @(obj, value) set(obj.Ruler, 'Exponent', value, 'TickLabelFormat', '%0.1f');
-    cellapply(num2cell(findobj(fig, 'Type', 'ColorBar')), fclb, pclb)
+        cellfun(@(a) {colorbar(axs{a}), legend(axs{a})}, ...
+            num2cell(ag), UniformOutput = false);
 
-    % customize legends appearance
-    flgd = plgd;
-    flgd.legend = @(obj, value) set(obj, 'Visible', value);
-    flgd.ltitle = @(obj, value) set(obj.Title, 'String', value);
-    flgd.llocation = @(obj, value) set(obj, 'Location', value);
-    flgd.lorientation = @(obj, value) set(obj, 'Orientation', value);
-    flgd.linterpreter = @(obj, value) set(obj, 'Interpreter', value);
-    cellapply(num2cell(findobj(fig, 'Type', 'Legend')), flgd, plgd)
+        % customize axes appearance
+        % define specific name functions (`xlabel(ax, ...)` et al.)
+        fax = cellfun(@(s) str2func(s), fieldnames(pax), UniformOutput = false);
+        % define `set(ax, ...)` functions
+        fset = cellfun(@(param) @(ax, val) set(ax, param, val), fieldnames(pset), UniformOutput = false);
+        % collect functions
+        fax = cell2struct(cat(1, fax, fset), cat(1, fieldnames(pax), fieldnames(pset)));
+        % merge structures
+        pax = cat(2, namedargs2cell(pax), namedargs2cell(pset));
+        pax = cell2struct(pax(2:2:end), pax(1:2:end), 2);
+        cellapply(axs, fax, pax);
+    
+        % customize colorbars appearance
+        fclb = pclb;
+        fclb.colorbar = @(obj, value) set(obj, 'Visible', value);
+        fclb.clabel = @(obj, value) set(obj.Label, 'String', value);
+        fclb.clocation = @(obj, value) set(obj, 'Location', value);
+        fclb.corientation = @(obj, value) set(obj, 'Orientation', value);
+        fclb.cinterpreter = @(obj, value) set(obj.Label, 'Interpreter', value);
+        fclb.cexponent = @(obj, value) set(obj.Ruler, 'Exponent', value, 'TickLabelFormat', '%0.1f');
+        cellapply(num2cell(flip(findobj(fig, 'Type', 'ColorBar'))), fclb, pclb);
+    
+        % customize legends appearance
+        flgd = plgd;
+        flgd.legend = @(obj, value) set(obj, 'Visible', value);
+        flgd.ltitle = @(obj, value) set(obj.Title, 'String', value);
+        flgd.llocation = @(obj, value) set(obj, 'Location', value);
+        flgd.lorientation = @(obj, value) set(obj, 'Orientation', value);
+        flgd.linterpreter = @(obj, value) set(obj, 'Interpreter', value);
+        flgd.lbackgroundalpha = @(obj, value) set(obj, 'BackgroundAlpha', value);
+        flgd.lnumcolumns = @(obj, value) set(obj, 'NumColumns', value);
+        cellapply(num2cell(flip(findobj(fig, 'Type', 'Legend'))), flgd, plgd);
 
-    % customize line
-    fcond = @(obj, param, value) teropf(isempty(value), [], @() set(findobj(obj.Children, '-property', param), param, value));
-    % temp = @(obj, param, value) cellfun(@(c,d) set(c, param, d), num2cell(findobj(obj.Children, '-property', param)), value(:));
-    % fcond2 = @(obj, param, value) teropf(isempty(value), [], @() temp(obj, param, value));
-    fplin = plin;
-    fplin.cyclingmethod = @(obj, cyclingmethod) set(obj, LineStyleCyclingMethod = cyclingmethod);
-    fplin.linestyle = @(obj, value) fcond(obj, 'LineStyle', value);
-    fplin.levels = @(obj, value) fcond(obj, 'LevelList', value);
-    fplin.labelcolor = @(obj, value) fcond(obj, 'LabelColor', value);
-    fplin.view = @(obj, value) set(obj, 'View', value);
-    % fplin.displayname = @(obj, value) fcond2(obj, 'Displayname', value);
-    fplin.facecolor = @(obj, value) fcond(obj, 'FaceColor', value);
-    cellapply(axs, fplin, plin)
-
+        % customize line
+        fcond = @(obj, param, value) teropf(isempty(value), [], @() set(findobj(obj.Children, '-property', param), param, value));
+        % temp = @(obj, param, value) cellfun(@(c,d) set(c, param, d), num2cell(findobj(obj.Children, '-property', param)), value(:));
+        % fcond2 = @(obj, param, value) teropf(isempty(value), [], @() temp(obj, param, value));
+        fplin = plin;
+        fplin.cyclingmethod = @(obj, value) set(obj, 'LineStyleCyclingMethod', value);
+        fplin.linestyle = @(obj, value) fcond(obj, 'LineStyle', value);
+        fplin.levels = @(obj, value) fcond(obj, 'LevelList', value);
+        fplin.labelcolor = @(obj, value) fcond(obj, 'LabelColor', value);
+        fplin.view = @(obj, value) set(obj, 'View', value);
+        % fplin.displayname = @(obj, value) fcond2(obj, 'Displayname', value);
+        fplin.facecolor = @(obj, value) fcond(obj, 'FaceColor', value);
+        cellapply(axs, fplin, plin);
+    end
     %% roi
     if ~strcmp(proi.draw, "none")
+
+        if isempty(proi.target);  proi.target = 1; end
+        if ~isa(proi.target, 'cell'); proi.target = {proi.target}; end
+        if isempty(proi.number);  proi.number = 1; end
+        if ~isa(proi.number, 'cell'); proi.number = {proi.number}; end
         if ~isa(proi.draw, 'cell'); proi.draw = {proi.draw}; end
-        rois = cellfun(@(target, draw) guiroi(plts(target), draw), ...
-            num2cell(proi.target), proi.draw, UniformOutput = false);
+
+        funcs = cellfun(@(draw) str2func(draw), proi.draw, UniformOutput = false);
+        rois = cellfun(@(f,t,g) f(plts(t).Parent, 'UserData', struct(target = plts(t), group = g)), ...
+            funcs, proi.target, num2cell(1:numel(funcs)), UniformOutput = false);
+
+        numbers = proi.number;
+
+        proi = rmfield(proi, 'draw');
+        proi = rmfield(proi, 'target');
+        proi = rmfield(proi, 'number');
+
+        froi = proi;
+        froi.rlabel = @(obj, value) set(obj, 'Label', value);
+        froi.rcolor = @(obj, value) set(obj, 'Color', value);
+        froi.rposition = @(obj, value) teropf(isempty(value), [], @() set(obj, 'Position', value));
+        froi.rinteraction = @(obj, value) set(obj, 'Interaction', value);
+        froi.rstripecolor  = @(obj, value) set(findobj(obj,'-property','StripeColor'), 'StripeColor', value);
+        froi.ralpha = @(obj, value) set(findobj(obj,'-property','Alpha'), 'Alpha', value);
+        froi.rtag = @(obj, value) set(obj, 'Tag', value);
+        froi.rmarkersize = @(obj, value) teropf(isempty(value), [], @() set(obj, 'MarkerSize', value));
+        froi.rlinewidth = @(obj, value) teropf(isempty(value), [], @() set(obj, 'LineWidth', value));
+        froi.rvisible = @(obj, value) set(obj, 'Visible', value);
+        froi.rcolororder = @(obj, value) set(obj, 'UserData', setfield(obj.UserData, 'colororder', value));
+        froi.rlinealign = @(obj, value) set(obj, 'UserData', setfield(obj.UserData, 'linealign', value));
+        cellapply(rois, froi, proi);
+
+        % replicate roi object
+        cellfun(@(r,n) cellfun(@(n) copyobj(r, gca), num2cell(1:n-1)), rois, numbers, ...
+            UniformOutput = false)
+        % get roi object list
+        rois = flip(findobj(fig, 'Type','images.roi'));
+        % set snap hander
+        cellfun(@(r) addlistener(r, 'MovingROI', @(s,e) roisnaphandler(s, r.UserData.target)), ...
+            num2cell(rois));
+        % define group mask
+        gr = arrayfun(@(r) r.UserData.group, rois);
+        % set colors
+        colors = repmat(colororder, max([max(cell2mat(numbers)), numel(funcs)]), 1);
+        cond = @(r,i) terop(strcmp(r.UserData.colororder,'on'), colors(i,:), colors(r.UserData.group,:));
+        splitapply(@(roi) arrayfun(@(r,i) set(r, 'Color', cond(r,i)), roi, (1:numel(roi))'), rois, gr)
+        % set aligment event
+        cond = @(r,roi) teropf(strcmp(r.UserData.linealign,'on'), ...
+            @() addlistener(r, 'MovingROI', @(s,e) roievtlinalig(e,num2cell(roi))), ...
+            []);
+        splitapply(@(roi) arrayfun(@(r) cond(r,roi), roi), rois, gr)
+
     else
         rois = [];
     end
@@ -213,10 +310,23 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
 
 end
 
-function cellapply(objs, hdls, params)
+function [funcs, params] = cellapply(objs, hdls, params)
     [funcs, params] = parseargs(numel(objs), params);
     funcs = cellfun(@(func) cellfun(@(f) hdls.(f), func, ...
         UniformOutput = false), funcs, UniformOutput = false);
     cellfun(@(obj,func,param) cellfun(@(f,p) f(obj,p{:}), func(:), param(:), UniformOutput = false), ...
         objs(:), funcs(:), params(:), UniformOutput = false)
+end
+
+function roievtlinalig(evt, rois)
+    % event to align ROI object by line
+    num = numel(rois);
+    if isa(evt.Source, 'images.roi.Rectangle')
+        cellfun(@(r) set(r, 'Position', [r.Position(1:2), evt.CurrentPosition(:,3:4)]), rois);
+    end
+    pos = cellfun(@(r) r.Position, rois, UniformOutput = false);
+    pos = cell2mat(arrayfun(@(p1,p2)shiftdim(linspace(p1,p2,num),-1),pos{1},pos{end},'UniformOutput',false));
+    pos = mat2cell(pos,size(pos,1),size(pos,2),ones(1,size(pos,3)));
+    cellfun(@(r, p) set(r, 'Position', p), rois, pos(:));
+    cellfun(@(r) roisnaphandler(r, r.UserData.target), rois)
 end

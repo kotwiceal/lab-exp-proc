@@ -1,9 +1,145 @@
+%% plot, 1D double array, no grid
+t = linspace(0,1)'; x = sin(10*t)+0.5*rand(size(t));
+cellplot('plot',x,axis='square',xlabel='t',ylabel='x');
+%% plot, 1D double array, grid
+t = linspace(0,1)'; x = sin(10*t)+0.5*rand(size(t));
+cellplot('plot',t,x,axis='square',xlabel='t',ylabel='x');
+%% plot, 2D double array, no grid
+t = linspace(0,1)'; x = sin(10*t)+0.5*rand(size(t));
+cellplot('plot',x,axis='square',xlabel='t',ylabel='x');
+%% plot, 2D double array, grid
+t = linspace(0,1)'; x = sin(10*t)+0.5*rand(size(t)); 
+x = cat(2, x, x + 1, x + 2);
+cellplot('plot',x,axis='square',xlabel='t',ylabel='x',legend='on');
+%% plot, 2D double array, grid
+t = linspace(0,1)'; x = sin(10*t)+0.5*rand(size(t)); 
+x = cat(2, x, x + 1, x + 2);
+cellplot('plot',t,x,axis='square',xlabel='t',ylabel='x',legend='on');
+%% plot, 2D cell array, no grid
+t = linspace(0,1)'; x = sin(10*t)+0.5*rand(size(t));
+cellplot('plot',{x, x + 1, x + 2},axis='square',xlabel='t',ylabel='x',...
+    legend='on');
+%% plot, 2D cell array, grid
+t = linspace(0,1)'; x = sin(10*t)+0.5*rand(size(t));
+cellplot('plot',{t, t, t},{x, x + 1, x + 2},axis='square',xlabel='t',...
+    ylabel='x',legend='on');
+%% plot, 2D cell array, grid
+t = linspace(0,1)'; x = sin(10*t)+0.5*rand(size(t)); 
+x = cat(2, x, x + 1, x + 2);
+cellplot('plot',t,x,axis='square',xlabel='t',ylabel='x',legend='on');
+%% contour, 2D double array, no grid
+[x, y] = meshgrid(linspace(0,1),linspace(0,1));
+z = sin(10*x+5*y)+0.5*rand(size(x));
+cellplot('contour',z,xlabel='x',ylabel='y',axis='image',title='z(x,y)',...
+    subtitle='node space')
+%% contour, 2D double array, grid
+[x, y] = meshgrid(linspace(0,1),linspace(0,1));
+z = sin(10*x+5*y)+0.5*rand(size(x));
+cellplot('contour',x,y,z,xlabel='x',ylabel='y',axis='image',title='z(x,y)',...
+    subtitle='real space')
+%% contour, 3D double array, no grid
+[x, y] = meshgrid(linspace(0,1),linspace(0,1));
+z = sin(10*x+5*y)+0.5*rand(size(x)); z = cat(3, z, z + 1);
+cellplot('contour',z,xlabel='x',ylabel='y',axis='image',title='z(x,y)',...
+    subtitle='node space')
+%% contour, 3D double array, grid
+[x, y] = meshgrid(linspace(0,1),linspace(0,1));
+z = sin(10*x+5*y)+0.5*rand(size(x)); z = cat(3, z, z + 1);
+x = cat(3, x, x + 1); y = cat(3, y, y + 1);
+cellplot('contour',x,y,z,xlabel='x',ylabel='y',axis='image',...
+    title='z(x,y)',subtitle='real space')
+%% contour, 3D cell array, no grid
+[x, y] = meshgrid(linspace(0,1),linspace(0,1));
+z = sin(10*x+5*y)+0.5*rand(size(x));
+cellplot('contour',{z,z+1},xlabel='x',ylabel='y',axis='image',...
+    title='z(x,y)',subtitle='node space',colorbar='on')
+%% contour, 3D cell array, grid
+[x, y] = meshgrid(linspace(0,1),linspace(0,1));
+z = sin(10*x+5*y)+0.5*rand(size(x));
+cellplot('contour',{x,x+1},{y,y+1},{z,z+1},xlabel='x',ylabel='y',...
+    axis='image',title='z(x,y)',subtitle='real space',colorbar='on')
+%% plot, 1D double array, no grid + contour, 2D double array, no grid
+t = linspace(0,1)'; x1 = sin(10*t)+0.5*rand(size(t));
+[x, y] = meshgrid(linspace(0,1),linspace(0,1));
+z = sin(10*x+5*y)+0.5*rand(size(x));
+cellplot({'plot','contour'},{[],[]},{x1,[]},{[],z},axis='square',...
+    xlabel={'t','x'},ylabel={'x','y'},colorbar={'off','on'});
+%% plot, 1D double array, grid + contour, 2D double array, grid
+t = linspace(0,1)'; x1 = sin(10*t)+0.5*rand(size(t));
+[x, y] = meshgrid(linspace(0,1),linspace(0,1));
+z = sin(10*x+5*y)+0.5*rand(size(x));
+cellplot({'plot','contour'},{t,x},{x1,y},{[],z},axis='square',...
+    xlabel={'t','x'},ylabel={'x','y'},colorbar={'off','on'},legend='on',...
+    lbackgroundalpha={1,0.1});
+%% contour, 2D double array, grid, customize appearance
+[x, y] = meshgrid(linspace(0,1),linspace(0,1));
+z = sin(10*x+5*y)+0.5*rand(size(x));
+cellplot('contour',x,y,z,axis='square',...
+    xlabel='x',ylabel='y',colorbar='on',legend='on',...
+    lbackgroundalpha=0.75,labelcolor='w',ltitle='z(x,y)');
+%% create multiple axes
+[x, y] = meshgrid(linspace(0,1),linspace(0,1));
+z = sin(10*x+5*y)+0.5*rand(size(x));
+cellplot('contour',x,y,z,axis='square',...
+    xlabel='x',ylabel='y',colorbar='on',legend='on',...
+    lbackgroundalpha=0.75,labelcolor='w',ltitle='z(x,y)');
+t = linspace(0,1,25)'; x = sin(10*t)+0.5*rand(size(t));
+[~, axs, ~] = cellplot('plot',x,axis='square',xlabel='t',ylabel='x',parent=gcf().Children);
+%% append to last axis
+t = linspace(0,1,25)'; x = sin(10*t)+0.5*rand(size(t));
+cellplot('plot',x,axis='square',xlabel='t',ylabel='x',parent=axs);
+%%
+
+
+
+%% roi
+%% plot, 1D double array, no grid, roi drawxrange
+t = linspace(0,1,25)'; x = sin(10*t)+0.5*rand(size(t));
+cellplot('plot',x,axis='square',xlabel='t',ylabel='x',draw='drawxrange');
+%%
+[x, y] = meshgrid(linspace(0,1),linspace(0,1));
+z = sin(10*x+5*y)+0.5*rand(size(x));
+[plts, axs, rois] = cellplot('contour',x,y,z,axis='square',...
+    xlabel='x',ylabel='y',colorbar='on',legend='on',...
+    lbackgroundalpha=0.75,labelcolor='w',ltitle='z(x,y)');
+fig = gcf;
+tl = fig.Children;
+t = linspace(0,1,25)'; x = sin(10*t)+0.5*rand(size(t));
+cellplot('plot',x,axis='square',xlabel='t',ylabel='x',draw='drawxrange',parent=tl);
+%% drawpoint
+clc
+[x, y] = meshgrid(linspace(0,1,25),linspace(0,1,25));
+z = sin(10*x+5*y)+0.5*rand(size(x));
+[plts, axs, rois] = cellplot('contour',x,y,z,axis='square',...
+    xlabel='x',ylabel='y',colorbar='on',legend='on',...
+    lbackgroundalpha=0.75,labelcolor='w',ltitle='z(x,y)',...
+    draw={'drawpoint','drawrectangle'},...
+    number={2,3},target={1,1},rcolororder='off',rlinealign={'off','on'});
+%% drawpolygon
+clc
+[x, y] = meshgrid(linspace(0,1,25),linspace(0,1,25));
+z = sin(10*x+5*y)+0.5*rand(size(x));
+[plts, axs, rois] = cellplot('contour',x,y,z,axis='square',...
+    xlabel='x',ylabel='y',colorbar='on',legend='on',...
+    lbackgroundalpha=0.75,labelcolor='w',ltitle='z(x,y)',...
+    draw={'drawpolygon'},...
+    number={3},target={1},rcolororder='off');
 %%
 clc
-cellplot({'contour','plot'},{rand(10,10,1),rand(10,10,1),rand(10,10,4)})
-%%
-clc
-cellplot({'contour','contour'},rand(3,2,2),{[],[],rand(4,5,3)})
+[plts, axs, rois] = cellplot('contour',x,y,z,axis='square',...
+    xlabel='x',ylabel='y',colorbar='on',legend='on',...
+    lbackgroundalpha=0.75,labelcolor='w',ltitle='z(x,y)');
+drawpoint(Position=[0.5,0.5]);
+% drawpoint(Position=[0.5,0.5]);
+% drawpoint(Position=[0.5,0.5]);
+drawrectangle(Position=[0.5,0.5,1,1]);
+% drawrectangle(Position=[0.5,0.5,1,1]);
+number = [2, 3]';
+% number = [0, 0]';
+rois = flip(findobj(gca, 'Type','images.roi'))
+% arrayfun(@(r) cellfun(@(n) copyobj(r, gca)), rois, UniformOutput = false)
+arrayfun(@(r,n) cellfun(@(n) copyobj(r, gca), num2cell(1:n-1)), rois, number, UniformOutput = false)
+rois = flip(findobj(gca, 'Type','images.roi'))
 %%
 clc
 cellplot('contour',rand(3,2,1),rand(3,2,1),rand(3,2,4))

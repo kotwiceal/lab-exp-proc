@@ -50,7 +50,7 @@ function [stack, group, dim] = wraparrbycell(varargin, kwargs)
 
         % truncate empty trail cells
         ne = find(cellfun(@(x) ~isempty(x), data{i}));
-        data{i} = data{i}(1:ne(end));
+        if ~isempty(data{i}{1}); data{i} = data{i}(1:ne(end)); end
 
         % flat data
         nd = numel(data{i})-1;
@@ -71,6 +71,7 @@ function [stack, group, dim] = wraparrbycell(varargin, kwargs)
         % wrap data
         temp = reshape([temp{:}], [], numel(data{i}));
         temp = cellfun(@(i) temp(i,:), num2cell(1:size(temp,1)), UniformOutput = false);
+        if isempty(temp); temp{1} = {[]}; end
         group = cat(1, group, repmat(i, numel(temp), 1));
         dim = cat(1, dim, repmat(dims(i), numel(temp), 1));
         
