@@ -1,8 +1,8 @@
-function teropf(condition,m,n)
+function y = teropf(condition,m,n)
     % condition ? m() : n();
     if condition
-        m();
+        y = m();
     else
-        n();
+        y = n();
     end
 end

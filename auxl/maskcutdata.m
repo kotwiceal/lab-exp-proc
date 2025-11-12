@@ -45,7 +45,7 @@ function varargout = maskcutdata(mask, varargin, options)
 
     dims = repmat({1:size(mask,2)}, 1, numel(varargin));
 
-    varargout = cellfun(@(dim, data) mdslice(subind, linindr, data, dims = dim, fill = options.fill, ...
+    varargout = cellfun(@(dim, data) mdslice(subind, linindr, dim, data, fill = options.fill, ...
         shape = options.shape), dims, varargin, UniformOutput = false);
 
 end
