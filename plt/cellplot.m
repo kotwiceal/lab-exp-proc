@@ -180,7 +180,7 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
     % gather axes children
     plts = flip(setdiff(findobj('-depth',4), findobj('-depth',3), 'stable'));
 
-    if ~isempty(popt.addax); axs = cat(2, axs, cellfun(@(~) nexttile(tl), num2cell(popt.addax), UniformOutput = false)); end
+    if ~isempty(popt.addax); axs = cat(2, axs, cellfun(@(~) nexttile(tl), num2cell(1:popt.addax), UniformOutput = false)); end
 
     %% customize
     if popt.customize
@@ -225,7 +225,6 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
     end
 
     % customize line
-    % fexpr = @(obj, param, value) teropf(isempty(value), @() [], @() set(flip(findobj(obj.Children, '-property', param)), param, value));
     fexpr = @(obj, param, value) teropf(isempty(value), @() [], @() set(findobj(obj.Children, '-property', param), param, value));
     temp = @(obj, param, value) cellfun(@(c,d) set(c, param, d), num2cell(findobj(obj.Children, '-property', param)), terop(isa(value,'cell'), value(:), {value}), UniformOutput = false);
     fcond2 = @(obj, param, value) teropf(isempty(value), @() [], @() temp(obj, param, value));

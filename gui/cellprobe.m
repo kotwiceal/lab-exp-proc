@@ -1,13 +1,14 @@
-function getdata = pointprobe(plotname, dims, varargin, opt, popt, pax, pset, pclb, plgd, plin, proi)
+function cellprobe(nplot, mnplot, funcs, dims, varargin, opt, popt, pax, pset, pclb, plgd, plin, proi)
     arguments (Input)
-        plotname {mustBeMember(plotname, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
+        nplot {mustBeMember(nplot, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
+        mnplot {mustBeMember(mnplot, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
+        funcs
         dims
     end
     arguments (Input, Repeating)
         varargin {mustBeA(varargin, {'double', 'cell'})}
     end
     arguments (Input)
-        opt.func = []
         opt.dispnameroi (1,1) logical = false
         popt.parent = []
         popt.axpos (1,:) double = []
@@ -92,8 +93,8 @@ function getdata = pointprobe(plotname, dims, varargin, opt, popt, pax, pset, pc
         % roi properties
         proi.draw {mustBeMember(proi.draw, {'none', 'drawpoint', 'drawline', ...
             'drawrectangle', 'drawpolygon', 'drawpolyline', 'drawxrange', 'drawyrange'})} = 'none'
-        proi.target (1,:) {mustBeA(proi.target, {'double', 'cell'})} = []
-        proi.number (1,:) {mustBeA(proi.number, {'double', 'cell'})} = []
+        proi.target (1,:) {mustBeA(proi.target, {'double', 'cell'})} = 1
+        proi.number (1,:) {mustBeA(proi.number, {'double', 'cell'})} = 1
         proi.rposition {mustBeA(proi.rposition, {'double', 'cell'})} = []
         proi.rlabel {mustBeA(proi.rlabel, {'char', 'string', 'cell'})} = ''
         proi.rinteraction {mustBeMember(proi.rinteraction , {'all', 'none', 'translate'})} = 'all' % region selection behaviour
@@ -108,7 +109,7 @@ function getdata = pointprobe(plotname, dims, varargin, opt, popt, pax, pset, pc
         proi.rnumlabel {mustBeMember(proi.rnumlabel, {'on', 'off'})} = 'off'
         proi.rlabelalpha (1,1) double = 1
     end
-    
+
     switch numel(varargin)
         case 2
             % Z,D
@@ -129,58 +130,89 @@ function getdata = pointprobe(plotname, dims, varargin, opt, popt, pax, pset, pc
         otherwise
             return
     end
-    
-    if isempty(opt.func); opt.func = @(x) x; end
 
+    sarg = struct;
+    sarg.plot = mnplot;
+    sarg.draw = proi.draw;
+    sarg.funcs = funcs;
+    sarg.dims = dims;
+    sarg.target = num2cell(proi.target);
+    sarg.number = num2cell(proi.number);
+    sarg.data = marker{end};
+
+    num = max(structfun(@(s) terop(isa(s,'cell'), numel(s), 1), sarg));
+    sarg = parseargs(num, sarg, ans = 'struct');
+    
     % prepare options
-    proi.draw = 'drawpoint';
-    num = max([numel(proi.number),numel(proi.target)]);
-    proi.draw = repelem({proi.draw},num);
-    if isscalar(proi.number); proi.number = repelem(proi.number, num); end
-    if isscalar(proi.target); proi.target = repelem(proi.target, num); end
-    popt.addax = 1;
-    if ~isa(plotname, 'cell'); plotname = {plotname}; end
-    if isa(plotname, 'cell'); plotname = cat(2, plotname, {'plot'}); end
+    popt.addax = num; % to do axis merging by copy axis obj
+    proi.draw = sarg.draw;
+    proi.number = sarg.number;
+    proi.target = sarg.target;
     opts = cat(2, namedargs2cell(popt), namedargs2cell(pax), namedargs2cell(pset), ...
         namedargs2cell(pclb), namedargs2cell(plgd), namedargs2cell(plin), ...
         namedargs2cell(proi));
-    [~, axs, ~] = cellplot(plotname(1:end-1), data{:}, opts{:});
+    [~, axs, ~] = cellplot(nplot, data{:}, opts{:});
 
+    % define axis objects for ROI handler results
+    axroi = axs(end-popt.addax+1:end);
 
-    fslice = @(r) roislicedata(r, r.UserData.target, dims, marker{end}, ...
-        fill = 'none', shape = 'trim');
+    for i = 1:num
 
-    axroi = axs{end-popt.addax+1:end};
-    if ~isa(axroi, 'cell'); axroi = {axroi}; end
+        % define data slicing handler
+        fslice = @(r) roislicedata(r, r.UserData.target, dims, sarg.data{i}, ...
+            fill = 'none', shape = 'trim');
+        
+        func = @(r) sarg.funcs{i}(fslice(r));
 
-    rois = num2cell(flip(findobj(axs{1}.Parent,'type','images.roi.Point')));
+        % get all ROI objects
+        rois = flip(findobj(axs{1}.Parent,'type','images.roi'));
+    
+        % define group mask
+        gr = arrayfun(@(r) r.UserData.group, rois);
 
-    cellfun(@(r, t) set(r, 'Tag', t), rois, num2cell(string(1:numel(rois))'))
+        % select member of group ROI objects
+        rois = rois(gr == i);
 
-    if isscalar(marker); markerx = {[]}; else; markerx = marker{1}; end
+        rois = num2cell(rois);
 
-    cellfun(@(r,t) cellplot(plotname{end}, markerx, fslice(r), parent = axroi, customize = false, ltag = r.Tag), ...
-        rois, UniformOutput = false);
+        % set tag to ROI objects
+        cellfun(@(r, t) set(r, 'Tag', strcat(num2str(i),"-",t)), rois, num2cell(string(1:numel(rois))'))
 
-    cellfun(@(r) set(r, 'UserData', setfield(r.UserData, 'plt', findobj(axroi{1},'Tag',r.Tag))), rois);
+        % set handler to ROI user data
+        cellfun(@(r, t) set(r, 'UserData', setfield(r.UserData, 'func', func)), rois);
 
-    % set display name according to ROI label property
-    if opt.dispnameroi; cellfun(@(r) arrayfun(@(p) set(p, 'DisplayName', r.Label), r.UserData.plt), rois); end
+        % set plot method to ROI user data
+        cellfun(@(r, t) set(r, 'UserData', setfield(r.UserData, 'plot', sarg.plot{i})), rois);
 
-    cellfun(@(r) addlistener(r, 'ROIMoved', @event), rois);
+        % marker = [];
+        % if isscalar(marker); markerx = {[]}; else; markerx = marker{1}; end
+    
+        % plot ROI handler results
+        cellfun(@(r,t) cellplot(sarg.plot{i}, func(r), parent = {axroi{i}}, customize = false, ltag = r.Tag), ...
+            rois, UniformOutput = false);
+    
+        % set tags to axis childrens
+        cellfun(@(r) set(r, 'UserData', setfield(r.UserData, 'plt', findobj(axroi{i},'Tag',r.Tag))), rois);
+    
+        % set display name according to ROI label property
+        if opt.dispnameroi; cellfun(@(r) arrayfun(@(p) set(p, 'DisplayName', r.Label), r.UserData.plt), rois); end
+    
+        % register event
+        cellfun(@(r) addlistener(r, 'ROIMoved', @event), rois);
 
-    getdata = @() getdatah;
+    end
 
     function event(~, evt)
         roi = evt.Source;
-        d = opt.func(fslice(roi)); d = d(:,:); d = mat2cell(d, size(d,1), ones(1,size(d,2)));
-        cellfun(@(plt,d) set(plt, 'YData', d'), num2cell(roi.UserData.plt)', d);
+        d = roi.UserData.func(roi);
+        switch roi.UserData.plot
+            case 'plot'
+                d = d(:,:); d = mat2cell(d, size(d,1), ones(1,size(d,2)));
+                cellfun(@(plt,d) set(plt, 'YData', d), num2cell(roi.UserData.plt)', d);
+            otherwise
+                d = d(:,:,:); d = mat2cell(d, size(d,1), size(d,2), ones(1,size(d,3)));
+                cellfun(@(plt,d) set(plt, 'ZData', d), num2cell(roi.UserData.plt)', d);
+        end
     end
-
-    function res = getdatah()
-        res = struct;
-        robj = num2cell(flip(findobj(axs{1}.Parent,'type','images.roi.Point')));
-        res.position = cellfun(@(r) r.Position, robj, UniformOutput = false);
-    end
-
+    
 end

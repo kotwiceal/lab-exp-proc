@@ -1,5 +1,5 @@
-function getdata = pointprobe(plotname, dims, varargin, opt, popt, pax, pset, pclb, plgd, plin, proi)
-    arguments (Input)
+function histprobe(plotname, dims, varargin, opt, phist, popt, pax, pset, pclb, plgd, plin, proi)
+arguments (Input)
         plotname {mustBeMember(plotname, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
         dims
     end
@@ -9,6 +9,10 @@ function getdata = pointprobe(plotname, dims, varargin, opt, popt, pax, pset, pc
     arguments (Input)
         opt.func = []
         opt.dispnameroi (1,1) logical = false
+        phist.edges (1,:) {mustBeA(phist.edges, {'double', 'cell'})} = []
+        phist.binmethod {mustBeMember(phist.binmethod, {'auto', 'scott', 'fd', 'integers', 'sturges', 'sqrt'})} = 'auto'
+        phist.normalization {mustBeMember(phist.normalization, {'count', ...
+            'probability', 'percentage', 'countdensity', 'cumcount', 'pdf', 'cdf'})} = 'count'
         popt.parent = []
         popt.axpos (1,:) double = []
         popt.docked (1,1) logical = false
@@ -108,7 +112,8 @@ function getdata = pointprobe(plotname, dims, varargin, opt, popt, pax, pset, pc
         proi.rnumlabel {mustBeMember(proi.rnumlabel, {'on', 'off'})} = 'off'
         proi.rlabelalpha (1,1) double = 1
     end
-    
+
+
     switch numel(varargin)
         case 2
             % Z,D
@@ -133,11 +138,12 @@ function getdata = pointprobe(plotname, dims, varargin, opt, popt, pax, pset, pc
     if isempty(opt.func); opt.func = @(x) x; end
 
     % prepare options
-    proi.draw = 'drawpoint';
-    num = max([numel(proi.number),numel(proi.target)]);
-    proi.draw = repelem({proi.draw},num);
-    if isscalar(proi.number); proi.number = repelem(proi.number, num); end
-    if isscalar(proi.target); proi.target = repelem(proi.target, num); end
+    % proi.draw = 'drawpoint';
+    % num = max([numel(proi.number),numel(proi.target)]);
+    % proi.draw = repelem({proi.draw},num);
+    % if isscalar(proi.number); proi.number = repelem(proi.number, num); end
+    % if isscalar(proi.target); proi.target = repelem(proi.target, num); end
+
     popt.addax = 1;
     if ~isa(plotname, 'cell'); plotname = {plotname}; end
     if isa(plotname, 'cell'); plotname = cat(2, plotname, {'plot'}); end
@@ -146,22 +152,32 @@ function getdata = pointprobe(plotname, dims, varargin, opt, popt, pax, pset, pc
         namedargs2cell(proi));
     [~, axs, ~] = cellplot(plotname(1:end-1), data{:}, opts{:});
 
-
+    % define data slicing handler
     fslice = @(r) roislicedata(r, r.UserData.target, dims, marker{end}, ...
         fill = 'none', shape = 'trim');
 
+    % define histogram handler
+    if isempty(phist.edges); phist.edges = 100; end
+    edges = phist.edges; phist = rmfield(phist,'edges');
+    if ~isscalar(edges); phist = rmfield(phist,'binmethod'); end
+    harg = namedargs2cell(phist); harg = cat(2, edges, harg);
+    fhist = @(r) reshape(histcounts(reshape(fslice(r),[],1),harg{:}),[],1);
+
+    % roi
     axroi = axs{end-popt.addax+1:end};
     if ~isa(axroi, 'cell'); axroi = {axroi}; end
 
-    rois = num2cell(flip(findobj(axs{1}.Parent,'type','images.roi.Point')));
+    rois = num2cell(flip(findobj(axs{1}.Parent,'type','images.roi')));
 
     cellfun(@(r, t) set(r, 'Tag', t), rois, num2cell(string(1:numel(rois))'))
 
-    if isscalar(marker); markerx = {[]}; else; markerx = marker{1}; end
+    % marker = [];
+    % if isscalar(marker); markerx = {[]}; else; markerx = marker{1}; end
 
-    cellfun(@(r,t) cellplot(plotname{end}, markerx, fslice(r), parent = axroi, customize = false, ltag = r.Tag), ...
+    cellfun(@(r,t) cellplot(plotname{end}, fhist(r), parent = axroi, customize = false, ltag = r.Tag), ...
         rois, UniformOutput = false);
 
+    % set tags to axis childrens
     cellfun(@(r) set(r, 'UserData', setfield(r.UserData, 'plt', findobj(axroi{1},'Tag',r.Tag))), rois);
 
     % set display name according to ROI label property
@@ -169,18 +185,10 @@ function getdata = pointprobe(plotname, dims, varargin, opt, popt, pax, pset, pc
 
     cellfun(@(r) addlistener(r, 'ROIMoved', @event), rois);
 
-    getdata = @() getdatah;
-
     function event(~, evt)
         roi = evt.Source;
-        d = opt.func(fslice(roi)); d = d(:,:); d = mat2cell(d, size(d,1), ones(1,size(d,2)));
-        cellfun(@(plt,d) set(plt, 'YData', d'), num2cell(roi.UserData.plt)', d);
+        d = opt.func(fhist(roi)); d = d(:,:); d = mat2cell(d, size(d,1), ones(1,size(d,2)));
+        cellfun(@(plt,d) set(plt, 'YData', d), num2cell(roi.UserData.plt)', d);
     end
-
-    function res = getdatah()
-        res = struct;
-        robj = num2cell(flip(findobj(axs{1}.Parent,'type','images.roi.Point')));
-        res.position = cellfun(@(r) r.Position, robj, UniformOutput = false);
-    end
-
+    
 end
