@@ -88,7 +88,8 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
         plin.ltag {mustBeA(plin.ltag, {'char', 'string', 'cell'})} = ''
         % roi properties
         proi.draw {mustBeMember(proi.draw, {'none', 'drawpoint', 'drawline', ...
-            'drawrectangle', 'drawpolygon', 'drawpolyline', 'drawxrange', 'drawyrange'})} = 'none'
+            'drawrectangle', 'drawpolygon', 'drawpolyline', 'drawxline', ...
+            'drawyline', 'drawxrange', 'drawyrange'})} = 'none'
         proi.target (1,:) {mustBeA(proi.target, {'double', 'cell'})} = []
         proi.number (1,:) {mustBeA(proi.number, {'double', 'cell'})} = []
         proi.rposition {mustBeA(proi.rposition, {'double', 'cell'})} = []

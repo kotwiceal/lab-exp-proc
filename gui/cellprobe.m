@@ -9,7 +9,8 @@ function cellprobe(nplot, mnplot, funcs, dims, varargin, opt, popt, pax, pset, p
         varargin {mustBeA(varargin, {'double', 'cell'})}
     end
     arguments (Input)
-        opt.dispnameroi (1,1) logical = false
+        opt.dispnameroi (1,:) logical = false
+        opt.gradcolor (1,:) logical = false
         popt.parent = []
         popt.axpos (1,:) double = []
         popt.docked (1,1) logical = false
@@ -92,7 +93,8 @@ function cellprobe(nplot, mnplot, funcs, dims, varargin, opt, popt, pax, pset, p
         plin.ltag {mustBeA(plin.ltag, {'char', 'string', 'cell'})} = ''
         % roi properties
         proi.draw {mustBeMember(proi.draw, {'none', 'drawpoint', 'drawline', ...
-            'drawrectangle', 'drawpolygon', 'drawpolyline', 'drawxrange', 'drawyrange'})} = 'none'
+            'drawrectangle', 'drawpolygon', 'drawpolyline', 'drawxline', ...
+            'drawyline', 'drawxrange', 'drawyrange'})} = 'none'
         proi.target (1,:) {mustBeA(proi.target, {'double', 'cell'})} = 1
         proi.number (1,:) {mustBeA(proi.number, {'double', 'cell'})} = 1
         proi.rposition {mustBeA(proi.rposition, {'double', 'cell'})} = []
@@ -114,7 +116,7 @@ function cellprobe(nplot, mnplot, funcs, dims, varargin, opt, popt, pax, pset, p
         case 2
             % Z,D
             data = varargin(1);
-            marker = varargin(2);
+            marker = cat(2, {[]}, varargin(2));
         case 3
             % Z,M,D
             data = varargin(1);
@@ -122,7 +124,7 @@ function cellprobe(nplot, mnplot, funcs, dims, varargin, opt, popt, pax, pset, p
         case 4
             % X,Y,Z,D
             data = varargin(1:3);
-            marker = varargin(4);
+            marker = cat(2, {[]}, varargin(4));
         case 5
             % X,Y,Z,M,D
             data = varargin(1:3);
@@ -138,7 +140,10 @@ function cellprobe(nplot, mnplot, funcs, dims, varargin, opt, popt, pax, pset, p
     sarg.dims = dims;
     sarg.target = num2cell(proi.target);
     sarg.number = num2cell(proi.number);
+    sarg.coord = marker{1:end-1};
     sarg.data = marker{end};
+    sarg.gradcolor = opt.gradcolor;
+    sarg.dispnameroi = opt.dispnameroi;
 
     num = max(structfun(@(s) terop(isa(s,'cell'), numel(s), 1), sarg));
     sarg = parseargs(num, sarg, ans = 'struct');
@@ -155,13 +160,20 @@ function cellprobe(nplot, mnplot, funcs, dims, varargin, opt, popt, pax, pset, p
 
     % define axis objects for ROI handler results
     axroi = axs(end-popt.addax+1:end);
-
     for i = 1:num
 
         % define data slicing handler
-        fslice = @(r) roislicedata(r, r.UserData.target, dims, sarg.data{i}, ...
-            fill = 'none', shape = 'trim');
-        
+        switch sarg.draw{i}
+            case 'drawxline'
+                shape = 'bounds';
+            case 'drawyline'
+                shape = 'bounds';
+            otherwise
+                shape = 'trim';
+        end
+        fslice = @(r) roislicedata(r, r.UserData.target, sarg.dims{i}, sarg.data{i}, ...
+            fill = 'none', shape = shape);
+
         func = @(r) sarg.funcs{i}(fslice(r));
 
         % get all ROI objects
@@ -184,18 +196,21 @@ function cellprobe(nplot, mnplot, funcs, dims, varargin, opt, popt, pax, pset, p
         % set plot method to ROI user data
         cellfun(@(r, t) set(r, 'UserData', setfield(r.UserData, 'plot', sarg.plot{i})), rois);
 
-        % marker = [];
-        % if isscalar(marker); markerx = {[]}; else; markerx = marker{1}; end
-    
         % plot ROI handler results
-        cellfun(@(r,t) cellplot(sarg.plot{i}, func(r), parent = {axroi{i}}, customize = false, ltag = r.Tag), ...
+        cellfun(@(r,t) cellplot(sarg.plot{i}, sarg.coord{i}(:), r.UserData.func(r), parent = axroi(i), customize = false, ltag = r.Tag), ...
             rois, UniformOutput = false);
     
         % set tags to axis childrens
         cellfun(@(r) set(r, 'UserData', setfield(r.UserData, 'plt', findobj(axroi{i},'Tag',r.Tag))), rois);
     
         % set display name according to ROI label property
-        if opt.dispnameroi; cellfun(@(r) arrayfun(@(p) set(p, 'DisplayName', r.Label), r.UserData.plt), rois); end
+        if sarg.dispnameroi{i}; cellfun(@(r) arrayfun(@(p) set(p, 'DisplayName', r.Label), r.UserData.plt), rois); end
+
+        % set gradient color
+        if sarg.gradcolor{i}
+            cellfun(@(r) set(r, 'UserData', setfield(r.UserData, 'alpha', linspace(0.1,0.9,numel(r.UserData.plt)))), rois)
+            cellfun(@(r) arrayfun(@(p, a) set(p, 'Color', [r.Color, a]), r.UserData.plt(:), r.UserData.alpha(:)), rois);
+        end
     
         % register event
         cellfun(@(r) addlistener(r, 'ROIMoved', @event), rois);

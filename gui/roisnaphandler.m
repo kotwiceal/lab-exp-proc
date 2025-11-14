@@ -31,13 +31,23 @@ function roisnaphandler(roi, target, options)
 
     k = dsearchn(pos, vrt);
     roi.UserData.linind = k;
-    if isa(roi, 'images.roi.Point')
-        roi.UserData.linindr = roi.UserData.linind;
-    else
+    switch class(roi)
+        case 'images.roi.Point'
+            roi.UserData.linindr = roi.UserData.linind;
+        case 'images.roi.Line'
+            roi.UserData.linindr = roi.UserData.linind;
+        otherwise
         [in, on] = inpolygon(pos(:,1), pos(:,2), vrt(:,1), vrt(:,2));
         ind = in | on;
         roi.UserData.linindr = find(ind);        
     end
+    % if isa(roi, 'images.roi.Point')
+    %     roi.UserData.linindr = roi.UserData.linind;
+    % else
+    %     [in, on] = inpolygon(pos(:,1), pos(:,2), vrt(:,1), vrt(:,2));
+    %     ind = in | on;
+    %     roi.UserData.linindr = find(ind);        
+    % end
     vrt = pos(k,:);
 
     if options.snap
