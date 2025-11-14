@@ -1,17 +1,17 @@
-function roi = drawyrange(varargin, options)
+function roi = drawxline(varargin, options)
     arguments (Input, Repeating)
         varargin 
     end
 
     arguments (Input)
-        options.?images.roi.Rectangle
+        options.?images.roi.Line
     end
 
     arg = namedargs2cell(options);
     if isempty(varargin)
-        roi = drawrectangle(arg{:});
+        roi = drawline(arg{:});
     else
-        roi = drawrectangle(varargin{1}, arg{:});
+        roi = drawline(varargin{1}, arg{:});
     end
 
     addlistener(roi, 'MovingROI', @event)
@@ -22,11 +22,11 @@ end
 
 function event(~, evt)
     switch class(evt)
-        case 'images.roi.Rectangle'
+        case 'images.roi.Line'
             roi = evt;
-        case 'images.roi.RectangleMovingEventData'
+        case 'images.roi.ROIMovingEventData'
             roi = evt.Source;
     end
-    limits = roi.Parent.XLim;
-    roi.Position([1,3]) = [limits(1), limits(2)-limits(1)];
+    roi.Position(:,1) = roi.Parent.XLim;
+    roi.Position(:,2) = mean(roi.Position(:,2));
 end

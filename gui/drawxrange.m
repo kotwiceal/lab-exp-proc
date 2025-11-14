@@ -16,9 +16,17 @@ function roi = drawxrange(varargin, options)
 
     addlistener(roi, 'MovingROI', @event)
     
+    event([], roi)
+
 end
 
 function event(~, evt)
-    limits = evt.Source.Parent.YLim;
-    evt.Source.Position([2,4]) = [limits(1), limits(2)-limits(1)];
+    switch class(evt)
+        case 'images.roi.Rectangle'
+            roi = evt;
+        case 'images.roi.RectangleMovingEventData'
+            roi = evt.Source;
+    end
+    limits = roi.Parent.YLim;
+    roi.Position([2,4]) = [limits(1), limits(2)-limits(1)];
 end
