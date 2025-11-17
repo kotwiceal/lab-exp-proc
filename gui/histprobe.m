@@ -1,18 +1,18 @@
-function histprobe(plotname, dims, varargin, opt, phist, popt, pax, pset, pclb, plgd, plin, proi)
+function histprobe(dplot, dims, varargin, opt, phist, popt, pax, pset, pclb, plgd, plin, proi)
 arguments (Input)
-        plotname {mustBeMember(plotname, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
+        dplot {mustBeMember(dplot, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
         dims
     end
     arguments (Input, Repeating)
         varargin {mustBeA(varargin, {'double', 'cell'})}
     end
     arguments (Input)
-        opt.func = []
         opt.dispnameroi (1,1) logical = false
-        phist.edges (1,:) {mustBeA(phist.edges, {'double', 'cell'})} = []
-        phist.binmethod {mustBeMember(phist.binmethod, {'auto', 'scott', 'fd', 'integers', 'sturges', 'sqrt'})} = 'auto'
+        % phist.edges (1,:) {mustBeA(phist.edges, {'double', 'cell'})} = []
+        % phist.binmethod {mustBeMember(phist.binmethod, {'auto', 'scott', 'fd', 'integers', 'sturges', 'sqrt'})} = 'auto'
         phist.normalization {mustBeMember(phist.normalization, {'count', ...
             'probability', 'percentage', 'countdensity', 'cumcount', 'pdf', 'cdf'})} = 'count'
+        %% cellplot
         popt.parent = []
         popt.axpos (1,:) double = []
         popt.docked (1,1) logical = false
@@ -95,9 +95,10 @@ arguments (Input)
         plin.ltag {mustBeA(plin.ltag, {'char', 'string', 'cell'})} = ''
         % roi properties
         proi.draw {mustBeMember(proi.draw, {'none', 'drawpoint', 'drawline', ...
-            'drawrectangle', 'drawpolygon', 'drawpolyline', 'drawxrange', 'drawyrange'})} = 'none'
-        proi.target (1,:) {mustBeA(proi.target, {'double', 'cell'})} = []
-        proi.number (1,:) {mustBeA(proi.number, {'double', 'cell'})} = []
+            'drawrectangle', 'drawpolygon', 'drawpolyline', 'drawxline', ...
+            'drawyline', 'drawxrange', 'drawyrange'})} = 'none'
+        proi.target (1,:) {mustBeA(proi.target, {'double', 'cell'})} = 1
+        proi.number (1,:) {mustBeA(proi.number, {'double', 'cell'})} = 1
         proi.rposition {mustBeA(proi.rposition, {'double', 'cell'})} = []
         proi.rlabel {mustBeA(proi.rlabel, {'char', 'string', 'cell'})} = ''
         proi.rinteraction {mustBeMember(proi.rinteraction , {'all', 'none', 'translate'})} = 'all' % region selection behaviour
@@ -113,82 +114,70 @@ arguments (Input)
         proi.rlabelalpha (1,1) double = 1
     end
 
-
     switch numel(varargin)
         case 2
             % Z,D
             data = varargin(1);
-            marker = varargin(2);
+            probe = cat(2, {[]}, varargin(2));
         case 3
             % Z,M,D
             data = varargin(1);
-            marker = varargin(2:3);
+            probe = varargin(2:3);
         case 4
             % X,Y,Z,D
             data = varargin(1:3);
-            marker = varargin(4);
+            probe = cat(2, {[]}, varargin(4));
         case 5
             % X,Y,Z,M,D
             data = varargin(1:3);
-            marker = varargin(4:5);
+            probe = varargin(4:5);
         otherwise
             return
     end
-    
-    if isempty(opt.func); opt.func = @(x) x; end
 
-    % prepare options
-    % proi.draw = 'drawpoint';
-    % num = max([numel(proi.number),numel(proi.target)]);
-    % proi.draw = repelem({proi.draw},num);
-    % if isscalar(proi.number); proi.number = repelem(proi.number, num); end
-    % if isscalar(proi.target); proi.target = repelem(proi.target, num); end
+    args = namedargs2cell(phist);
 
-    popt.addax = 1;
-    if ~isa(plotname, 'cell'); plotname = {plotname}; end
-    if isa(plotname, 'cell'); plotname = cat(2, plotname, {'plot'}); end
-    opts = cat(2, namedargs2cell(popt), namedargs2cell(pax), namedargs2cell(pset), ...
+    sarg = struct;
+    sarg.plot = @(d) terop(isa(d,'cell'), 'contourf', 'plot');
+    sarg.edges = probe(1);
+    sarg.data = probe(end);
+    sarg.funcs = @(x,f,e) f(x{:},e{:},args{:});
+
+    num = max(structfun(@(s) terop(isa(s,'cell'), numel(s), 1), sarg));
+    sarg = parseargs(num, sarg, ans = 'struct');
+
+    probe{1} = cellfun(@(e) e(2:end)-diff(e)/2, sarg.edges, ...
+        UniformOutput = false);
+
+    edges = cellfun(@(e) e(2:end)-diff(e)/2, sarg.edges, ...
+        UniformOutput = false);
+    sarg.edges = cellfun(@(e) terop(isempty(e), {100}, e), sarg.edges, ...
+        UniformOutput = false); 
+
+    % medges = cell(numel(edges),1);
+    % [medges{:}] = ndgrid(edges{:});
+
+
+    % args = cat(2, edges, namedargs2cell(phist));
+    % funcs = @(x) histcounts(x{:},args{:});
+    % funcs = @(x) histcounts2(x{:},linspace(0,60),linspace(0,1));
+    % funcs = @(x) histcounts2(x{:},linspace(0,60),linspace(0,1));
+
+
+    % edges = edges(2:end)-diff(edges)/2;
+
+    args = cat(2, namedargs2cell(popt), namedargs2cell(pax), namedargs2cell(pset), ...
         namedargs2cell(pclb), namedargs2cell(plgd), namedargs2cell(plin), ...
         namedargs2cell(proi));
-    [~, axs, ~] = cellplot(plotname(1:end-1), data{:}, opts{:});
 
-    % define data slicing handler
-    fslice = @(r) roislicedata(r, r.UserData.target, dims, marker{end}, ...
-        fill = 'none', shape = 'trim');
+    varargin = cat(2, data, probe);
 
-    % define histogram handler
-    if isempty(phist.edges); phist.edges = 100; end
-    edges = phist.edges; phist = rmfield(phist,'edges');
-    if ~isscalar(edges); phist = rmfield(phist,'binmethod'); end
-    harg = namedargs2cell(phist); harg = cat(2, edges, harg);
-    fhist = @(r) reshape(histcounts(reshape(fslice(r),[],1),harg{:}),[],1);
+    % varargin = cat(2, varargin(1:end-1), {edges(:)}, varargin(end));
 
-    % roi
-    axroi = axs{end-popt.addax+1:end};
-    if ~isa(axroi, 'cell'); axroi = {axroi}; end
+    pplot = cellfun(@(p,d) p(d), sarg.plot, sarg.data, UniformOutput = false);
+    funcs = cellfun(@(f,e,d) @(x) f(x,terop(isa(d,'cell'),@histcounts2,@histcounts),e), ...
+        sarg.funcs, sarg.edges, sarg.data, UniformOutput = false);
 
-    rois = num2cell(flip(findobj(axs{1}.Parent,'type','images.roi')));
-
-    cellfun(@(r, t) set(r, 'Tag', t), rois, num2cell(string(1:numel(rois))'))
-
-    % marker = [];
-    % if isscalar(marker); markerx = {[]}; else; markerx = marker{1}; end
-
-    cellfun(@(r,t) cellplot(plotname{end}, fhist(r), parent = axroi, customize = false, ltag = r.Tag), ...
-        rois, UniformOutput = false);
-
-    % set tags to axis childrens
-    cellfun(@(r) set(r, 'UserData', setfield(r.UserData, 'plt', findobj(axroi{1},'Tag',r.Tag))), rois);
-
-    % set display name according to ROI label property
-    if opt.dispnameroi; cellfun(@(r) arrayfun(@(p) set(p, 'DisplayName', r.Label), r.UserData.plt), rois); end
-
-    cellfun(@(r) addlistener(r, 'ROIMoved', @event), rois);
-
-    function event(~, evt)
-        roi = evt.Source;
-        d = opt.func(fhist(roi)); d = d(:,:); d = mat2cell(d, size(d,1), ones(1,size(d,2)));
-        cellfun(@(plt,d) set(plt, 'YData', d), num2cell(roi.UserData.plt)', d);
-    end
+    cellprobe(dplot,pplot,funcs,dims,varargin{:},args{:})
     
 end

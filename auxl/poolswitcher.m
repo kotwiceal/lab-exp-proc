@@ -3,22 +3,27 @@ function poolobj = poolswitcher(resources, poolsize)
 
     arguments
         resources {mustBeMember(resources, {'Processes', 'Threads', 'backgroundPool'})}
-        poolsize
+        poolsize (1,:) double {mustBeInteger}
     end
 
     poolobj = gcp('nocreate');
     label = [];
+    if isempty(poolsize)
+        arg = {resources};
+    else
+        arg = {resources, poolsize};
+    end
 
     switch class(poolobj)
         case 'parallel.Pool'
             try
-                if ~strcmp(resources, "backgroundPool")
-                    if isempty(getCurrentWorker)
-                        poolobj = parpool(resources, poolsize);
-                    end
-                else
+                if strcmp(resources, "backgroundPool")
                     poolobj = backgroundPool;
                     label = [];
+                else
+                    if isempty(getCurrentWorker)
+                        poolobj = parpool(arg{:});
+                    end
                 end
             catch
             end
@@ -30,7 +35,7 @@ function poolobj = poolswitcher(resources, poolsize)
     if ~isempty(label)
         if (resources ~= label) || (poolsize ~= poolobj.NumWorkers)
             delete(gcp('nocreate'));
-            poolobj = parpool(resources, poolsize);
+            poolobj = parpool(arg{:});
         end
     end
 

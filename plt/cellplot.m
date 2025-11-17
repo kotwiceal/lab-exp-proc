@@ -90,8 +90,8 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
         proi.draw {mustBeMember(proi.draw, {'none', 'drawpoint', 'drawline', ...
             'drawrectangle', 'drawpolygon', 'drawpolyline', 'drawxline', ...
             'drawyline', 'drawxrange', 'drawyrange'})} = 'none'
-        proi.target (1,:) {mustBeA(proi.target, {'double', 'cell'})} = []
-        proi.number (1,:) {mustBeA(proi.number, {'double', 'cell'})} = []
+        proi.rtarget (1,:) {mustBeA(proi.rtarget, {'double', 'cell'})} = []
+        proi.rnumber (1,:) {mustBeA(proi.rnumber, {'double', 'cell'})} = []
         proi.rposition {mustBeA(proi.rposition, {'double', 'cell'})} = []
         proi.rlabel {mustBeA(proi.rlabel, {'char', 'string', 'cell'})} = ''
         proi.rinteraction {mustBeMember(proi.rinteraction , {'all', 'none', 'translate'})} = 'all' % region selection behaviour
@@ -125,6 +125,7 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
             end
         end
     end
+    varargin = cellfun(@(v) terop(isrow(v),v',v), varargin, UniformOutput = false);
     [data, dg] = wraparrbycell(varargin{:}, dims = dims);
     dgn = splitapply(@numel, dg, dg);
 
@@ -250,25 +251,25 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
         if ~isa(proi.rposition, 'cell'); proi.rposition = {{proi.rposition}}; end
         proi.rposition = cellfun(@(p) terop(isa(p,'cell'),p,{p}), proi.rposition, UniformOutput = false);
 
-        if isempty(proi.target);  proi.target = ones(1, numel(proi.draw)); end
-        if ~isa(proi.target, 'cell'); proi.target = num2cell(proi.target); end
+        if isempty(proi.rtarget);  proi.rtarget = ones(1, numel(proi.draw)); end
+        if ~isa(proi.rtarget, 'cell'); proi.rtarget = num2cell(proi.rtarget); end
 
-        if isempty(proi.number); proi.number = cellfun(@(p) numel(p), proi.rposition); end
-        if ~isa(proi.number, 'cell'); proi.number = num2cell(proi.number); end
+        if isempty(proi.rnumber); proi.rnumber = cellfun(@(p) numel(p), proi.rposition); end
+        if ~isa(proi.rnumber, 'cell'); proi.rnumber = num2cell(proi.rnumber); end
 
         % draw roi
         funcs = cellfun(@(draw) str2func(draw), proi.draw, UniformOutput = false);
         expr = @(f,t,g,p) teropf(isempty(p{1}), @() f(plts(t).Parent, 'UserData', struct(target = plts(t), group = g)), ...
             @() f(plts(t).Parent, 'Position', p{1}, 'UserData', struct(target = plts(t), group = g, tindex = t)));
         rois = cellfun(@(f,t,g,p) expr(f,t,g,p), ...
-            funcs, proi.target, num2cell(1:numel(funcs)), proi.rposition, UniformOutput = false);
+            funcs, proi.rtarget, num2cell(1:numel(funcs)), proi.rposition, UniformOutput = false);
         
-        rnumber = proi.number;
-        rposition = cellfun(@(p,n) terop(isscalar(p), repelem(p,n), p), proi.rposition, proi.number, 'UniformOutput', false);
+        rnumber = proi.rnumber;
+        rposition = cellfun(@(p,n) terop(isscalar(p), repelem(p,n), p), proi.rposition, proi.rnumber, 'UniformOutput', false);
 
         proi = rmfield(proi, 'draw');
-        proi = rmfield(proi, 'target');
-        proi = rmfield(proi, 'number');
+        proi = rmfield(proi, 'rtarget');
+        proi = rmfield(proi, 'rnumber');
         proi = rmfield(proi, 'rposition');
 
         froi = proi;

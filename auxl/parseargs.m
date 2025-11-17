@@ -10,7 +10,7 @@ function varargout = parseargs(nargs, args, param)
     % wrap structure field value by cell if is not cell
     args = structfun(@(s) terop(isa(s, 'cell'), s, {s}), args, UniformOutput = false);
     % repeat field element if is scalar cell array
-    args = structfun(@(s) terop(numel(s) > 1, s, repelem(s, nargs)), args, UniformOutput = false);
+    args = structfun(@(s) cat(2, s, repelem(s(end), terop(nargs>numel(s),nargs-numel(s),0))), args, UniformOutput = false);
     switch param.ans
         case 'struct'
             varargout{1} = args;

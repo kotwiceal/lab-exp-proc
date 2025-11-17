@@ -24,7 +24,7 @@ function varargout = filteval(param)
         param.cast {mustBeMember(param.cast, {'int8', 'int16', 'int32', 'int64'})} = 'int32'
         
         % enable multi dimensional slicing
-        % if is not empty `param.filtdim` than `param.kernel` will be modified like `param.kernel = [nan, ..., param.filtdim, ..., nan]`
+        % if is not empty `param.filtdim` than `param.kernel` will be modified like `param.kernel = [nan, ..., kernel, ..., nan] & param.kernel(param.filtdim) = kernel`
         param.slice (1,1) logical = false
 
         % evaluate filter passing
@@ -74,7 +74,6 @@ function varargout = filteval(param)
                     if numel(param.padval{i}) ~= ndimsarg{i}; error('`numel(padval)` must be equal `narg`'); end    
                 end
             end
-            % if numel(param.padval) ~= narg; error('`numel(padval)` must be equal `narg`'); end
             for i = 1:narg
                 if numel(param.padval{i}) ~= ndimsarg{i}; error('`numel(padval{i})` must be equal ndimsarg{i}'); end
                 for j = 1:ndimsarg{i}
@@ -91,6 +90,19 @@ function varargout = filteval(param)
         end
     end
 
+    % filter dimension validation
+    if isempty(param.filtdim)
+        param.filtdim = repmat({[]}, 1, narg);
+    end
+    if isa(param.filtdim, 'double')
+        if isvector(param.filtdim)
+            param.filtdim = repmat({param.filtdim}, 1, narg);
+        else
+            param.filtdim = {param.filtdim};
+        end
+    end
+    if narg ~= numel(param.filtdim); error('number of filter `param.filtdim` must be correspond to number of filtering array'); end
+
     % kernel validation
     if isempty(param.kernel); param.kernel = param.szarg; end
     if isa(param.kernel, 'double')
@@ -102,11 +114,10 @@ function varargout = filteval(param)
     end
     if narg ~= numel(param.kernel); error('number of filter `param.kernel` must be equal one or correspond to number of filtering array'); end
     for i = 1:narg
-        if isvector(param.kernel{i})
+        if isvector(param.kernel{i}) & isempty(param.filtdim{i})
             param.kernel{i}(isnan(param.kernel{i})) = param.szarg{i}(isnan(param.kernel{i}));
         end
-    end   
-    param.kernel = cellfun(@(x) cast(x, param.cast), param.kernel, UniformOutput = false);
+    end
 
     % stride validation
     if isempty(param.stride)
@@ -136,30 +147,18 @@ function varargout = filteval(param)
     if narg ~= numel(param.offset); error('`param.kernel` and `param.offset` dimensions must be equal'); end
     param.offset = cellfun(@(x) cast(x, param.cast), param.offset, UniformOutput = false);
 
-    % filter dimension validation
-    if isempty(param.filtdim)
-        param.filtdim = repmat({[]}, 1, narg);
-    end
-    if isa(param.filtdim, 'double')
-        if isvector(param.filtdim)
-            param.filtdim = repmat({param.filtdim}, 1, narg);
-        else
-            param.filtdim = {param.filtdim};
-        end
-    end
-    if narg ~= numel(param.filtdim); error('number of filter `param.filtdim` must be correspond to number of filtering array'); end
+    % adjust kernel/stride/offset by given filter dimensions
     for i = 1:narg
         if ~isempty(param.filtdim{i})
             if isvector(param.kernel{i})
                 if param.slice
                     kernel = nan(1, numel(param.szarg{i}));
                 else
-                    kernel = ones(1, numel(param.szarg{i}), param.cast);
+                    kernel = ones(1, numel(param.szarg{i}));
                 end
                 kernel(param.filtdim{i}) = param.kernel{i};
                 param.kernel{i} = kernel;
                 param.kernel{i}(isnan(param.kernel{i})) = param.szarg{i}(isnan(param.kernel{i}));
-                param.kernel{i} = cast(param.kernel{i}, param.cast);
             end
 
             if isvector(param.stride{i})
@@ -179,6 +178,7 @@ function varargout = filteval(param)
             param.padval{i} = padval;
         end
     end
+    param.kernel = cellfun(@(x) cast(x, param.cast), param.kernel, UniformOutput = false);
 
     % adjust filter parameters
     tempfunc = @(x) x*(x > 0);

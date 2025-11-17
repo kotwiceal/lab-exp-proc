@@ -14,8 +14,8 @@ function data = imfilt(data, kwargs, opts)
         opts.usefiledatastore (1, 1) logical = false
         opts.useparallel (1,1) logical = false
         opts.extract {mustBeMember(opts.extract, {'readall', 'writeall'})} = 'readall'
-        opts.poolsize (1,:) double = 16
-        opts.resources {mustBeA(opts.resources, {'char', 'string', 'cell'}), mustBeMember(opts.resources, {'Processes', 'Threads', 'backgroundPool'})} = 'backgroundPool'
+        opts.poolsize (1,:) double = []
+        opts.pool {mustBeMember(opts.pool, {'Processes', 'Threads', 'backgroundPool'})} = 'backgroundPool'
     end
 
     arguments (Output)
@@ -27,14 +27,14 @@ function data = imfilt(data, kwargs, opts)
             data = nonlinfilt(@(x,~) wiener2(x, kwargs.filtker), data, kernel = [nan, nan], padval = false, ...
                 verbose = kwargs.verbose, usefiledatastore = opts.usefiledatastore, ...
                 useparallel = opts.useparallel, extract = opts.extract, ...
-                resources = opts.resources);
+                pool = opts.pool, poolsize = opts.poolsize);
         case 'median'
             kerfunc = @(y,~) nonlinfilt(@(x,~) median(x(:), 'omitmissing'), y, kernel = kwargs.filtker, padval = kwargs.padval);
 
             data = nonlinfilt(kerfunc, data, kernel = [nan, nan], padval = false, ...
                 verbose = kwargs.verbose, usefiledatastore = opts.usefiledatastore, ...
                 useparallel = opts.useparallel, extract = opts.extract, ...
-                resources = opts.resources);
+                pool = opts.pool, poolsize = opts.poolsize);
 
             % m = numel(kwargs.filtker);
             % n = ndims(data) - numel(kwargs.filtker);
@@ -50,13 +50,13 @@ function data = imfilt(data, kwargs, opts)
                 data = nonlinfilt(@(x,~) fillmissing2(x, kwargs.method), data, kernel = [nan, nan], padval = false, ...
                     verbose = kwargs.verbose, usefiledatastore = opts.usefiledatastore, ...
                     useparallel = opts.useparallel, extract = opts.extract, ...
-                    resources = opts.resources, poolsize = opts.poolsize);
+                    pool = opts.pool, poolsize = opts.poolsize);
             end
         case 'mediancond'
             data = nonlinfilt(@(x,~) kermedcond(x, kwargs.mediancondvars), data, kernel = kwargs.filtker, ...
                 padval = kwargs.padval, verbose = kwargs.verbose, usefiledatastore = opts.usefiledatastore, ...
                 useparallel = opts.useparallel, extract = opts.extract, ...
-                resources = opts.resources);
+                pool = opts.pool, poolsize = opts.poolsize);
         otherwise
             if kwargs.filt ~= "none"
                 data = imfilter(data, fspecial(kwargs.filt, kwargs.filtker), kwargs.padval);

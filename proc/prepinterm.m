@@ -2,9 +2,9 @@ function result = prepinterm(data, kwargs)
     %% Prepare data to process intermittency.
 
     %% Examples:
-    %% 1. Process a velocity directed gradient:
+    %% 1. Calculate a velocity directional derivative:
     % data.dwdl = prepinterm(data, type = 'dirgrad');
-    %% 2. Process a lambda-2 criteria with custom settings:
+    %% 2. Calculate a lambda-2 criteria:
     % data.l2 = prepinterm(data, type = 'l2', diffilt = 'sobel', prefilt = 'wiener', ...
     %       prefiltker = [15, 15], postfilt = 'median', postfiltker = [15, 15]);
 
@@ -44,10 +44,10 @@ function result = prepinterm(data, kwargs)
         % postfilter
         kwargs.postfiltker (1,:) double = [15, 15] % postfilter kernel size
         kwargs.postfiltpool {mustBeMember(kwargs.postfiltpool, {'Processes', 'Threads', 'backgroundPool'})} = 'backgroundPool'
-        kwargs.postfiltpoolsize (1,:) {mustBeInteger} = 16
+        kwargs.postfiltpoolsize (1,:) {mustBeInteger} = []
         %% optional
         kwargs.pool {mustBeMember(kwargs.pool, {'Processes', 'Threads', 'backgroundPool'})} = 'backgroundPool'
-        kwargs.poolsize (1,:) double = 16
+        kwargs.poolsize (1,:) double = []
         kwargs.usefiledatastore (1, 1) logical = false
         kwargs.useparallel (1,1) logical = false
         kwargs.extract {mustBeMember(kwargs.extract, {'readall', 'writeall'})} = 'readall'
@@ -56,15 +56,13 @@ function result = prepinterm(data, kwargs)
     result = [];
 
     if isfield(data, 'u') && isfield(data, 'w')
-        u = data.u; w = data.w;
-    
         % norm velocity
         if kwargs.norm
             if ~(isfield(data, 'U') && isfield(data, 'W'))
-                data.U = u(:,:,:,end);
-                data.W = w(:,:,:,end);
-                u = u(:,:,:,1:end-1);
-                w = w(:,:,:,1:end-1);
+                data.U = data.u(:,:,:,end);
+                data.W = data.w(:,:,:,end);
+                data.u = data.u(:,:,:,1:end-1);
+                data.w = data.w(:,:,:,1:end-1);
             end
 
             if kwargs.fillmiss ~= "none"
@@ -76,10 +74,10 @@ function result = prepinterm(data, kwargs)
                 data.W = imfilt(data.W, filt = kwargs.corefilt, ...
                     filtker = kwargs.corefiltker, padval = kwargs.corepadval);
             end
-            Vm = hypot(data.U, data.W);
-            if ~ismatrix(Vm); Vm = mean(Vm, 3, 'omitmissing'); end
-            u = u./Vm;
-            w = w./Vm;
+            data.Vm = hypot(data.U, data.W);
+            if ~ismatrix(data.Vm); data.Vm = mean(data.Vm, 3, 'omitmissing'); end
+            data.u = data.u./data.Vm;
+            data.w = data.w./data.Vm;
         end
     end
 
@@ -90,7 +88,7 @@ function result = prepinterm(data, kwargs)
         case 'dirgrad'
             kernel = [nan, nan];
             padval = false;
-            arg = {u, w};
+            arg = {data.u, data.w};
             handl = @(u,w,~) dirgrad(u, w, kwargs.angle, component = kwargs.component, ...
                 diffilt = kwargs.diffilt, fillmiss = kwargs.fillmiss, ...
                 prefilt = kwargs.prefilt, prefiltker = kwargs.prefiltker, ...
@@ -98,7 +96,7 @@ function result = prepinterm(data, kwargs)
         case 'l2'
             kernel = [nan, nan];
             padval = false;
-            arg = {u, w};
+            arg = {data.u, data.w};
             handl = @(u,w,~) vortind(u, w, type = 'l2', diffilt = kwargs.diffilt, prefilt = kwargs.prefilt, abs = kwargs.abs, ...
                 prefiltker = kwargs.prefiltker, threshold = kwargs.threshold, pow = kwargs.pow, eigord = kwargs.eigord, ...
                 postfilt = kwargs.postfilt, postfiltker = kwargs.postfiltker, fillmiss = kwargs.fillmiss);
@@ -113,7 +111,7 @@ function result = prepinterm(data, kwargs)
         case 'vm'
             kernel = [nan, nan];
             padval = false;
-            arg = {u, w};
+            arg = {data.u, data.w};
             handl = @(u,w,~) procvel(u, w, ...
                 fillmiss = kwargs.fillmiss, prefilt = kwargs.prefilt, ...
                 prefiltker = kwargs.prefiltker, postfilt = kwargs.postfilt, ...
@@ -123,13 +121,12 @@ function result = prepinterm(data, kwargs)
             kernel = nan(1, ndims(v)); kernel(kwargs.dirdim) = numel(diffilt);
             padval = num2cell(false(1, ndims(v)));
             padval{kwargs.dirdim} = 'symmetric';
-
             handl = @(x,~) squeeze(tensorprod(diffilt(:), x, 1, kwargs.dirdim)).^kwargs.pow;
             arg{1} = v;
     end
 
     result = nonlinfilt(handl, arg{:}, kernel = kernel, padval = padval, ...
-        resources = kwargs.pool, poolsize = kwargs.poolsize, ....
+        pool = kwargs.pool, poolsize = kwargs.poolsize, ....
         usefiledatastore = kwargs.usefiledatastore, ...
         useparallel = kwargs.useparallel, extract = kwargs.extract);
 
@@ -137,14 +134,8 @@ function result = prepinterm(data, kwargs)
     switch kwargs.type
         case 'dt'
             result = ndfilt(result, filt = kwargs.postfilt, filtker = kwargs.postfiltker, ...
-                filtdim = kwargs.dirdim, padval = padval, resources = kwargs.postfiltpool, ...
+                filtdim = kwargs.dirdim, padval = padval, pool = kwargs.postfiltpool, ...
                 poolsize = kwargs.postfiltpoolsize);
-            % kernel(kwargs.dirdim) = kwargs.postfiltker;
-            % result = nonlinfilt(@(x, ~) median(x, kwargs.dirdim), result, ...
-            %     kernel = kernel, padval = padval,...
-            %     resources = kwargs.pool, poolsize = kwargs.poolsize, ...
-            %     usefiledatastore = kwargs.usefiledatastore, ...
-            %     useparallel = kwargs.useparallel, extract = kwargs.extract);
     end
     
     clearAllMemoizedCaches

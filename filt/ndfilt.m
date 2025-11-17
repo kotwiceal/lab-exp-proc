@@ -6,17 +6,16 @@ function data = ndfilt(data, kwargs, opts)
         % filter name
         kwargs.filt {mustBeMember(kwargs.filt, {'none', 'gaussian', 'average', 'sobel', 'median', 'fillmiss', 'griddatan'})} = 'gaussian'
         kwargs.filtker (1,:) double = [] % kernel size
-        kwargs.filtdim (1,:) double = []
+        kwargs.filtdim (1,:) double = [] % filter dimension 
         kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string', 'logical', 'cell'})} = 'symmetric' % padding value
         kwargs.method (1,:) char {mustBeMember(kwargs.method, {'none', 'linear', 'nearest', 'natural', 'cubic', 'v4'})} = 'nearest' % at specifying `filtker=fillmiss`
         kwargs.zero2nan (1,1) logical = true
         kwargs.verbose (1,1) logical = false
-        kwargs.mediancondvars (1,2) double = [1, 1]
         opts.usefiledatastore (1, 1) logical = false
         opts.useparallel (1,1) logical = false
         opts.extract {mustBeMember(opts.extract, {'readall', 'writeall'})} = 'readall'
-        opts.poolsize (1,:) double = 16
-        opts.resources {mustBeA(opts.resources, {'char', 'string', 'cell'}), mustBeMember(opts.resources, {'Processes', 'Threads', 'backgroundPool'})} = 'Threads'
+        opts.poolsize (1,:) double = [] % pool size
+        opts.pool {mustBeMember(opts.pool, {'Processes', 'Threads', 'backgroundPool'})} = 'Threads'
     end
 
     arguments (Output)
@@ -28,12 +27,14 @@ function data = ndfilt(data, kwargs, opts)
     switch kwargs.filt
         case 'median'
             if isempty(kwargs.filtdim)
-                filtdim = 1:numel(kwargs.filtker);
-                filtdim(kwargs.filtker == 1) = [];
-            else
-                filtdim = kwargs.filtdim;
+                kwargs.filtdim = 1:numel(kwargs.filtker);
+                kwargs.filtdim(kwargs.filtker == 1) = [];
             end
-            kerfunc = @(x, ~) squeeze(median(x, filtdim, 'omitmissing'));
+            kerfunc = @(x, ~) squeeze(median(x, kwargs.filtdim, 'omitmissing'));
+            kernel = nan(1, ndims(data));
+            kernel(kwargs.filtdim) = kwargs.filtker;
+            kwargs.filtker = kernel;
+            kwargs.filtdim = [];
         case 'fillmiss'
             if kwargs.method ~= "none"
                 if isempty(kwargs.filtdim); kwargs.filtdim = 1:numel(kwargs.filtker); end
@@ -97,7 +98,7 @@ function data = ndfilt(data, kwargs, opts)
             usefiledatastore = opts.usefiledatastore, ...
             useparallel = opts.useparallel, ...
             extract = opts.extract, ...
-            resources = opts.resources, ...
+            pool = opts.pool, ...
             poolsize = opts.poolsize);
     end
 

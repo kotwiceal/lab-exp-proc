@@ -1,0 +1,29 @@
+%% wire/yz-scan
+load('files/data/cta_f37.8hz_u31.2mps_x270mm_yz_scan_single_rough_h260um_date20251113.mat')
+data = prepcta(data, storeraw = true);
+data.raw = data.raw(:,:,:,1);
+%%
+data.dudt = prepinterm(data, type = 'dt', diffilt = 'sobel', ...
+    dirdim = 3, postfilt = 'median', postfiltker = 50);
+%%
+clc
+rpos = {[175,2],[180,2]};
+cellprobe('contourf','plot',@(x)x{:},[1,2],data.z,data.y,data.vm,...
+    {data.raw,data.dudt},draw='drawpoint',axis={'equal','auto'},...
+    xlim={'auto',[1,200]},rposition=rpos,rnumber=2)
+%%
+clc
+rpos = {[175,2],[180,2]};
+cellprobe('contourf','plot',@(x)x{:},[1,2],data.z,data.y,data.vm,...
+    {data.raw,data.dudt},draw='drawpoint',axis={'equal','auto'},...
+    xlim={'auto',[1,200]},rposition=rpos,rgroup=[1,2],rnumber=2)
+%%
+data.bins = linspace(0,1,200);
+data.h = nonlinfilt(@(x, ~) histcounts(x(:),data.bins,'Normalization','pdf'), data.dudt, ...
+    filtdim = 3, kernel = nan, ...
+    padval = false);
+%%
+data.h = nonlinfilt(@(x, ~) histcounts(x(:),data.bins,'Normalization','pdf'), data.dudt, ...
+    kernel = [1,1,nan], ...
+    padval = false);
+%%

@@ -92,26 +92,26 @@ cellplot('plot',x,axis='square',xlabel='t',ylabel='x',parent=axs);
 %% drawpolygon/3, manual position
 [x, y] = meshgrid(linspace(0,1,25),linspace(0,1,25));
 z = sin(10*x+5*y)+0.5*rand(size(x));
-cellplot('contour',x,y,z,draw='drawpolygon',number=3,rcolororder='on',...
+cellplot('contour',x,y,z,draw='drawpolygon',rnumber=3,rcolororder='on',...
     rlinealign='on',ralpha=0.1,rlinewidth=0.5);
 %% drawpolygon/2, cell position/1
 pos = {{[0.2,0.2;0.4,0.2;0.3,0.4]}};
 [x, y] = meshgrid(linspace(0,1,25),linspace(0,1,25));
 z = sin(10*x+5*y)+0.5*rand(size(x));
-cellplot('contour',x,y,z,draw='drawpolygon',number=3,rcolororder='on',...
+cellplot('contour',x,y,z,draw='drawpolygon',rnumber=3,rcolororder='on',...
     rlinealign='on',ralpha=0.1,rlinewidth=0.5,rposition=pos);
 %% drawpolygon/3, array position/1
 pos = [0.2,0.2;0.4,0.2;0.3,0.4];
 [x, y] = meshgrid(linspace(0,1,25),linspace(0,1,25));
 z = sin(10*x+5*y)+0.5*rand(size(x));
-cellplot('contour',x,y,z,draw='drawpolygon',number=3,rcolororder='on',...
+cellplot('contour',x,y,z,draw='drawpolygon',rnumber=3,rcolororder='on',...
     rlinealign='on',ralpha=0.1,rlinewidth=0.5,rposition=pos);
 %% drawpolygon/3, cell position/3
 pos = {{[0.2,0.2;0.4,0.2;0.3,0.4], [0.2,0.2;0.4,0.2;0.3,0.4]+0.2, ...
     [0.2,0.2;0.4,0.2;0.3,0.4]+0.3}};
 [x, y] = meshgrid(linspace(0,1,25),linspace(0,1,25));
 z = sin(10*x+5*y)+0.5*rand(size(x));
-cellplot('contour',x,y,z,draw='drawpolygon',number=3,rcolororder='on',...
+cellplot('contour',x,y,z,draw='drawpolygon',rnumber=3,rcolororder='on',...
     rlinealign='on',ralpha=0.1,rlinewidth=0.5,rposition=pos,rnumlabel='on');
 %% drawpoint/2+drawpolygon/3, manual position
 [x, y] = meshgrid(linspace(0,1,25),linspace(0,1,25));
@@ -121,19 +121,19 @@ cellplot('contour',x,y,z,draw={'drawpoint','drawpolygon'},...
 %% drawpoint/2+drawpolygon/3, manual position, specify number
 [x, y] = meshgrid(linspace(0,1,25),linspace(0,1,25));
 z = sin(10*x+5*y)+0.5*rand(size(x));
-cellplot('contour',x,y,z,draw={'drawpoint','drawpolygon'},number=[2,3],...
+cellplot('contour',x,y,z,draw={'drawpoint','drawpolygon'},rnumber=[2,3],...
     rcolororder='on',rlinealign='on',ralpha=0.1,rlinewidth=0.5);
 %% drawpoint/2+drawpolygon/3, cell position/2 with empty mask, specify number
 pos = {{[0.2,0.2]}, {[]}};
 [x, y] = meshgrid(linspace(0,1,25),linspace(0,1,25));
 z = sin(10*x+5*y)+0.5*rand(size(x));
-cellplot('contour',x,y,z,draw={'drawpoint','drawpolygon'},number=[2,3],...
+cellplot('contour',x,y,z,draw={'drawpoint','drawpolygon'},rnumber=[2,3],...
     rcolororder='on',rlinealign='on',ralpha=0.1,rlinewidth=0.5,rposition=pos);
 %% drawpoint/2+drawpolygon/3, cell position/2, specify number
 pos = {{[0.1,0.7]}, {[0.2,0.2;0.4,0.2;0.3,0.4]}};
 [x, y] = meshgrid(linspace(0,1,25),linspace(0,1,25));
 z = sin(10*x+5*y)+0.5*rand(size(x));
-cellplot('contour',x,y,z,draw={'drawpoint','drawpolygon'},number=[2,3],...
+cellplot('contour',x,y,z,draw={'drawpoint','drawpolygon'},rnumber=[2,3],...
     rcolororder='on',rlinealign='on',ralpha=0.1,rlinewidth=0.5,rposition=pos);
 %% drawpoint/2+drawpolygon/3, cell position/2
 pos = {{[0.1,0.7]}, {[0.2,0.2;0.4,0.2;0.3,0.4]}};

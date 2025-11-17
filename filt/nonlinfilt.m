@@ -1,4 +1,4 @@
-function result = nonlinfilt(method, varargin, kwargs, opts, pool)
+function result = nonlinfilt(method, varargin, kwargs, opts, popts)
     %% Filter data by multi dimensional sliding window and multi argument nonlinear kernel.
     % `varargin` is a positional argument corresponding to the data.
     %
@@ -76,7 +76,7 @@ function result = nonlinfilt(method, varargin, kwargs, opts, pool)
         kwargs.cast (1,:) char {mustBeMember(kwargs.cast, {'int8', 'int16', 'int32', 'int64'})} = 'int32' % cast type of evaluated filter indexes
         kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string', 'logical', 'cell'})} = nan % padding value
         % enable multi dimensional slicing
-        % if is not empty `param.filtdim` than `param.kernel` will be modified like `param.kernel = [nan, ..., param.filtdim, ..., nan]`
+        % if is not empty `param.filtdim` than `param.kernel` will be modified like `param.kernel = [nan, ..., kernel, ..., nan] & param.kernel(param.filtdim) = kernel`
         kwargs.slice (1,1) logical = false
         opts.verbose logical {mustBeScalarOrEmpty} = false % enable logger
         opts.ans {mustBeMember(opts.ans, {'array', 'cell', 'filedatastore'})} = 'array' % returned data type 
@@ -91,8 +91,8 @@ function result = nonlinfilt(method, varargin, kwargs, opts, pool)
         % than apply `method`; `writeall` slicing load data from datastore
         % and save result in the buffer new filedatastore
         opts.extract {mustBeMember(opts.extract, {'readall', 'writeall'})} = 'readall'
-        pool.poolsize (1,:) double = 16
-        pool.resources {mustBeA(pool.resources, {'char', 'string', 'cell'}), mustBeMember(pool.resources, {'Processes', 'Threads', 'backgroundPool'})} = 'Threads'
+        popts.poolsize (1,:) double = []
+        popts.pool {mustBeMember(popts.pool, {'Processes', 'Threads', 'backgroundPool'})} = 'backgroundPool'
     end
 
     arguments (Output)
@@ -100,13 +100,14 @@ function result = nonlinfilt(method, varargin, kwargs, opts, pool)
     end
 
     % parse pool parameters
-    if isa(pool.poolsize, 'double'); pool.poolsize = num2cell(pool.poolsize); end
-    if isscalar(pool.poolsize); pool.poolsize = repmat(pool.poolsize, 1, 2); end
-    if isa(pool.resources, 'char'); pool.resources = string(pool.resources); end
-    if isscalar(pool.resources); pool.resources = repmat(pool.resources, 1, 2); end
-    if ~isa(pool.resources, 'cell'); pool.resources = cellstr(pool.resources); end
+    if isempty(popts.poolsize); popts.poolsize = {[]}; end
+    if isa(popts.poolsize, 'double'); popts.poolsize = num2cell(popts.poolsize); end
+    if isscalar(popts.poolsize); popts.poolsize = repelem(popts.poolsize, 2); end
+    if isa(popts.pool, 'char'); popts.pool = string(popts.pool); end
+    if isscalar(popts.pool); popts.pool = repmat(popts.pool, 1, 2); end
+    if ~isa(popts.pool, 'cell'); popts.pool = cellstr(popts.pool); end
     % prepare pool
-    poolarg = cellfun(@(x,y){x,y}, pool.resources, pool.poolsize, UniformOutput = false);
+    poolarg = cellfun(@(x,y){x,y}, popts.pool, popts.poolsize, UniformOutput = false);
     poolobj = poolswitcher(poolarg{1}{:});
 
     timer = tic;

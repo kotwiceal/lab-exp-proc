@@ -1,7 +1,7 @@
-function cellprobe(nplot, mnplot, funcs, dims, varargin, opt, popt, pax, pset, pclb, plgd, plin, proi)
+function cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, pax, pset, pclb, plgd, plin, proi)
     arguments (Input)
-        nplot {mustBeMember(nplot, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
-        mnplot {mustBeMember(mnplot, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
+        dplot {mustBeMember(dplot, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
+        pplot {mustBeMember(pplot, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
         funcs
         dims
     end
@@ -11,6 +11,8 @@ function cellprobe(nplot, mnplot, funcs, dims, varargin, opt, popt, pax, pset, p
     arguments (Input)
         opt.dispnameroi (1,:) logical = false
         opt.gradcolor (1,:) logical = false
+        opt.rgroup (1,:) double = []
+        %% cellplot
         popt.parent = []
         popt.axpos (1,:) double = []
         popt.docked (1,1) logical = false
@@ -95,8 +97,8 @@ function cellprobe(nplot, mnplot, funcs, dims, varargin, opt, popt, pax, pset, p
         proi.draw {mustBeMember(proi.draw, {'none', 'drawpoint', 'drawline', ...
             'drawrectangle', 'drawpolygon', 'drawpolyline', 'drawxline', ...
             'drawyline', 'drawxrange', 'drawyrange'})} = 'none'
-        proi.target (1,:) {mustBeA(proi.target, {'double', 'cell'})} = 1
-        proi.number (1,:) {mustBeA(proi.number, {'double', 'cell'})} = 1
+        proi.rtarget (1,:) {mustBeA(proi.rtarget, {'double', 'cell'})} = 1
+        proi.rnumber (1,:) {mustBeA(proi.rnumber, {'double', 'cell'})} = 1
         proi.rposition {mustBeA(proi.rposition, {'double', 'cell'})} = []
         proi.rlabel {mustBeA(proi.rlabel, {'char', 'string', 'cell'})} = ''
         proi.rinteraction {mustBeMember(proi.rinteraction , {'all', 'none', 'translate'})} = 'all' % region selection behaviour
@@ -116,50 +118,64 @@ function cellprobe(nplot, mnplot, funcs, dims, varargin, opt, popt, pax, pset, p
         case 2
             % Z,D
             data = varargin(1);
-            marker = cat(2, {[]}, varargin(2));
+            probe = cat(2, {[]}, varargin(2));
         case 3
             % Z,M,D
             data = varargin(1);
-            marker = varargin(2:3);
+            probe = varargin(2:3);
         case 4
             % X,Y,Z,D
             data = varargin(1:3);
-            marker = cat(2, {[]}, varargin(4));
+            probe = cat(2, {[]}, varargin(4));
         case 5
             % X,Y,Z,M,D
             data = varargin(1:3);
-            marker = varargin(4:5);
+            probe = varargin(4:5);
         otherwise
             return
     end
 
     sarg = struct;
-    sarg.plot = mnplot;
+    sarg.plot = pplot;
     sarg.draw = proi.draw;
     sarg.funcs = funcs;
     sarg.dims = dims;
-    sarg.target = num2cell(proi.target);
-    sarg.number = num2cell(proi.number);
-    sarg.coord = marker{1:end-1};
-    sarg.data = marker{end};
+    sarg.target = num2cell(proi.rtarget);
+    sarg.number = num2cell(proi.rnumber);
+    sarg.coord = probe{1:end-1};
+    sarg.data = probe{end};
     sarg.gradcolor = opt.gradcolor;
     sarg.dispnameroi = opt.dispnameroi;
 
     num = max(structfun(@(s) terop(isa(s,'cell'), numel(s), 1), sarg));
     sarg = parseargs(num, sarg, ans = 'struct');
     
+    % wrap to cell
+    sarg.coord = cellfun(@(c) terop(isa(c,'cell'),c,{terop(isrow(c),c',c)}), sarg.coord, ...
+        UniformOutput = false);
+    sarg.data = cellfun(@(d) terop(isa(d,'cell'),d,{d}), sarg.data, ...
+        UniformOutput = false);
+
     % prepare options
     popt.addax = num; % to do axis merging by copy axis obj
     proi.draw = sarg.draw;
-    proi.number = sarg.number;
-    proi.target = sarg.target;
+    proi.rnumber = sarg.number;
+    proi.rtarget = sarg.target;
     opts = cat(2, namedargs2cell(popt), namedargs2cell(pax), namedargs2cell(pset), ...
         namedargs2cell(pclb), namedargs2cell(plgd), namedargs2cell(plin), ...
         namedargs2cell(proi));
-    [~, axs, ~] = cellplot(nplot, data{:}, opts{:});
+    % plot
+    [~, axs, ~] = cellplot(dplot, data{:}, opts{:});
 
     % define axis objects for ROI handler results
     axroi = axs(end-popt.addax+1:end);
+
+    % get all ROI objects
+    roisg = flip(findobj(axs{1}.Parent,'type','images.roi'));
+    
+    % define group mask
+    gr = arrayfun(@(r) r.UserData.group, roisg);
+
     for i = 1:num
 
         % define data slicing handler
@@ -171,24 +187,19 @@ function cellprobe(nplot, mnplot, funcs, dims, varargin, opt, popt, pax, pset, p
             otherwise
                 shape = 'trim';
         end
-        fslice = @(r) roislicedata(r, r.UserData.target, sarg.dims{i}, sarg.data{i}, ...
-            fill = 'none', shape = shape);
+        fslice = @(r) cellfun(@(d) roislicedata(r, r.UserData.target, sarg.dims{i}, d, ...
+            fill = 'none', shape = shape), sarg.data{i}, UniformOutput = false);
 
         func = @(r) sarg.funcs{i}(fslice(r));
 
-        % get all ROI objects
-        rois = flip(findobj(axs{1}.Parent,'type','images.roi'));
-    
-        % define group mask
-        gr = arrayfun(@(r) r.UserData.group, rois);
-
         % select member of group ROI objects
-        rois = rois(gr == i);
+        rois = roisg(gr == i);
 
         rois = num2cell(rois);
 
         % set tag to ROI objects
-        cellfun(@(r, t) set(r, 'Tag', strcat(num2str(i),"-",t)), rois, num2cell(string(1:numel(rois))'))
+        cellfun(@(r, t) set(r, 'Tag', strcat(num2str(i),"-",t)), rois, ...
+            num2cell(string(1:numel(rois))'))
 
         % set handler to ROI user data
         cellfun(@(r, t) set(r, 'UserData', setfield(r.UserData, 'func', func)), rois);
@@ -197,7 +208,8 @@ function cellprobe(nplot, mnplot, funcs, dims, varargin, opt, popt, pax, pset, p
         cellfun(@(r, t) set(r, 'UserData', setfield(r.UserData, 'plot', sarg.plot{i})), rois);
 
         % plot ROI handler results
-        cellfun(@(r,t) cellplot(sarg.plot{i}, sarg.coord{i}(:), r.UserData.func(r), parent = axroi(i), customize = false, ltag = r.Tag), ...
+        cellfun(@(r,t) cellplot(sarg.plot{i}, sarg.coord{i}{:}, r.UserData.func(r), ...
+            parent = axroi(i), customize = false, ltag = r.Tag), ...
             rois, UniformOutput = false);
     
         % set tags to axis childrens
@@ -213,17 +225,30 @@ function cellprobe(nplot, mnplot, funcs, dims, varargin, opt, popt, pax, pset, p
         end
     
         % register event
-        cellfun(@(r) addlistener(r, 'ROIMoved', @event), rois);
+        cellfun(@(r) set(r, 'UserData', setfield(r.UserData, 'listener', addlistener(r, 'ROIMoved', @event))), rois);
 
+    end
+
+    % snap ROI pairs by given group
+    if isa(opt.rgroup,'double'); opt.rgroup = {opt.rgroup}; end
+    for i = 1:numel(opt.rgroup)
+        if ~isempty(opt.rgroup)
+            rois = reshape(roisg(ismember(gr,opt.rgroup{i})),[],numel(opt.rgroup{1}));
+            addlistener(rois, 'ROIMoved', @(s,e) e.Source.UserData.listener.Callback([],e));
+            rois = mat2cell(rois,size(rois,1),ones(1,size(rois,2)));
+            cellfun(@(roi) addlistener(roi, 'MovingROI', @(s,e) arrayfun(@(r) set(r, 'Position', e.CurrentPosition), roi)), ...
+                rois, UniformOutput = false);
+        end
     end
 
     function event(~, evt)
         roi = evt.Source;
         d = roi.UserData.func(roi);
+        if isrow(d); d = d'; end
         switch roi.UserData.plot
             case 'plot'
                 d = d(:,:); d = mat2cell(d, size(d,1), ones(1,size(d,2)));
-                cellfun(@(plt,d) set(plt, 'YData', d), num2cell(roi.UserData.plt)', d);
+                cellfun(@(plt,d) set(plt, 'YData', d(:)'), num2cell(roi.UserData.plt)', d);
             otherwise
                 d = d(:,:,:); d = mat2cell(d, size(d,1), size(d,2), ones(1,size(d,3)));
                 cellfun(@(plt,d) set(plt, 'ZData', d), num2cell(roi.UserData.plt)', d);
