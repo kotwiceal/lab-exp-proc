@@ -33,7 +33,7 @@ function poolobj = poolswitcher(resources, poolsize)
             label = "Processes";
     end
     if ~isempty(label)
-        if (resources ~= label) || (poolsize ~= poolobj.NumWorkers)
+        if (resources ~= label) | (poolsize ~= poolobj.NumWorkers)
             delete(gcp('nocreate'));
             poolobj = parpool(arg{:});
         end

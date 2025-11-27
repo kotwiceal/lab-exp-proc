@@ -97,8 +97,8 @@ function saf(path, kwargs, options)
 
         if ~isempty(kwargs.size)
             set(fighandle, WindowStyle = 'normal')
-            set(fighandle, Units = kwargs.units, Position = [0, 0, kwargs.size]);
             pause(kwargs.pause)
+            set(fighandle, Units = kwargs.units, Position = [0, 0, kwargs.size]);
         end
 
         if kwargs.save

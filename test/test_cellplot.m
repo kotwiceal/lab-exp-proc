@@ -147,4 +147,10 @@ pos = {{[0.1,0.7], [0.2,0.8]}, {[0.2,0.2;0.4,0.2;0.3,0.4], [0.2,0.2;0.4,0.2;0.3,
 z = sin(10*x+5*y)+0.5*rand(size(x));
 cellplot('contour',x,y,z,draw={'drawpoint','drawpolygon'},...
     rcolororder='on',rlinealign='on',ralpha=0.1,rlinewidth=0.5,rposition=pos);
+%% drawpolygon/3, cell position/2, specify number
+pos = {{[0.2,0.2;0.4,0.2;0.3,0.4]}};
+[x, y] = meshgrid(linspace(0,1,25),linspace(0,1,25));
+z = sin(10*x+5*y)+0.5*rand(size(x));
+cellplot('contour',{x,x+2},{y,y},{z,z},axpos=[0,1],draw='drawpolygon',rnumber=3,...
+    rcolororder='on',rlinealign='on',ralpha=0.1,rlinewidth=0.5,rposition=pos,rsnap='off');
 %%

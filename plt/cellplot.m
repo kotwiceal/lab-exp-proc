@@ -105,6 +105,7 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
         proi.rlinealign {mustBeMember(proi.rlinealign, {'on', 'off'})} = 'off'
         proi.rnumlabel {mustBeMember(proi.rnumlabel, {'on', 'off'})} = 'off'
         proi.rlabelalpha (1,1) double = 1
+        proi.rsnap {mustBeMember(proi.rsnap, {'on', 'off'})} = 'on'
     end
     %% plot
 
@@ -257,6 +258,8 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
         if isempty(proi.rnumber); proi.rnumber = cellfun(@(p) numel(p), proi.rposition); end
         if ~isa(proi.rnumber, 'cell'); proi.rnumber = num2cell(proi.rnumber); end
 
+        if ~isa(proi.rsnap, 'cell'); proi.rsnap = repelem({proi.rsnap}, numel(proi.draw)); end
+
         % draw roi
         funcs = cellfun(@(draw) str2func(draw), proi.draw, UniformOutput = false);
         expr = @(f,t,g,p) teropf(isempty(p{1}), @() f(plts(t).Parent, 'UserData', struct(target = plts(t), group = g)), ...
@@ -266,11 +269,13 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
         
         rnumber = proi.rnumber;
         rposition = cellfun(@(p,n) terop(isscalar(p), repelem(p,n), p), proi.rposition, proi.rnumber, 'UniformOutput', false);
+        rsnap = proi.rsnap;
 
         proi = rmfield(proi, 'draw');
         proi = rmfield(proi, 'rtarget');
         proi = rmfield(proi, 'rnumber');
         proi = rmfield(proi, 'rposition');
+        proi = rmfield(proi, 'rsnap');
 
         froi = proi;
         froi.rlabel = @(obj, value) set(obj, 'Label', value);
@@ -288,9 +293,11 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
         froi.rlabelalpha = @(obj, value) set(obj, 'LabelAlpha', value);
         cellapply(rois, froi, proi);
 
+        % set snap property
+        cellfun(@(r,s) set(r, 'UserData', setfield(r.UserData, 'snap', s)), rois, rsnap);
         % replicate roi object
         cellfun(@(r,n) cellfun(@(n) copyobj(r, r.Parent), num2cell(1:n-1)), rois, rnumber, ...
-            UniformOutput = false)
+            UniformOutput = false);
         % get roi object list
         rois = flip(findobj(fig, 'Type','images.roi'));
         % define group mask
@@ -298,22 +305,22 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
         % set position
         expr = @(r,i) teropf(isempty(rposition{r.UserData.group}{i}), @() nan, ...
             @() set(r, 'Position', rposition{r.UserData.group}{i}));
-        splitapply(@(roi) {arrayfun(@(r,i) {expr(r,i)}, roi, (1:numel(roi))')}, rois, gr)
+        splitapply(@(roi) {arrayfun(@(r,i) {expr(r,i)}, roi, (1:numel(roi))')}, rois, gr);
         % set snap hander
-        cellfun(@(r) addlistener(r, 'MovingROI', @(s,e) roisnaphandler(s, r.UserData.target)), ...
-            num2cell(rois));
+        cellfun(@(r) teropf(strcmp(r.UserData.snap, 'on'), @() addlistener(r, 'MovingROI', @(s,e) roisnaphandler(s, r.UserData.target)), @() []), ...
+            num2cell(rois), 'UniformOutput', false);
         % set colors
         colors = repmat(colororder, max([max(cell2mat(rnumber)), numel(funcs)]), 1);
         expr = @(r,i) terop(strcmp(r.UserData.colororder,'on'), colors(i,:), colors(r.UserData.group,:));
-        splitapply(@(roi) arrayfun(@(r,i) set(r, 'Color', expr(r,i)), roi, (1:numel(roi))'), rois, gr)
+        splitapply(@(roi) arrayfun(@(r,i) set(r, 'Color', expr(r,i)), roi, (1:numel(roi))'), rois, gr);
         % set numbered label
         expr = @(r,i) terop(strcmp(r.UserData.numlabel,'on'), num2str(i), r.Label);
-        splitapply(@(roi) arrayfun(@(r,i) set(r, 'Label', expr(r,i)), roi, (1:numel(roi))'), rois, gr)
+        splitapply(@(roi) arrayfun(@(r,i) set(r, 'Label', expr(r,i)), roi, (1:numel(roi))'), rois, gr);
         % set aligment event
         expr = @(r,roi) teropf(strcmp(r.UserData.linealign,'on'), ...
             @() addlistener(r, 'MovingROI', @(s,e) roievtlinalig(e,num2cell(roi))), ...
             @() nan);
-        splitapply(@(roi) {arrayfun(@(r) expr(r,roi), roi)}, rois, gr)
+        splitapply(@(roi) {arrayfun(@(r) expr(r,roi), roi)}, rois, gr);
     else
         rois = [];
     end
@@ -361,7 +368,7 @@ function [plts, axs, rois] = cellplot(plotname, varargin, popt, pax, pset, pclb,
         expr = @(r,roi) teropf(strcmp(r.UserData.linealign,'on'), ...
             @() addlistener(r, 'MovingROI', @(s,e) roievtlinalig(e,num2cell(roi))), ...
             @() nan);
-        splitapply(@(roi) {arrayfun(@(r) expr(r,roi), roi)}, rois, gr)
+        splitapply(@(roi) {arrayfun(@(r) expr(r,roi), roi)}, rois, gr);
     end
 
 end
@@ -371,7 +378,7 @@ function [funcs, params] = cellapply(objs, hdls, params)
     funcs = cellfun(@(func) cellfun(@(f) hdls.(f), func, ...
         UniformOutput = false), funcs, UniformOutput = false);
     cellfun(@(obj,func,param) cellfun(@(f,p) f(obj,p{:}), func(:), param(:), UniformOutput = false), ...
-        objs(:), funcs(:), params(:), UniformOutput = false)
+        objs(:), funcs(:), params(:), UniformOutput = false);
 end
 
 function roievtlinalig(evt, rois)
@@ -384,5 +391,6 @@ function roievtlinalig(evt, rois)
     pos = cell2mat(arrayfun(@(p1,p2)shiftdim(linspace(p1,p2,num),-1),pos{1},pos{end},'UniformOutput',false));
     pos = mat2cell(pos,size(pos,1),size(pos,2),ones(1,size(pos,3)));
     cellfun(@(r, p) set(r, 'Position', p), rois, pos(:));
-    cellfun(@(r) roisnaphandler(r, r.UserData.target), rois)
+    cellfun(@(r)  teropf(strcmp(r.UserData.snap, 'on'), @() roisnaphandler(r, r.UserData.target), @() []), ...
+        rois, 'UniformOutput', false);
 end

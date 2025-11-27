@@ -1,4 +1,4 @@
-function cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, pax, pset, pclb, plgd, plin, proi)
+function varargout = cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, pax, pset, pclb, plgd, plin, proi)
     arguments (Input)
         dplot {mustBeMember(dplot, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
         pplot {mustBeMember(pplot, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
@@ -112,6 +112,9 @@ function cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, pax, pset, pc
         proi.rlinealign {mustBeMember(proi.rlinealign, {'on', 'off'})} = 'off'
         proi.rnumlabel {mustBeMember(proi.rnumlabel, {'on', 'off'})} = 'off'
         proi.rlabelalpha (1,1) double = 1
+    end
+    arguments (Output, Repeating)
+        varargout
     end
 
     switch numel(varargin)
@@ -241,6 +244,8 @@ function cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, pax, pset, pc
         end
     end
 
+    varargout{1} = @getdata;
+
     function event(~, evt)
         roi = evt.Source;
         d = roi.UserData.func(roi);
@@ -255,4 +260,10 @@ function cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, pax, pset, pc
         end
     end
     
+    function result = getdata()
+        result = struct;
+        result.data = arrayfun(@(r) r.UserData.func(r), roisg, 'UniformOutput', false);
+        result.mask = arrayfun(@(r) r.Position, roisg, 'UniformOutput', false);
+    end
+
 end
