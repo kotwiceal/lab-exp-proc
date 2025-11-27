@@ -33,9 +33,9 @@ function varargout = maskcutdata(mask, varargin, options)
     [in, on] = inpolygon(pos(:,1), pos(:,2), mask(:,1), mask(:,2));
     switch options.fill
         case 'innan'
-            ind = in | on;
-        case 'outnan'
             ind = ~(in | on);
+        case 'outnan'
+            ind = in | on;
         otherwise
             ind = in | on;
     end
@@ -51,7 +51,7 @@ function varargout = maskcutdata(mask, varargin, options)
 
     switch options.ans
         case 'on'
-            varargout = flip(varargout); end
+            varargout = flip(varargout);
     end
 
 end

@@ -3,7 +3,8 @@
 z = sin(10*x+20*y);
 [xr,yr,zr] = maskcutdata([5,10;10,75],z,dims=[1,2],fill='none',shape='bounds');
 disp([size(xr);size(yr);size(zr)])
-cellplot('contourf',{x,xr},{y,yr},{z,zr},linestyle='none',axis={'equal','square'})
+cellplot('contourf',{x,xr},{y,yr},{z,zr},linestyle='none',axis={'equal','square'},...
+    xlim={'auto',[1,size(x,1)]},ylim={'auto',[1,size(x,2)]})
 %% data 2D, grid, slice dimenstion [1,2], none fill, bounds shape
 [x,y] = meshgrid(linspace(0,1),linspace(1,2));
 z = sin(10*x+20*y);
@@ -51,6 +52,21 @@ cellplot('contourf',{x,xr},{y,yr},{z,zr},linestyle='none',axis={'equal','square'
 z = sin(10*x+20*y);
 xl = [min(x(:)), max(x(:))]; yl = [min(y(:)), max(y(:))];
 [xr,yr,zr] = maskcutdata([0.1,1.25;0.5,1.25;0.5,1.75;0.1,1.75],x,y,z,fill='innan',shape='trim');
+disp([size(xr);size(yr);size(zr)])
+cellplot('contourf',{x,xr},{y,yr},{z,zr},linestyle='none',axis={'equal','square'},...
+    xlim=xl,ylim=yl)
+%% data 2D, no grid, slice dimenstion [1,2], outnan fill, trim shape
+[x,y] = meshgrid(linspace(0,1),linspace(1,2));
+z = sin(10*x+20*y);
+[xr,yr,zr] = maskcutdata([5,10;10,10;10,75;5,75],z,dims=[1,2],fill='outnan',shape='trim');
+disp([size(xr);size(yr);size(zr)])
+cellplot('contourf',{x,xr},{y,yr},{z,zr},linestyle='none',axis={'equal','square'},...
+    xlim={'auto',[1,size(x,1)]},ylim={'auto',[1,size(x,2)]})
+%% data 2D, grid, slice dimenstion [1,2], innan fill, trim shape
+[x,y] = meshgrid(linspace(0,1),linspace(1,2));
+z = sin(10*x+20*y);
+xl = [min(x(:)), max(x(:))]; yl = [min(y(:)), max(y(:))];
+[xr,yr,zr] = maskcutdata([0.1,1.25;0.5,1.25;0.5,1.75;0.1,1.75],x,y,z,fill='outnan',shape='trim');
 disp([size(xr);size(yr);size(zr)])
 cellplot('contourf',{x,xr},{y,yr},{z,zr},linestyle='none',axis={'equal','square'},...
     xlim=xl,ylim=yl)
