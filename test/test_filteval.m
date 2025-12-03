@@ -7,9 +7,10 @@ viewfilteval(filtpass);
 %% data 1D
 [~, filtpass] = filteval(szarg = [10, 1], kernel = 3, isfiltpass = true, padval = false);
 viewfilteval(filtpass);
-
-
-
+%%
+%
+%
+%
 %% data 1D
 [~, filtpass] = filteval(szarg = [1, 10], kernel = [1, 1], isfiltpass = true);
 viewfilteval(filtpass);
@@ -19,28 +20,28 @@ viewfilteval(filtpass);
 %% data 1D
 [~, filtpass] = filteval(szarg = [1, 10], kernel = [1, 3], isfiltpass = true, padval = false);
 viewfilteval(filtpass);
-
-
-
-
+%%
+%
+%
+%
 %% data 1D
 [~, filtpass] = filteval(szarg = [10, 10], kernel = [1, 1], isfiltpass = true);
 viewfilteval(filtpass);
-
-
+%%
+%
+%
+%
 %% data 2D
 [~, filtpass] = filteval(szarg = [10, 10, 10], kernel = [3, 3, nan], ...
     isfiltpass = true, padval = {nan,nan,false});
 viewfilteval(filtpass);
-
 %% data 1D
 [~, filtpass] = filteval(szarg = [1, 10], kernel = [1, 3], isfiltpass = true, verbose = true);
 viewfilteval(filtpass);
 %% data 1D
 [~, filtpass] = filteval(szarg = [1, 10], kernel = [1, 2], isfiltpass = true, verbose = true);
 viewfilteval(filtpass);
-%%
-clc
+%% data 3D, 2 arg
 kwargs = struct;
 kwargs.szarg = {[20,20,3],[20,20,3]};
 kwargs.kernel = [nan, nan, 1];
@@ -48,15 +49,27 @@ kwargs.stride = [1,1,1];
 kwargs.offset = [];
 kwargs.cast = 'int16';
 kwargs.isfiltpass = true;
-% kwargs.padval = {true, true, true};
 kwargs.padval = true;
 
 arg = namedargs2cell(kwargs);
-[kwargs, filtpass] = filteval(arg{:});
+[~, filtpass] = filteval(arg{:});
 
 viewfilteval(filtpass, pause = 1e-3);
-%%
-clc
+%% data 3D, 2 arg 
+kwargs = struct;
+kwargs.szarg = {[20,20,3],[20,20,3]};
+kwargs.kernel = [nan, nan, 1];
+kwargs.stride = [1,1,1];
+kwargs.offset = [];
+kwargs.cast = 'int16';
+kwargs.isfiltpass = true;
+kwargs.padval = true;
+
+arg = namedargs2cell(kwargs);
+[~, filtpass] = filteval(arg{:});
+
+viewfilteval(filtpass, pause = 1e-3);
+%% data 1D, 2 arg
 kwargs = struct;
 kwargs.szarg = {[20, 1], [20, 1]};
 kwargs.kernel = [2, 1];
@@ -64,13 +77,26 @@ kwargs.stride = [1, 1];
 kwargs.offset = [];
 kwargs.cast = 'int16';
 kwargs.isfiltpass = true;
-% kwargs.padval = {true, true, true};
-kwargs.padval = false;
+kwargs.padval = true;
 
 arg = namedargs2cell(kwargs);
-kwargs = filteval(arg{:});
+[~, filtpass]  = filteval(arg{:});
 
-viewfilteval(kwargs.filtpass, pause = 1e-3);
+viewfilteval(filtpass, pause = 1e-3);
+%% data 1D, 2 arg
+kwargs = struct;
+kwargs.szarg = {[20, 1], [20, 1]};
+kwargs.kernel = [2, 1];
+kwargs.stride = [1, 1];
+kwargs.offset = [];
+kwargs.cast = 'int16';
+kwargs.isfiltpass = true;
+kwargs.padval = true;
+
+arg = namedargs2cell(kwargs);
+[~, filtpass]  = filteval(arg{:});
+
+viewfilteval(filtpass, pause = 1e-3);
 %%
 function viewfilteval(mask, kwargs)
     arguments

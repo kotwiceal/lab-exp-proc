@@ -119,12 +119,10 @@ function result = nonlinfilt(method, varargin, kwargs, opts, popts)
     end
 
     % flat vector data
-    for i = 1:numel(varargin)
-        if isvector(varargin{i}); varargin{i} = varargin{i}(:); end
-    end
+    varargin = cellfun(@(x) terop(isvector(x), x(:), x), varargin, 'UniformOutput', false);
 
     % evaluate size
-    kwargs.szarg = cellfun(@size, varargin, UniformOutput = false);
+    kwargs.szarg = cellfun(@size, varargin, 'UniformOutput', false);
 
     % evaluate filter passing
     filtevalh = memoize(@filteval);
@@ -155,10 +153,7 @@ function result = nonlinfilt(method, varargin, kwargs, opts, popts)
         for i = 1:kwargs.narg   
             kernel = kwargs.kernel{i}(:,k);
             stride = kwargs.stride{i}(:,k);
-            temporary = cell(1, kwargs.ndimsarg{i});
-            for j = 1:kwargs.ndimsarg{i}
-                temporary{j} = stride(j) + (0:kernel(j));
-            end
+            temporary = arrayfun(@(k,s) (0:k)+s, kernel, stride, 'UniformOutput', false);
             dataslice{i} = varargin{i}(temporary{:});
         end
         result{k} = method(dataslice{:}, k); 
@@ -199,22 +194,12 @@ function result = nonlinfilt(method, varargin, kwargs, opts, popts)
         result = result(index, 1:end-1);
     end
 
+    result = reshape(result, kwargs.szfilt);
+
     switch opts.ans
         case 'array'
-            tf = isscalar(result);
-            result = cell2arr(result);
-            if isrow(result) || iscolumn(result)
-                if kwargs.numfilt == 1
-                    shape = size(result);
-                else
-                    shape = kwargs.szfilt;
-                end
-            else
-                szout = size(result);
-                if ~tf; szout = szout(1:end-1); end
-                shape = [szout, kwargs.szfilt];
-            end
-            result = squeeze(reshape(result, shape));
+            result = shiftdim(result,-ndims(result{1}));
+            result = squeeze(cell2mat(result));
     end
 
     if opts.verbose; disp(strcat("nonlinfilt: elapsed time is ", num2str(toc(timer)), " seconds")); end

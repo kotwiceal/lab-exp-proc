@@ -49,6 +49,19 @@ function varargout = filteval(param)
 
     param.strideisvector = false(1, narg);
 
+    % filter dimension validation
+    if isempty(param.filtdim)
+        param.filtdim = repmat({[]}, 1, narg);
+    end
+    if isa(param.filtdim, 'double')
+        if isvector(param.filtdim)
+            param.filtdim = repmat({param.filtdim}, 1, narg);
+        else
+            param.filtdim = {param.filtdim};
+        end
+    end
+    if narg ~= numel(param.filtdim); error('number of filter `param.filtdim` must be correspond to number of filtering array'); end
+
     % padding value validation
     if isempty(param.padval)
         param.padval = cellfun(@(x) num2cell(zeros(1, x)), ndimsarg, UniformOutput = false);
@@ -62,8 +75,8 @@ function varargout = filteval(param)
             else
                 ispad = true;
             end
-            param.padval = cellfun(@(x) repmat({param.padval}, 1, x), ndimsarg, UniformOutput = false);
-            ispad = cellfun(@(x) repmat({ispad}, 1, x), ndimsarg, UniformOutput = false);
+            param.padval = cellfun(@(x) repelem({param.padval}, x), ndimsarg, 'UniformOutput', false);
+            ispad = cellfun(@(x) repelem({ispad}, x), ndimsarg, 'UniformOutput', false);
         else
             if isscalar(ndimsarg) && numel(param.padval) == ndimsarg{1}
                 param.padval = {param.padval};
@@ -89,19 +102,6 @@ function varargout = filteval(param)
             end
         end
     end
-
-    % filter dimension validation
-    if isempty(param.filtdim)
-        param.filtdim = repmat({[]}, 1, narg);
-    end
-    if isa(param.filtdim, 'double')
-        if isvector(param.filtdim)
-            param.filtdim = repmat({param.filtdim}, 1, narg);
-        else
-            param.filtdim = {param.filtdim};
-        end
-    end
-    if narg ~= numel(param.filtdim); error('number of filter `param.filtdim` must be correspond to number of filtering array'); end
 
     % kernel validation
     if isempty(param.kernel); param.kernel = param.szarg; end
@@ -329,8 +329,9 @@ function varargout = filteval(param)
             end
         end
 
+        poolobj = poolswitcher('backgroundPool', []);
         filtpass = cell(numfilt, 1);
-        parfor k = 1:numfilt
+        parfor (k = 1:numfilt, poolobj)
             dataslice = cell(1, narg);
             
             for i = 1:narg  

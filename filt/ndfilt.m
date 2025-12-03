@@ -4,7 +4,7 @@ function data = ndfilt(data, kwargs, opts)
     arguments (Input)
         data
         % filter name
-        kwargs.filt {mustBeMember(kwargs.filt, {'none', 'gaussian', 'average', 'sobel', 'median', 'fillmiss', 'griddatan'})} = 'gaussian'
+        kwargs.filt {mustBeMember(kwargs.filt, {'none', 'gaussian', 'average', 'sobel', 'median', 'fillmiss', 'griddatan', 'fillmissn', 'interpn'})} = 'gaussian'
         kwargs.filtker (1,:) double = [] % kernel size
         kwargs.filtdim (1,:) double = [] % filter dimension 
         kwargs.padval {mustBeA(kwargs.padval, {'double', 'char', 'string', 'logical', 'cell'})} = 'symmetric' % padding value
@@ -15,14 +15,14 @@ function data = ndfilt(data, kwargs, opts)
         opts.useparallel (1,1) logical = false
         opts.extract {mustBeMember(opts.extract, {'readall', 'writeall'})} = 'readall'
         opts.poolsize (1,:) double = [] % pool size
-        opts.pool {mustBeMember(opts.pool, {'Processes', 'Threads', 'backgroundPool'})} = 'Threads'
+        opts.pool {mustBeMember(opts.pool, {'Processes', 'Threads', 'backgroundPool'})} = 'backgroundPool'
     end
 
     arguments (Output)
         data
     end
 
-    if isempty(kwargs.filtker); return; end
+    if (isempty(kwargs.filtker) & isempty(kwargs.filtdim)) | strcmp(kwargs.filt,"none") | isscalar(data); return; end
 
     switch kwargs.filt
         case 'median'
@@ -31,13 +31,22 @@ function data = ndfilt(data, kwargs, opts)
                 kwargs.filtdim(kwargs.filtker == 1) = [];
             end
             kerfunc = @(x, ~) squeeze(median(x, kwargs.filtdim, 'omitmissing'));
+            padval = kwargs.padval;
+            if ~isa(padval,'cell'); padval = {padval}; end
+            kwargs.padval = num2cell(false(1, ndims(data)));
+            if numel(padval) == numel(kwargs.filtdim)
+                kwargs.padval(kwargs.filtdim) = padval;
+            else
+                kwargs.padval = padval;
+            end
             kernel = nan(1, ndims(data));
             kernel(kwargs.filtdim) = kwargs.filtker;
             kwargs.filtker = kernel;
             kwargs.filtdim = [];
         case 'fillmiss'
             if kwargs.method ~= "none"
-                if isempty(kwargs.filtdim); kwargs.filtdim = 1:numel(kwargs.filtker); end
+                kwargs.filtker = nan(1, numel(kwargs.filtdim));
+                kwargs.padval = false;
                 if kwargs.zero2nan; data(data==0) = nan; end
                 switch numel(kwargs.filtdim)
                     case 1
@@ -45,62 +54,61 @@ function data = ndfilt(data, kwargs, opts)
                     case 2
                         kerfunc = @(x, ~) fillmissing2(squeeze(x), kwargs.method);
                 end
-                kwargs.filtker = ones(1, ndims(data));
-                kwargs.filtker(kwargs.filtdim) = nan;
-                kwargs.filtdim = [];
-                kwargs.padval = false;
             end
+        case 'fillmissn'
+            kwargs.padval = false;
+            kwargs.filtker = size(data,kwargs.filtdim);
+            if isscalar(kwargs.filtker); kwargs.filtker = [kwargs.filtker, 1]; end
+            p = cellfun(@(x)linspace(0,1,x),num2cell(size(data,kwargs.filtdim)),'UniformOutput',false);
+            [p{:}] = ndgrid(p{:});
+            p = cellfun(@(x)x(:),p,'UniformOutput',false);
+            p = cat(2,p{:});
+            kerfunc = @(x,~) reshape(griddatan(p(~isnan(x(:)),:),x(~isnan(x(:))),p,kwargs.method),kwargs.filtker);
+            kwargs.filtker = nan(1,numel(kwargs.filtdim));
         case 'griddatan'
-            kwargs.filt = 'none';
-            szd = size(data);
-
-            if isempty(kwargs.filtdim)
-                tempfunc = @(x) x*(x > 0);
-                kwargs.filtker = padarray(kwargs.filtker, [0, tempfunc(ndims(data)-numel(kwargs.filtker))], nan, 'post');
-
-            else
-                kernel = nan(1, ndims(data));
-                kernel(kwargs.filtdim) = kwargs.filtker;
-                kwargs.filtker = kernel;
-            end
-            kwargs.filtker(isnan(kwargs.filtker)) = szd(isnan(kwargs.filtker));
-
-            temp = cellfun(@(x) 1:x, num2cell(szd), UniformOutput = false);
-            subind = cell(1, numel(temp));
-            [subind{:}] = ndgrid(temp{:});
-            subind = cell2arr(cellfun(@(x) x(:), subind, UniformOutput = false));
-                        
-            temp = cellfun(@(x, y) linspace(1, x, y), num2cell(szd), num2cell(kwargs.filtker), UniformOutput = false);
-
-            subindq = cell(1, numel(temp));
-            [subindq{:}] = ndgrid(temp{:});
-            subindq = cell2arr(cellfun(@(x) x(:), subindq, UniformOutput = false));
-
-            data = griddatan(subind, data(:), subindq, kwargs.method);
-            data = reshape(data, kwargs.filtker);
+            kwargs.padval = false;
+            if isempty(kwargs.filtdim); kwargs.filtdim = 1:numel(kwargs.filtker); end
+            p = cellfun(@(x)linspace(0,1,x),num2cell(size(data,kwargs.filtdim)),'UniformOutput',false);
+            [p{:}] = ndgrid(p{:});
+            p = cellfun(@(x)x(:),p,'UniformOutput',false);
+            q = cellfun(@(x)linspace(0,1,x),num2cell(kwargs.filtker),'UniformOutput',false);
+            [q{:}] = ndgrid(q{:});
+            q = cellfun(@(x)x(:),q,'UniformOutput',false);
+            kerfunc = @(x,~) reshape(griddatan(cat(2,p{:}),x(:),cat(2,q{:}),kwargs.method),kwargs.filtker);
+            kwargs.filtker = nan(1,numel(kwargs.filtdim));
+        case 'interpn'
+            kwargs.padval = false;
+            if isempty(kwargs.filtdim); kwargs.filtdim = 1:numel(kwargs.filtker); end
+            p = cellfun(@(x)linspace(0,1,x),num2cell(size(data,kwargs.filtdim)),'UniformOutput',false);
+            [p{:}] = ndgrid(p{:});
+            q = cellfun(@(x)linspace(0,1,x),num2cell(kwargs.filtker),'UniformOutput',false);
+            [q{:}] = ndgrid(q{:});
+            if isscalar(kwargs.filtker); kwargs.filtker = [kwargs.filtker, 1]; end
+            kerfunc = @(x,~) reshape(interpn(p{:},x,q{:},kwargs.method),kwargs.filtker);
+            kwargs.filtker = nan(1,numel(kwargs.filtdim));
         otherwise
-            if kwargs.filt ~= "none"
-                if isempty(kwargs.filtdim); kwargs.filtdim = 1:numel(kwargs.filtker); end
-                if isscalar(kwargs.filtdim); kwargs.filtdim = [kwargs.filtdim, 2]; end
-                if isscalar(kwargs.filtker); kwargs.filtker = [kwargs.filtker, 1]; end
-                kernelmat = fspecial(kwargs.filt, kwargs.filtker);
-                kerfunc = @(x, ~) squeeze(tensorprod(kernelmat, x, 1:ndims(kernelmat), kwargs.filtdim));
-            end
+            if isempty(kwargs.filtdim); kwargs.filtdim = 1:numel(kwargs.filtker); end
+            if isscalar(kwargs.filtdim); kwargs.filtdim = [kwargs.filtdim, 2]; end
+            if isscalar(kwargs.filtker); kwargs.filtker = [kwargs.filtker, 1]; end
+            padval = kwargs.padval;
+            if ~isa(padval,'cell'); padval = {padval}; end
+            kwargs.padval = num2cell(false(1, ndims(data)));
+            kwargs.padval(kwargs.filtdim) = padval;
+            kernelmat = fspecial(kwargs.filt, kwargs.filtker);
+            kerfunc = @(x,~) squeeze(tensorprod(kernelmat, x, 1:ndims(kernelmat), kwargs.filtdim));
     end
 
-    if kwargs.filt ~= "none"
-        data = nonlinfilt(kerfunc, ...
-            data, ...
-            kernel = kwargs.filtker, ...
-            padval = kwargs.padval, ...
-            filtdim = kwargs.filtdim, ...
-            verbose = kwargs.verbose, ...
-            usefiledatastore = opts.usefiledatastore, ...
-            useparallel = opts.useparallel, ...
-            extract = opts.extract, ...
-            pool = opts.pool, ...
-            poolsize = opts.poolsize);
-    end
+    data = nonlinfilt(kerfunc, ...
+        data, ...
+        kernel = kwargs.filtker, ...
+        padval = kwargs.padval, ...
+        filtdim = kwargs.filtdim, ...
+        verbose = kwargs.verbose, ...
+        usefiledatastore = opts.usefiledatastore, ...
+        useparallel = opts.useparallel, ...
+        extract = opts.extract, ...
+        pool = opts.pool, ...
+        poolsize = opts.poolsize);
 
     clearAllMemoizedCaches;
 

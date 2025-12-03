@@ -1,7 +1,7 @@
 function varargout = cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, pax, pset, pclb, plgd, plin, proi)
     arguments (Input)
-        dplot {mustBeMember(dplot, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
-        pplot {mustBeMember(pplot, {'plot', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
+        dplot {mustBeMember(dplot, {'plot', 'scatter', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3', 'xregion', 'yregion'})}
+        pplot {mustBeMember(pplot, {'plot', 'scatter', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3', 'xregion', 'yregion'})}
         funcs
         dims
     end
@@ -20,7 +20,8 @@ function varargout = cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, p
         popt.merge (1,:) {mustBeA(popt.merge, {'double', 'cell'})} = [] % merge axes children to one axis
         popt.probe (1,:) double = []
         popt.addax = []
-        popt.customize (1,1) logical = true
+        popt.customize (1,1) logical = true % enable axes customization
+        popt.ans {mustBeMember(popt.ans, {'cell', 'struct'})} = 'cell'
         % axis properties
         pax.axis {mustBeMember(pax.axis, {'tight', 'normal', 'manual', 'padded', 'tickaligned', ...
             'auto', 'auto x', 'auto y', 'auto xy', 'fill', 'equal', 'image', 'square', 'vis3d', ...
@@ -89,7 +90,9 @@ function varargout = cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, p
         plin.levels {mustBeA(plin.levels, {'double', 'cell'})} = []
         plin.labelcolor {mustBeA(plin.labelcolor, {'double', 'char', 'string', 'cell'})} = []
         plin.facecolor {mustBeMember(plin.facecolor, {'flat', 'interp', 'none', 'red', 'blue', 'white', 'black'})} = 'flat'
+        plin.facealpha (1,:) double = 1
         plin.edgecolor {mustBeMember(plin.edgecolor , {'flat', 'interp', 'none', 'red', 'blue', 'white', 'black'})} = 'flat'
+        plin.edgealpha (1,:) double = 1
         plin.view {mustBeA(plin.view, {'double', 'cell'})} = [0, 90]
         plin.displayname {mustBeA(plin.displayname, {'char', 'string', 'cell'})} = ''
         plin.ltag {mustBeA(plin.ltag, {'char', 'string', 'cell'})} = ''
@@ -97,8 +100,8 @@ function varargout = cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, p
         proi.draw {mustBeMember(proi.draw, {'none', 'drawpoint', 'drawline', ...
             'drawrectangle', 'drawpolygon', 'drawpolyline', 'drawxline', ...
             'drawyline', 'drawxrange', 'drawyrange'})} = 'none'
-        proi.rtarget (1,:) {mustBeA(proi.rtarget, {'double', 'cell'})} = 1
-        proi.rnumber (1,:) {mustBeA(proi.rnumber, {'double', 'cell'})} = 1
+        proi.rtarget (1,:) {mustBeA(proi.rtarget, {'double', 'cell'})} = []
+        proi.rnumber (1,:) {mustBeA(proi.rnumber, {'double', 'cell'})} = []
         proi.rposition {mustBeA(proi.rposition, {'double', 'cell'})} = []
         proi.rlabel {mustBeA(proi.rlabel, {'char', 'string', 'cell'})} = ''
         proi.rinteraction {mustBeMember(proi.rinteraction , {'all', 'none', 'translate'})} = 'all' % region selection behaviour
@@ -112,6 +115,9 @@ function varargout = cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, p
         proi.rlinealign {mustBeMember(proi.rlinealign, {'on', 'off'})} = 'off'
         proi.rnumlabel {mustBeMember(proi.rnumlabel, {'on', 'off'})} = 'off'
         proi.rlabelalpha (1,1) double = 1
+        proi.rsnap {mustBeMember(proi.rsnap, {'on', 'off'})} = 'on'
+        proi.redgealpha (1,:) double = 1
+        proi.rfacealpha (1,:) double = 1
     end
     arguments (Output, Repeating)
         varargout
@@ -160,7 +166,9 @@ function varargout = cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, p
         UniformOutput = false);
 
     % prepare options
-    popt.addax = num; % to do axis merging by copy axis obj
+    pltdims = struct(plot = 1, scatter = 1, contour = 2, contourf = 2, imagesc = 2, ...
+        surf = 2, pcolor = 2, plot3 = 2, xregion = 1, yregion = 1);
+    popt.addax = num;
     proi.draw = sarg.draw;
     proi.rnumber = sarg.number;
     proi.rtarget = sarg.target;
@@ -250,11 +258,26 @@ function varargout = cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, p
         roi = evt.Source;
         d = roi.UserData.func(roi);
         if isrow(d); d = d'; end
-        switch roi.UserData.plot
-            case 'plot'
+        switch pltdims.(roi.UserData.plot)
+            case 1
                 d = d(:,:); d = mat2cell(d, size(d,1), ones(1,size(d,2)));
-                cellfun(@(plt,d) set(plt, 'YData', d(:)'), num2cell(roi.UserData.plt)', d);
-            otherwise
+                switch class(roi.UserData.plt(1))
+                    case 'matlab.graphics.chart.decoration.ConstantRegion'
+                        plt = roi.UserData.plt;
+                        ax = plt(1).Parent;
+                        y = parseregion(d{1});
+                        switch plt(1).InterceptAxis
+                            case 'x'
+                                func = @xregion;
+                            case 'y'
+                                func = @yregion;
+                        end
+                        roi.UserData.plt = xregion(ax,y);
+                        delete(plt);
+                    otherwise
+                        cellfun(@(plt,d) set(plt, 'YData', d(:)'), num2cell(roi.UserData.plt)', d);
+                end
+            case 2
                 d = d(:,:,:); d = mat2cell(d, size(d,1), size(d,2), ones(1,size(d,3)));
                 cellfun(@(plt,d) set(plt, 'ZData', d), num2cell(roi.UserData.plt)', d);
         end

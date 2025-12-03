@@ -1,7 +1,22 @@
 %%
-[result, mask] = nonlinfilt(@(x,~)mean(x(:)), rand(20,20,5), ...
-    kernel = [1, nan, nan], stride = [2, 2, 1], offset = [-3, 0], ...
-    isfiltpass = true, verbose=true, cast = 'int16');
+y = nonlinfilt(@(x,~) x(1), rand(21,22,23), kernel = 5, filtdim = 2);
+size(y)
+%%
+y = nonlinfilt(@(x,~) x(1), rand(21,22,23), kernel = [5,5], filtdim = [2,3]);
+size(y)
+%%
+y = nonlinfilt(@(x,~) x, rand(21,22,23), kernel = [5,5]);
+size(y)
+%%
+y = nonlinfilt(@(x,~) x, rand(21,22,23), kernel = [5,5], filtdim = [2,3]);
+size(y)
+%%
+y = nonlinfilt(@(x,~) x, rand(21,22,23), kernel = [nan,nan], filtdim = [2,3]);
+size(y)
+%%
+y = nonlinfilt(@(x,~) squeeze(x), ...
+    rand(21,22,23), kernel = [nan,nan], filtdim = [2,3], padval = false);
+size(y)
 %%
 
 

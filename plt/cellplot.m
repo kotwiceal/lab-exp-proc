@@ -1,6 +1,6 @@
 function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, plin, proi)
     arguments (Input)
-        plotname {mustBeMember(plotname, {'plot', 'scatter', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3'})}
+        plotname {mustBeMember(plotname, {'plot', 'scatter', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3', 'xregion', 'yregion'})}
     end
     arguments (Input, Repeating)
         varargin {mustBeA(varargin, {'double', 'cell'})}
@@ -85,6 +85,7 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
         plin.facecolor {mustBeMember(plin.facecolor, {'flat', 'interp', 'none', 'red', 'blue', 'white', 'black'})} = 'flat'
         plin.facealpha (1,:) double = 1
         plin.edgecolor {mustBeMember(plin.edgecolor , {'flat', 'interp', 'none', 'red', 'blue', 'white', 'black'})} = 'flat'
+        plin.edgealpha (1,:) double = 1
         plin.view {mustBeA(plin.view, {'double', 'cell'})} = [0, 90]
         plin.displayname {mustBeA(plin.displayname, {'char', 'string', 'cell'})} = ''
         plin.ltag {mustBeA(plin.ltag, {'char', 'string', 'cell'})} = ''
@@ -120,10 +121,14 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
 
     if ~isa(plotname, 'cell'); plotname = {plotname}; end
     if isscalar(plotname) & isa(varargin{1}, 'cell'); plotname = repmat(plotname, 1, numel(varargin{1})); end
-    plt = struct(plot = 1, scatter = 1, contour = 2, contourf = 2, imagesc = 2, surf = 2, pcolor = 2, plot3 = 2);
+    plt = struct(plot = 1, scatter = 1, contour = 2, contourf = 2, imagesc = 2, ...
+        surf = 2, pcolor = 2, plot3 = 2, xregion = 1, yregion = 1);
     dims = cellfun(@(p) plt.(p), plotname);
-
-    pltfunc = cellfun(@(p) str2func(p), plotname, UniformOutput = false);
+    % define custom function
+    funcs = cell2struct(cellfun(@(p) str2func(p), plotname, 'UniformOutput', false), plotname, 2);
+    funcs.xregion = @(varargin) plotregion('x',varargin{:});
+    funcs.yregion = @(varargin) plotregion('y',varargin{:});
+    pltfunc = cellfun(@(p) funcs.(p), plotname, UniformOutput = false);
 
     % parse data
     if ~isempty(popt.probe)
@@ -135,7 +140,7 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
             end
         end
     end
-    varargin = cellfun(@(v) terop(isrow(v),v',v), varargin, UniformOutput = false);
+    varargin = cellfun(@(v) terop(isvector(v),v(:),v), varargin, UniformOutput = false);
     [data, dg] = wraparrbycell(varargin{:}, dims = dims);
     dgn = splitapply(@numel, dg, dg);
 
@@ -238,8 +243,10 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
     end
 
     % customize line
-    fexpr = @(obj, param, value) teropf(isempty(value), @() [], @() set(findobj(obj.Children, '-property', param), param, value));
-    temp = @(obj, param, value) cellfun(@(c,d) set(c, param, d), num2cell(flip(findobj(obj.Children, '-property', param))), terop(isa(value,'cell'), value(:), {value}), UniformOutput = false);
+    % fexpr = @(obj, param, value) teropf(isempty(value)|isprop(obj,param), @() [], @() set(findobj(obj.Children, '-property', param), param, value));
+    fexpr = @(obj, param, value) teropf(isempty(value)|isprop(obj,param), @() [], @() set(findobj(obj.Children, '-property', param), param, value));
+    temp = @(obj, param, value) cellfun(@(c,d) set(c, param, d), num2cell(flip(findobj(obj.Children, '-property', param))), ...
+        terop(isa(value,'cell'), value(:), {value}), UniformOutput = false);
     fcond2 = @(obj, param, value) teropf(isempty(value), @() [], @() temp(obj, param, value));
     flin = plin;
     flin.cyclingmethod = @(obj, value) set(obj, 'LineStyleCyclingMethod', value);
@@ -251,6 +258,7 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
     flin.facecolor = @(obj, value) fexpr(obj, 'FaceColor', value);
     flin.facealpha = @(obj, value) fexpr(obj, 'FaceAlpha', value);
     flin.edgecolor = @(obj, value) fexpr(obj, 'EdgeColor', value);
+    flin.edgealpha = @(obj, value) fexpr(obj, 'EdgeAlpha', value);
     flin.ltag = @(obj, value) set(findobj(obj.Children,'Tag',''), 'Tag', value);
     cellapply(axs, flin, plin);
 
@@ -265,14 +273,13 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
 
         if isempty(proi.rtarget);  proi.rtarget = ones(1, numel(proi.draw)); end
         if ~isa(proi.rtarget, 'cell'); proi.rtarget = num2cell(proi.rtarget); end
+        proi.rtarget = cellfun(@(x) terop(isempty(x), 1, x), proi.rtarget, 'UniformOutput', false);
 
         if isempty(proi.rnumber); proi.rnumber = cellfun(@(p) numel(p), proi.rposition); end
         if ~isa(proi.rnumber, 'cell'); proi.rnumber = num2cell(proi.rnumber); end
+        proi.rnumber = cellfun(@(x) terop(isempty(x), 1, x), proi.rnumber, 'UniformOutput', false);
 
         if ~isa(proi.rsnap, 'cell'); proi.rsnap = repelem({proi.rsnap}, numel(proi.draw)); end
-
-        rlist = {'images.roi.Point','images.roi.Line','images.roi.Polyline'};
-        isrlist = @(obj) sum(ismember(rlist, class(obj)))>0;
 
         % draw roi
         funcs = cellfun(@(draw) str2func(draw), proi.draw, UniformOutput = false);
@@ -305,8 +312,8 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
         froi.rlinealign = @(obj, value) set(obj, 'UserData', setfield(obj.UserData, 'linealign', value));
         froi.rnumlabel = @(obj, value) set(obj, 'UserData', setfield(obj.UserData, 'numlabel', value));
         froi.rlabelalpha = @(obj, value) set(obj, 'LabelAlpha', value);
-        froi.redgealpha = @(obj, value) teropf(isrlist(obj), @() [], @() set(obj, 'EdgeAlpha', value));
-        froi.rfacealpha = @(obj, value) teropf(isrlist(obj), @() [], @() set(obj, 'FaceAlpha', value));
+        froi.redgealpha = @(obj, value) teropf(isprop(obj,'EdgeAlpha'), @() set(obj, 'EdgeAlpha', value), @() []);
+        froi.rfacealpha = @(obj, value) teropf(isprop(obj,'FaceAlpha'), @() set(obj, 'FaceAlpha', value), @() []);
         cellapply(rois, froi, proi);
 
         % set snap property
@@ -343,15 +350,14 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
 
     %% merge axis
     if ~isempty(popt.merge)
-        ind = [];
         if isa(popt.merge, 'double'); popt.merge = {popt.merge}; end
         for i = 1:numel(popt.merge)
             [m, j] = min(popt.merge{i});
             popt.merge{i}(j) = [];
             cellfun(@(a) copyobj(a.Children, axs{m}), axs(popt.merge{i}))
-            ind = cat(1, ind, popt.merge{i});
+            cellfun(@(a) delete(a), axs(popt.merge{i}));
+            axs{popt.merge{i}} = axs{m};
         end
-        cellfun(@(a) delete(a), axs(ind));
     end
 
     %% convert tiles to standalone figures
@@ -400,6 +406,7 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
         if ~isempty(rois)
             res.rposition = arrayfun(@(r) r.Position, rois, 'UniformOutput', false);
             res.rgroup = rgroup;
+            res.rgpos = splitapply(@(r) {r}, res.rposition, res.rgroup);
         end
     end
 
@@ -425,4 +432,35 @@ function roievtlinalig(evt, rois)
     cellfun(@(r, p) set(r, 'Position', p), rois, pos(:));
     cellfun(@(r)  teropf(strcmp(r.UserData.snap, 'on'), @() roisnaphandler(r, r.UserData.target), @() []), ...
         rois, 'UniformOutput', false);
+end
+
+function plotregion(type,ax,varargin)
+    arguments (Input)
+        type {mustBeMember(type, {'x', 'y'})}
+        ax
+    end
+    arguments  (Input, Repeating)  
+        varargin
+    end
+    switch type
+        case 'x'
+            ind = [1, 2];
+        case 'y'
+            ind = [2, 1];
+    end
+    if isscalar(varargin)
+        bin = varargin{1};
+        pos = 1:numel(bin);
+    else
+        pos = varargin{ind(1)};
+        bin = varargin{ind(2)};
+    end
+    bin = parseregion(bin);
+    args = {ax,pos(bin(:,1)),pos(bin(:,2))};
+    switch type
+        case 'x'
+            xregion(args{:})
+        case 'y'
+            yregion(args{:})
+    end
 end
