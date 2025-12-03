@@ -9,6 +9,7 @@ function varargout = maskcutdata(mask, varargin, options)
         options.dims (1,:) double = []
         options.fill {mustBeMember(options.fill, {'none', 'innan', 'outnan'})} = 'none'
         options.shape {mustBeMember(options.shape, {'bounds', 'trim'})} = 'bounds'
+        options.roi {mustBeMember(options.roi, {'nodes', 'region'})} = 'region' % ROI mode
         options.ans {mustBeMember(options.ans, {'on', 'off'})} = 'off' % flip outputs
     end
 
@@ -30,16 +31,21 @@ function varargout = maskcutdata(mask, varargin, options)
     pos = cell2mat(cellfun(@(x) x(:), grid, UniformOutput = false));
     k = dsearchn(pos, mask);
     linind = k;
-    [in, on] = inpolygon(pos(:,1), pos(:,2), mask(:,1), mask(:,2));
-    switch options.fill
-        case 'innan'
-            ind = ~(in | on);
-        case 'outnan'
-            ind = in | on;
-        otherwise
-            ind = in | on;
+    switch options.roi
+        case 'nodes'
+            linindr = k;
+        case 'region'
+            [in, on] = inpolygon(pos(:,1), pos(:,2), mask(:,1), mask(:,2));
+            switch options.fill
+                case 'innan'
+                    ind = ~(in | on);
+                case 'outnan'
+                    ind = in | on;
+                otherwise
+                    ind = in | on;
+            end
+            linindr = find(ind);
     end
-    linindr = find(ind);
 
     subind = cell(numel(sz), 1);
     [subind{:}] = ind2sub(sz, linind);

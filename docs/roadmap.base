@@ -16,7 +16,7 @@ views:
     name: topics
     filters:
       and:
-        - file.tags.contains("#MATLAB/topics")
+        - file.tags.contains("MATLAB/topics")
         - file.folder.contains("docs/topics")
     order:
       - file.name

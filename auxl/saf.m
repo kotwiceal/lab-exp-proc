@@ -99,6 +99,7 @@ function saf(path, kwargs, options)
             set(fighandle, WindowStyle = 'normal')
             pause(kwargs.pause)
             set(fighandle, Units = kwargs.units, Position = [0, 0, kwargs.size]);
+            pause(kwargs.pause)
         end
 
         if kwargs.save

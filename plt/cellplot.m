@@ -190,7 +190,8 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
         num2cell(ag), data, num2cell(dg), UniformOutput = false);
  
     % gather axes children
-    plts = flip(setdiff(findobj('-depth',4), findobj('-depth',3), 'stable'));
+    plts = flip(setdiff(findobj(findobj(fig,'Type','Axes'),'-depth',1), ...
+        findobj(findobj(fig,'Type','Axes'),'-depth',0),'stable'));
 
     if ~isempty(popt.addax); axs = cat(2, axs, cellfun(@(~) nexttile(tl), num2cell(1:popt.addax), UniformOutput = false)); end
 
@@ -270,6 +271,9 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
 
         if ~isa(proi.rsnap, 'cell'); proi.rsnap = repelem({proi.rsnap}, numel(proi.draw)); end
 
+        rlist = {'images.roi.Point','images.roi.Line','images.roi.Polyline'};
+        isrlist = @(obj) sum(ismember(rlist, class(obj)))>0;
+
         % draw roi
         funcs = cellfun(@(draw) str2func(draw), proi.draw, UniformOutput = false);
         expr = @(f,t,g,p) teropf(isempty(p{1}), @() f(plts(t).Parent, 'UserData', struct(target = plts(t), group = g)), ...
@@ -301,8 +305,8 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
         froi.rlinealign = @(obj, value) set(obj, 'UserData', setfield(obj.UserData, 'linealign', value));
         froi.rnumlabel = @(obj, value) set(obj, 'UserData', setfield(obj.UserData, 'numlabel', value));
         froi.rlabelalpha = @(obj, value) set(obj, 'LabelAlpha', value);
-        froi.redgealpha = @(obj, value) set(obj, 'EdgeAlpha', value);
-        froi.rfacealpha = @(obj, value) set(obj, 'FaceAlpha', value);
+        froi.redgealpha = @(obj, value) teropf(isrlist(obj), @() [], @() set(obj, 'EdgeAlpha', value));
+        froi.rfacealpha = @(obj, value) teropf(isrlist(obj), @() [], @() set(obj, 'FaceAlpha', value));
         cellapply(rois, froi, proi);
 
         % set snap property
@@ -332,7 +336,7 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
         expr = @(r,roi) teropf(strcmp(r.UserData.linealign,'on'), ...
             @() addlistener(r, 'MovingROI', @(s,e) roievtlinalig(e,num2cell(roi))), ...
             @() nan);
-        splitapply(@(roi) {arrayfun(@(r) expr(r,roi), roi)}, rois, rgroup);
+        splitapply(@(roi) {arrayfun(@(r) {expr(r,roi)}, roi)}, rois, rgroup);
     else
         rois = [];
     end
