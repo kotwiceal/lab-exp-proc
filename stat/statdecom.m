@@ -10,7 +10,7 @@ function varargout = statdecom(bins,data,param,filt,cons,prob,popt,pfilt)
         %% nonlinfilt
         filt.kernel (1,:) double = []
         filt.stride (1,:) double = []
-        filt.filtdim (1,:) double = []
+        filt.ndim (1,:) double = []
         filt.padval (1,:) = false
         %% constraints
         cons.mean (1,:) {mustBeA(cons.mean, {'double', 'cell'})} = []

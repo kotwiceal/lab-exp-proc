@@ -69,7 +69,7 @@ function result = nonlinfilt(method, varargin, kwargs, opts, popts)
     end
 
     arguments (Input)
-        kwargs.filtdim {mustBeA(kwargs.filtdim, {'double', 'cell'})} = [] % data dimension to apply filter
+        kwargs.ndim {mustBeA(kwargs.ndim, {'double', 'cell'})} = [] % data dimension to apply filter
         kwargs.kernel {mustBeA(kwargs.kernel, {'double', 'cell'})} = [] % window size
         kwargs.stride {mustBeA(kwargs.stride, {'double', 'cell'})} = [] % window stride
         kwargs.offset {mustBeA(kwargs.offset, {'double', 'cell'})} = [] % window offset

@@ -1,8 +1,30 @@
+%% data 1D, filt 1D, sobel
+x = linspace(0,1)';
+y = sin(10*x)+0.5*rand(size(x));
+yf = cellfilt('sobel',y,ndim=1);
+cellplot('plot',x,cat(2,y,yf))
+%% data 2D, filt 1D, sobel
+x = linspace(0,1)';
+y = sin(10*x)+0.5*rand(size(x));
+y = cat(2, y, y+2);
+yf = cellfilt('sobel',y,ndim=1,padval='symmetric');
+cellplot('plot',x,cat(2,y,yf'))
+%% data 1D, filt 1D, average
+x = linspace(0,1)';
+y = sin(10*x)+0.5*rand(size(x));
+yf = cellfilt('average',y,kernel=10);
+cellplot('plot',x,cat(2,y,yf))
+%% data 2D, filt 1D, average
+x = linspace(0,1)';
+y = sin(10*x)+0.5*rand(size(x));
+y = cat(2, y, y+2);
+yf = cellfilt('average',y,kernel=10,padval={'symmetric',false});
+cellplot('plot',x,cat(2,y,yf'))
 %% data 1D, filt 1D, gaussian
 x = linspace(0,1)';
 y = sin(10*x)+0.5*rand(size(x));
 yf = cellfilt('gaussian',y,kernel=10);
-cellplot('plot',x,cat(2,y,yf))
+cellplot('plot',x,cat(2,y,yf'))
 %% data 2D, filt 1D, gaussian
 x = linspace(0,1)';
 y = sin(10*x)+0.5*rand(size(x));
@@ -23,12 +45,18 @@ x = linspace(0,1)';
 y = sin(10*x)+0.5*rand(size(x));
 yf = cellfilt('median',y,kernel=10,padval='symmetric');
 cellplot('plot',x,cat(2,y,yf))
+%% data 1D, filt 1D, median
+x = linspace(0,1)';
+y = sin(10*x)+0.5*rand(size(x));
+yf = cellfilt('median',y,kernel=[10,1]);
+cellplot('plot',x,cat(2,y,yf))
 %% data 2D, filt 1D, median
 x = linspace(0,1)';
 y = sin(10*x)+0.5*rand(size(x));
 y = cat(2, y, y+2);
-yf = cellfilt('median',y,kernel=15);
-cellplot('plot',x,cat(2,y,yf'))
+yf = cellfilt('median',y,kernel=15,padval={'symmetric',false});
+yf = permute(yf, [2, 1, 3]);
+cellplot('plot',x,cat(2,y,yf))
 %% data 3D, filt 1D, median
 x = linspace(0,1)';
 y = sin(10*x)+0.5*rand(size(x));
@@ -83,6 +111,12 @@ cellplot('plot',x,cat(2,y,yf'),axpos=nan)
 %
 %
 %
+%% data 2D, filt 2D, median
+[x,y] = meshgrid(linspace(0,1),linspace(1,2));
+z = sin(10*x+20*y)+0.5*rand(size(x));
+z(randi([1, numel(x)],200,1)) = nan;
+zf = cellfilt('median',z,ndim=[1,2],kernel=[15,15]);
+cellplot('contourf',x,y,cat(3,z,zf),linestyle='none',axpos=nan)
 %% data 2D, filt 2D, fillmiss, median
 [x,y] = meshgrid(linspace(0,1),linspace(1,2));
 z = sin(10*x+20*y)+0.5*rand(size(x));
@@ -116,3 +150,12 @@ z(randi([1, numel(x)],200,1)) = nan;
 [zf1, zf2] = cellfilt({'fillmiss','median'},z,z+1,ndim=[1,2],kernel=[15,15]);
 cellplot('contourf',x,y,cat(3,z,zf1,zf2),linestyle='none',axpos=nan,colorbar='on')
 %%
+%
+%
+%
+%% data 2D, filt 2D, fillmissn, median
+[x,y] = meshgrid(linspace(0,1),linspace(1,2));
+z = sin(10*x+20*y)+0.5*rand(size(x));
+z(randi([1, numel(x)],200,1)) = nan;
+zf = cellfilt({'fillmissn','median'},z,ndim=[1,2],kernel=[15,15]);
+cellplot('contourf',x,y,cat(3,z,zf),linestyle='none',axpos=nan)

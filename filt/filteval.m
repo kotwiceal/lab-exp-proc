@@ -6,7 +6,7 @@ function varargout = filteval(param)
         param.szarg {mustBeA(param.szarg, {'double', 'cell'})} = []
 
         % data dimension to apply filter
-        param.filtdim {mustBeA(param.filtdim, {'double', 'cell'})} = []
+        param.ndim {mustBeA(param.ndim, {'double', 'cell'})} = []
 
         % sliding window size
         param.kernel {mustBeA(param.kernel, {'double', 'cell'})} = []
@@ -24,7 +24,7 @@ function varargout = filteval(param)
         param.cast {mustBeMember(param.cast, {'int8', 'int16', 'int32', 'int64'})} = 'int32'
         
         % enable multi dimensional slicing
-        % if is not empty `param.filtdim` than `param.kernel` will be modified like `param.kernel = [nan, ..., kernel, ..., nan] & param.kernel(param.filtdim) = kernel`
+        % if is not empty `param.ndim` than `param.kernel` will be modified like `param.kernel = [nan, ..., kernel, ..., nan] & param.kernel(param.ndim) = kernel`
         param.slice (1,1) logical = false
 
         % evaluate filter passing
@@ -45,38 +45,31 @@ function varargout = filteval(param)
     if isa(param.szarg, 'double'); param.szarg = {param.szarg}; end
 
     narg = numel(param.szarg);
-    ndimsarg = cellfun(@numel, param.szarg, UniformOutput = false);
+    ndimsarg = cellfun(@numel, param.szarg, 'UniformOutput', false);
 
     param.strideisvector = false(1, narg);
 
     % filter dimension validation
-    if isempty(param.filtdim)
-        param.filtdim = repmat({[]}, 1, narg);
+    if isa(param.ndim, 'double')
+        param.ndim = repelem({param.ndim}, narg);
     end
-    if isa(param.filtdim, 'double')
-        if isvector(param.filtdim)
-            param.filtdim = repmat({param.filtdim}, 1, narg);
-        else
-            param.filtdim = {param.filtdim};
-        end
-    end
-    if narg ~= numel(param.filtdim); error('number of filter `param.filtdim` must be correspond to number of filtering array'); end
+    if narg ~= numel(param.ndim); error('number of filter `param.ndim` must be correspond to number of filtering array'); end
 
     % padding value validation
     if isempty(param.padval)
-        param.padval = cellfun(@(x) num2cell(zeros(1, x)), ndimsarg, UniformOutput = false);
-        ispad = cellfun(@(x) num2cell(false(1, x)), ndimsarg, UniformOutput = false);
+        param.padval = cellfun(@(x) num2cell(zeros(1, x)), ndimsarg, 'UniformOutput', false);
+        param.ispad = cellfun(@(x) num2cell(false(1, x)), ndimsarg, 'UniformOutput', false);
     else
         if isa(param.padval, 'char'); param.padval = string(param.padval); end
         if ~isa(param.padval, 'cell') && isscalar(param.padval)
             if isa(param.padval, 'logical')
-                ispad = param.padval; 
+                param.ispad = param.padval; 
                 param.padval = 0;
             else
-                ispad = true;
+                param.ispad = true;
             end
             param.padval = cellfun(@(x) repelem({param.padval}, x), ndimsarg, 'UniformOutput', false);
-            ispad = cellfun(@(x) repelem({ispad}, x), ndimsarg, 'UniformOutput', false);
+            param.ispad = cellfun(@(x) repelem({param.ispad}, x), ndimsarg, 'UniformOutput', false);
         else
             if isscalar(ndimsarg) && numel(param.padval) == ndimsarg{1}
                 param.padval = {param.padval};
@@ -91,12 +84,12 @@ function varargout = filteval(param)
                 if numel(param.padval{i}) ~= ndimsarg{i}; error('`numel(padval{i})` must be equal ndimsarg{i}'); end
                 for j = 1:ndimsarg{i}
                     if isa(param.padval{i}{j}, 'logical')
-                        ispad{i}{j} = param.padval{i}{j};
+                        param.ispad{i}{j} = param.padval{i}{j};
 
                         % set default padding value at enable padding without specifying value
-                        if ispad{i}{j}; param.padval{i}{j} = 0; end
+                        if param.ispad{i}{j}; param.padval{i}{j} = 0; end
                     else
-                        ispad{i}{j} = true;
+                        param.ispad{i}{j} = true;
                     end
                 end
             end
@@ -106,103 +99,88 @@ function varargout = filteval(param)
     % kernel validation
     if isempty(param.kernel); param.kernel = param.szarg; end
     if isa(param.kernel, 'double')
-        if isvector(param.kernel)
-            param.kernel = repmat({param.kernel}, 1, narg);
-        else
-            param.kernel = {param.kernel};
-        end
+        param.kernel = repelem({param.kernel}, narg);
     end
     if narg ~= numel(param.kernel); error('number of filter `param.kernel` must be equal one or correspond to number of filtering array'); end
     for i = 1:narg
-        if isvector(param.kernel{i}) & isempty(param.filtdim{i})
+        if isempty(param.ndim{i})
+            if isvector(param.kernel{i})
+                n = numel(param.kernel{i});
+            else
+                n = ndims(param.kernel{i});
+            end
+            param.ndim{i} = 1:n;
+        end
+    end
+    for i = 1:narg
+        if isvector(param.kernel{i}) & isempty(param.ndim{i})
             param.kernel{i}(isnan(param.kernel{i})) = param.szarg{i}(isnan(param.kernel{i}));
         end
     end
 
     % stride validation
     if isempty(param.stride)
-        param.stride = cellfun(@(x) ones(size(x)), param.kernel, UniformOutput = false);
+        param.stride = cellfun(@(x) ones(size(x)), param.kernel, 'UniformOutput', false);
     end
     if isa(param.stride, 'double')
-        if isvector(param.stride)
-            param.stride = repmat({param.stride}, 1, narg);
-        else
-            param.stride = {param.stride};
-        end
+        param.stride = repelem({param.stride}, narg);
     end
     if narg ~= numel(param.stride); error('`param.kernel` and `param.stride` dimensions must be equal'); end
-    param.stride = cellfun(@(x) cast(x, param.cast), param.stride, UniformOutput = false);
+    param.stride = cellfun(@(x) cast(x, param.cast), param.stride, 'UniformOutput', false);
 
     % offset validation
     if isempty(param.offset)
-        param.offset = cellfun(@(x) zeros(size(x)), param.kernel, UniformOutput = false);
+        param.offset = cellfun(@(x) zeros(size(x)), param.kernel, 'UniformOutput', false);
     end
     if isa(param.offset, 'double')
-        if isvector(param.offset)
-            param.offset = repmat({param.offset}, 1, narg);
-        else
-            param.offset = {param.offset};
-        end
+        param.offset = repelem({param.offset}, narg);
     end
     if narg ~= numel(param.offset); error('`param.kernel` and `param.offset` dimensions must be equal'); end
-    param.offset = cellfun(@(x) cast(x, param.cast), param.offset, UniformOutput = false);
+    param.offset = cellfun(@(x) cast(x, param.cast), param.offset, 'UniformOutput', false);
 
     % adjust kernel/stride/offset by given filter dimensions
     for i = 1:narg
-        if ~isempty(param.filtdim{i})
-            if isvector(param.kernel{i})
-                if param.slice
-                    kernel = nan(1, numel(param.szarg{i}));
-                else
-                    kernel = ones(1, numel(param.szarg{i}));
-                end
-                kernel(param.filtdim{i}) = param.kernel{i};
-                param.kernel{i} = kernel;
-                param.kernel{i}(isnan(param.kernel{i})) = param.szarg{i}(isnan(param.kernel{i}));
-            end
-
-            if isvector(param.stride{i})
-                stride = ones(1, numel(param.szarg{i}), param.cast);
-                stride(param.filtdim{i}) = param.stride{i};
-                param.stride{i} = stride;
-            end
-
-            if isvector(param.offset{i})
-                offset = zeros(1, numel(param.szarg{i}), param.cast);
-                offset(param.filtdim{i}) = param.offset{i};
-                param.offset{i} = offset;
-            end
-
-            padval = num2cell(false(1, numel(param.szarg{i})));
-            padval(param.filtdim{i}) = [param.padval{i}(param.filtdim{i})];
-            param.padval{i} = padval;
-        end
-    end
-    param.kernel = cellfun(@(x) cast(x, param.cast), param.kernel, UniformOutput = false);
-
-    % adjust filter parameters
-    tempfunc = @(x) x*(x > 0);
-    for i = 1:narg
         if isvector(param.kernel{i})
-            param.kernel{i} = padarray(param.kernel{i}, [0, tempfunc(ndimsarg{i}-numel(param.kernel{i}))], 0, 'post');
+            if param.slice
+                kernel = nan(1, numel(param.szarg{i}));
+            else
+                kernel = ones(1, numel(param.szarg{i}));
+            end
+            kernel(param.ndim{i}) = param.kernel{i};
+            param.kernel{i} = kernel;
+            param.kernel{i}(isnan(param.kernel{i})) = param.szarg{i}(isnan(param.kernel{i}));
         end
+
         if isvector(param.stride{i})
-            param.strideisvector(i) = true;
-            param.stride{i} = padarray(param.stride{i}, [0, tempfunc(ndimsarg{i}-numel(param.stride{i}))], 1, 'post');
+            stride = ones(1, numel(param.szarg{i}), param.cast);
+            stride(param.ndim{i}) = param.stride{i};
+            param.stride{i} = stride;
         end
+
         if isvector(param.offset{i})
-            param.offset{i} = padarray(param.offset{i}, [0, tempfunc(ndimsarg{i}-numel(param.offset{i}))], 0, 'post');
+            offset = zeros(1, numel(param.szarg{i}), param.cast);
+            offset(param.ndim{i}) = param.offset{i};
+            param.offset{i} = offset;
         end
+
+        padval = num2cell(false(1, numel(param.szarg{i})));
+        padval(param.ndim{i}) = [param.padval{i}(param.ndim{i})];
+        param.padval{i} = padval;
+
+        ispad = num2cell(false(1, numel(param.szarg{i})));
+        ispad(param.ndim{i}) = [param.ispad{i}(param.ndim{i})];
+        param.ispad{i} = ispad;
     end
+    param.kernel = cellfun(@(x) cast(x, param.cast), param.kernel, 'UniformOutput', false);
 
     % evaluate a size of filtered data
     szfilt = cell(1, narg);
     for i = 1:narg
         if isvector(param.stride{i})
             for j = 1:ndimsarg{i}
-                if isvector(param.kernel{i}) && ~ispad{i}{j}
+                if isvector(param.kernel{i}) && ~param.ispad{i}{j}
                     temp = param.kernel{i}(j);
-                    if temp ~= 0; temp = temp - 1; end
+                    if mod(temp, 2) ~= 0; temp = temp - 1; end
                     szfilt{i}(j) = numel(1:param.stride{i}(j):param.szarg{i}(j)-temp);
                 else
                     szfilt{i}(j) = numel(1:param.stride{i}(j):param.szarg{i}(j));
@@ -269,7 +247,7 @@ function varargout = filteval(param)
     % shift stride by half kernel at enabled padding
     for i = 1:narg
         for j = 1:ndimsarg{i}
-            if ispad{i}{j}
+            if param.ispad{i}{j}
                 temp = fix(param.kernel{i}(j,:)/2);
                 temp(temp~=0) = temp(temp~=0) - 1;
                 param.stride{i}(j,:) = param.stride{i}(j,:) - temp;
@@ -308,7 +286,7 @@ function varargout = filteval(param)
 
     % shift origin indexes according to padding
     param.stride = cellfun(@(s,o,b) s+o+b(:, 1), param.stride, param.offset, ...
-        outbound, UniformOutput = false);
+        outbound, 'UniformOutput', false);
     param.offset = [];
 
     % evaluate filter passing
@@ -338,10 +316,7 @@ function varargout = filteval(param)
                 kernel = param.kernel{i}(:,k);
                 stride = param.stride{i}(:,k);
     
-                temporary = cell(1, ndimsarg{i});
-                for j = 1:ndimsarg{i}
-                    temporary{j} = stride(j) + (0:kernel(j));
-                end
+                temporary = arrayfun(@(k,s) (0:k)+s, kernel, stride, 'UniformOutput', false);
     
                 tempfunc = masks{i};
                 tempfunc(temporary{:}) = 3;

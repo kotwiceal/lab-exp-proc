@@ -125,7 +125,7 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
         surf = 2, pcolor = 2, plot3 = 2, xregion = 1, yregion = 1);
     dims = cellfun(@(p) plt.(p), plotname);
     % define custom function
-    funcs = cell2struct(cellfun(@(p) str2func(p), plotname, 'UniformOutput', false), plotname, 2);
+    funcs = cell2struct(cellfun(@(f) str2func(f), fieldnames(plt), 'UniformOutput', false), fieldnames(plt));
     funcs.xregion = @(varargin) plotregion('x',varargin{:});
     funcs.yregion = @(varargin) plotregion('y',varargin{:});
     pltfunc = cellfun(@(p) funcs.(p), plotname, UniformOutput = false);
@@ -267,19 +267,23 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
 
         if ~isa(proi.draw, 'cell'); proi.draw = {proi.draw}; end
 
-        if isempty(proi.rposition); proi.rposition = repelem({{[]}}, numel(proi.draw)); end 
+        ndraw = numel(proi.draw);
+
+        if isempty(proi.rposition); proi.rposition = repelem({{[]}}, ndraw); end 
         if ~isa(proi.rposition, 'cell'); proi.rposition = {{proi.rposition}}; end
         proi.rposition = cellfun(@(p) terop(isa(p,'cell'),p,{p}), proi.rposition, UniformOutput = false);
 
-        if isempty(proi.rtarget);  proi.rtarget = ones(1, numel(proi.draw)); end
+        if isempty(proi.rtarget);  proi.rtarget = ones(1, ndraw); end
         if ~isa(proi.rtarget, 'cell'); proi.rtarget = num2cell(proi.rtarget); end
         proi.rtarget = cellfun(@(x) terop(isempty(x), 1, x), proi.rtarget, 'UniformOutput', false);
+        if isscalar(proi.rtarget); proi.rtarget = repelem(proi.rtarget, ndraw); end
 
         if isempty(proi.rnumber); proi.rnumber = cellfun(@(p) numel(p), proi.rposition); end
         if ~isa(proi.rnumber, 'cell'); proi.rnumber = num2cell(proi.rnumber); end
         proi.rnumber = cellfun(@(x) terop(isempty(x), 1, x), proi.rnumber, 'UniformOutput', false);
+        if isscalar(proi.rnumber); proi.rnumber = repelem(proi.rnumber, ndraw); end
 
-        if ~isa(proi.rsnap, 'cell'); proi.rsnap = repelem({proi.rsnap}, numel(proi.draw)); end
+        if ~isa(proi.rsnap, 'cell'); proi.rsnap = repelem({proi.rsnap}, ndraw); end
 
         % draw roi
         funcs = cellfun(@(draw) str2func(draw), proi.draw, UniformOutput = false);

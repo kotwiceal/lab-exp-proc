@@ -11,7 +11,7 @@ function varargout = procstatdecom(bins,data,kwarg,param,filt,cons,prob,popt,pre
         %% nonlinfilt
         filt.kernel (1,:) double = []
         filt.stride (1,:) double = []
-        filt.filtdim (1,:) double = []
+        filt.ndim (1,:) double = []
         filt.padval (1,:) = false
         %% constraints
         cons.mean (1,:) {mustBeA(cons.mean, {'double', 'cell'})} = []
@@ -79,8 +79,8 @@ function varargout = procstatdecom(bins,data,kwarg,param,filt,cons,prob,popt,pre
         padval = postf.postpadval);
 
     % grid intermittency/threshold
-    if isempty(filt.filtdim); filt.filtdim = 1:numel(filt.kernel); end
-    filtker = size(data, filt.filtdim(~isnan(filt.kernel)));
+    if isempty(filt.ndim); filt.ndim = 1:numel(filt.kernel); end
+    filtker = size(data, filt.ndim(~isnan(filt.kernel)));
     [intermittency, threshold] = cellfilt('interpn', ...
         intermittency, threshold,...
         kernel = filtker, ...
@@ -89,7 +89,7 @@ function varargout = procstatdecom(bins,data,kwarg,param,filt,cons,prob,popt,pre
     % shift dimension of threshold
     perind = 1:ndims(data);
     fdim = perind;
-    fdim(perind(filt.filtdim(isnan(filt.kernel)))) = [];
+    fdim(perind(filt.ndim(isnan(filt.kernel)))) = [];
     [~, i] = setdiff(perind, fdim);
     perind(i) = numel(fdim)+(1:numel(i));
     perind(fdim) = 1:numel(fdim);
@@ -98,7 +98,7 @@ function varargout = procstatdecom(bins,data,kwarg,param,filt,cons,prob,popt,pre
     binarized = double(data./permute(threshold,perind)>1);
 
     % average binarized
-    mbinarized = squeeze(mean(binarized,filt.filtdim(isnan(filt.kernel))));
+    mbinarized = squeeze(mean(binarized,filt.ndim(isnan(filt.kernel))));
 
     varargout{1} = struct(threshold=threshold,binarized=binarized,...
         intermittency=intermittency,mbinarized=mbinarized);

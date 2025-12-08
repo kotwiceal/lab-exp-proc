@@ -19,7 +19,8 @@ function varargout = cellfilt(name,varargin,param)
 
     param.name = name;
     args = parseargs(numel(name), param, ans = 'joint');
-    args = cellfun(@(x) cellfun(@(y) teropf(isa(y,'cell'), @() y{1}, @() y), x, 'UniformOutput', false), args, 'UniformOutput', false);
+    args = cellfun(@(x) cellfun(@(y) teropf(isa(y,'cell'), @() y{1}, @() y), x, 'UniformOutput', false), ...
+        args, 'UniformOutput', false);
 
     for i = 1:numel(args)
         varargin = cellfun(@(x) filter(x,args{i}{:}), varargin, 'UniformOutput', false);
@@ -51,25 +52,16 @@ function data = filter(data, param, filt)
 
     if (isempty(filt.kernel) & isempty(filt.ndim)) | strcmp(param.name,"none") | isscalar(data); return; end
 
+    if isempty(filt.ndim); filt.ndim = 1:numel(filt.kernel); end
+
     switch param.name
         case 'median'
-            if isempty(filt.ndim)
-                filt.ndim = 1:numel(filt.kernel);
-                filt.ndim(filt.kernel == 1) = [];
-            end
             func = @(x, ~) squeeze(median(x, filt.ndim, 'omitmissing'));
-            padval = filt.padval;
-            if ~isa(padval,'cell'); padval = {padval}; end
-            filt.padval = num2cell(false(1, ndims(data)));
-            filt.padval(filt.ndim) = padval;
-            kernel = nan(1, ndims(data));
-            kernel(filt.ndim) = filt.kernel;
-            filt.kernel = kernel;
-            filt.ndim = [];
+            filt.slice = true;
         case 'fillmiss'
             if param.method ~= "none"
-                filt.kernel = nan(1, numel(filt.ndim));
                 filt.padval = false;
+                filt.kernel = size(data, filt.ndim);
                 if param.zero2nan; data(data==0) = nan; end
                 switch numel(filt.ndim)
                     case 1
@@ -80,17 +72,15 @@ function data = filter(data, param, filt)
             end
         case 'fillmissn'
             filt.padval = false;
-            filt.kernel = size(data,filt.ndim);
+            filt.kernel = size(data, filt.ndim);
             if isscalar(filt.kernel); filt.kernel = [filt.kernel, 1]; end
             p = cellfun(@(x)linspace(0,1,x),num2cell(size(data,filt.ndim)),'UniformOutput',false);
             [p{:}] = ndgrid(p{:});
             p = cellfun(@(x)x(:),p,'UniformOutput',false);
             p = cat(2,p{:});
             func = @(x,~) reshape(griddatan(p(~isnan(x(:)),:),x(~isnan(x(:))),p,param.method),filt.kernel);
-            filt.kernel = nan(1,numel(filt.ndim));
         case 'griddatan'
             filt.padval = false;
-            if isempty(filt.ndim); filt.ndim = 1:numel(filt.kernel); end
             p = cellfun(@(x)linspace(0,1,x),num2cell(size(data,filt.ndim)),'UniformOutput',false);
             [p{:}] = ndgrid(p{:});
             p = cellfun(@(x)x(:),p,'UniformOutput',false);
@@ -98,32 +88,27 @@ function data = filter(data, param, filt)
             [q{:}] = ndgrid(q{:});
             q = cellfun(@(x)x(:),q,'UniformOutput',false);
             func = @(x,~) reshape(griddatan(cat(2,p{:}),x(:),cat(2,q{:}),param.method),filt.kernel);
-            filt.kernel = nan(1,numel(filt.ndim));
         case 'interpn'
             filt.padval = false;
-            if isempty(filt.ndim); filt.ndim = 1:numel(filt.kernel); end
             p = cellfun(@(x)linspace(0,1,x),num2cell(size(data,filt.ndim)),'UniformOutput',false);
             [p{:}] = ndgrid(p{:});
             q = cellfun(@(x)linspace(0,1,x),num2cell(filt.kernel),'UniformOutput',false);
             [q{:}] = ndgrid(q{:});
             if isscalar(filt.kernel); filt.kernel = [filt.kernel, 1]; end
             func = @(x,~) reshape(interpn(p{:},x,q{:},param.method),filt.kernel);
-            filt.kernel = nan(1,numel(filt.ndim));
         otherwise
-            if isempty(filt.ndim); filt.ndim = 1:numel(filt.kernel); end
-            padval = filt.padval;
-            if ~isa(padval,'cell'); padval = {padval}; end
-            filt.padval = num2cell(false(1, ndims(data)));
-            filt.padval(filt.ndim) = padval;
-            if isscalar(filt.ndim); filt.ndim = [filt.ndim, 2]; end
-            if isscalar(filt.kernel); filt.kernel = [filt.kernel, 1]; end
-            kernelmat = fspecial(param.name, filt.kernel);
-            func = @(x,~) squeeze(tensorprod(kernelmat, x, 1:ndims(kernelmat), filt.ndim));
+            switch param.name
+                case 'average'
+                    ker = squeeze(ones([filt.kernel,1])./prod(filt.kernel));
+                case 'sobel'
+                    ker = fspatialn(numel(filt.ndim),[1,0,-1],[1,2,1]);
+                    if isvector(ker); k = numel(ker); else; k = size(ker); end
+                    filt.kernel = k;
+            end
+            if isvector(ker); ndker = 1; else; ndker = 1:ndims(ker); end
+            func = @(x,~) squeeze(tensorprod(ker, x, ndker, filt.ndim));
+            filt.slice = true;
     end
-
-    % legacy
-    filt.filtdim = filt.ndim;
-    filt = rmfield(filt, 'ndim');
 
     filt = namedargs2cell(filt);
 
