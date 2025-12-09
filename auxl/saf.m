@@ -103,6 +103,7 @@ function saf(path, kwargs, options)
         end
 
         if kwargs.save
+            arrayfun(@(r) set(r, 'UserData', []), findobj(fighandle,'Type','images.roi'));
             exportgraphics(fighandle, strcat(filename, kwargs.extension), Resolution = kwargs.resolution)
             savefig(fighandle, strcat(filename, '.fig'));
         end

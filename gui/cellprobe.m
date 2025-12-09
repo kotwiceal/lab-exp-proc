@@ -70,7 +70,7 @@ function varargout = cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, p
             'layout'})} = 'eastoutside'
         pclb.corientation {mustBeMember(pclb.corientation, {'vertical', 'horizontal'})} = 'vertical'
         pclb.cinterpreter {mustBeMember(pclb.cinterpreter, {'latex', 'tex', 'none'})} = 'tex'
-        pclb.cexponent (1,1) double = 0
+        pclb.cexponent (1,:) {mustBeA(pclb.cexponent, {'double', 'cell'})} = 0
         % legend properties
         plgd.legend {mustBeMember(plgd.legend, {'on', 'off'})} = 'off'
         plgd.ltitle {mustBeA(plgd.ltitle, {'char', 'string', 'cell'})} = ''
@@ -96,6 +96,7 @@ function varargout = cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, p
         plin.view {mustBeA(plin.view, {'double', 'cell'})} = [0, 90]
         plin.displayname {mustBeA(plin.displayname, {'char', 'string', 'cell'})} = ''
         plin.ltag {mustBeA(plin.ltag, {'char', 'string', 'cell'})} = ''
+        plin.linealpha (1,1) double = 1
         % roi properties
         proi.draw {mustBeMember(proi.draw, {'none', 'drawpoint', 'drawline', ...
             'drawrectangle', 'drawpolygon', 'drawpolyline', 'drawxline', ...
@@ -116,8 +117,8 @@ function varargout = cellprobe(dplot, pplot, funcs, dims, varargin, opt, popt, p
         proi.rnumlabel {mustBeMember(proi.rnumlabel, {'on', 'off'})} = 'off'
         proi.rlabelalpha (1,1) double = 1
         proi.rsnap {mustBeMember(proi.rsnap, {'on', 'off'})} = 'on'
-        proi.redgealpha (1,:) double = 1
-        proi.rfacealpha (1,:) double = 1
+        proi.redgealpha (1,:) {mustBeA(proi.redgealpha, {'double', 'cell'})} = 1
+        proi.rfacealpha (1,:) {mustBeA(proi.rfacealpha, {'double', 'cell'})} = 1
     end
     arguments (Output, Repeating)
         varargout
