@@ -21,7 +21,7 @@ function varargout = procspecn(data, kwargs)
         kwargs.useparallel (1,1) logical = false
         kwargs.extract {mustBeMember(kwargs.extract, {'readall', 'writeall'})} = 'writeall'
         kwargs.poolsize (1,:) double = 16
-        kwargs.resources {mustBeMember(kwargs.resources, {'Processes', 'Threads', 'backgroundPool'})} = 'backgroundPool'
+        kwargs.pool {mustBeMember(kwargs.pool, {'Processes', 'Threads', 'backgroundPool'})} = 'backgroundPool'
     end
 
     arguments(Output,Repeating)
@@ -92,7 +92,7 @@ function varargout = procspecn(data, kwargs)
     stride = ones(1, dimsd); stride(kwargs.ftdim) = kwargs.overlap;
     offset = zeros(1, dimsd); offset(kwargs.ftdim) = kwargs.offset;
     spec = nonlinfilt(@specker, data, kernel = kernel, stride = stride, offset = offset, padval = false, ...
-        resources = kwargs.resources, usefiledatastore = kwargs.usefiledatastore, useparallel = kwargs.useparallel, ...
+        pool = kwargs.pool, usefiledatastore = kwargs.usefiledatastore, useparallel = kwargs.useparallel, ...
         extract = kwargs.extract, poolsize = kwargs.poolsize);
     dimss = ndims(spec);
     dimsb = setdiff(1:dimss, 1:dimsd);

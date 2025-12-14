@@ -3,7 +3,7 @@ function varargout = cellplot(plotname, varargin, popt, pax, pset, pclb, plgd, p
         plotname {mustBeMember(plotname, {'plot', 'scatter', 'contour', 'contourf', 'imagesc', 'surf', 'pcolor', 'plot3', 'xregion', 'yregion'})}
     end
     arguments (Input, Repeating)
-        varargin {mustBeA(varargin, {'double', 'cell'})}
+        varargin {mustBeA(varargin, {'single', 'double', 'cell'})}
     end
     arguments (Input)
         popt.parent = []
