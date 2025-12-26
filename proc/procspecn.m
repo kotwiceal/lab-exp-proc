@@ -12,16 +12,10 @@ function varargout = procspecn(data, kwargs)
         kwargs.type {mustBeMember(kwargs.type, {'amp', 'power', 'psd'})} = 'power' % spectra process mode
         kwargs.avg (1,:) logical = false % averaging by statistics of spectra
         kwargs.fs (1,:) double = [] % sampling frequency
-        kwargs.center (1,1) logical = true % centre data at transform
+        kwargs.center (1,:) logical = true % centre data at transform
         kwargs.winfun {mustBeMember(kwargs.winfun, {'uniform', 'hann', 'hanning', 'hamming'})} = 'hanning' % to weight data at transform
         kwargs.norm (1,1) logical = true % norm for spectral density
         kwargs.ans {mustBeMember(kwargs.ans, {'double', 'cell', 'struct'})} = 'double' % output data format
-        % parallel processing settings
-        kwargs.usefiledatastore (1, 1) logical = false
-        kwargs.useparallel (1,1) logical = false
-        kwargs.extract {mustBeMember(kwargs.extract, {'readall', 'writeall'})} = 'writeall'
-        kwargs.poolsize (1,:) double = 16
-        kwargs.pool {mustBeMember(kwargs.pool, {'Processes', 'Threads', 'backgroundPool'})} = 'backgroundPool'
     end
 
     arguments(Output,Repeating)
@@ -41,7 +35,7 @@ function varargout = procspecn(data, kwargs)
     if isa(kwargs.winfun, 'char') | isa(kwargs.winfun, 'string'); kwargs.winfun = repmat({kwargs.winfun}, 1, dimsf); end
     if isa(kwargs.side, 'char') | isa(kwargs.side, 'string'); kwargs.side = repmat({kwargs.side}, 1, dimsf); end
     if isscalar(kwargs.avg); kwargs.avg = repmat(kwargs.avg, 1, dimsf); end
-    if isscalar(kwargs.center); kwargs.center = repmat(kwargs.center, 1, dimsf); end
+    if isscalar(kwargs.center); kwargs.center = repelem(kwargs.center, dimsf); end
 
     % size validation
     if numel(kwargs.ftdim) ~= dimsf; error('`ftdim` size must be equal `winlen`'); end
@@ -68,12 +62,12 @@ function varargout = procspecn(data, kwargs)
         end
         f{i} = f{i}*kwargs.fs(i)/2;
     end
-    df = prod(cellfun(@(f) abs(f(2)-f(1)), f, UniformOutput = true));
+    df = prod(cellfun(@(f) abs(f(2)-f(1)), f, 'UniformOutput', true));
 
     % create multidimensional window function
-    winfun = repmat({'uniform'}, 1, numel(1:max(kwargs.ftdim)));
+    winfun = repelem({'uniform'}, numel(1:max(kwargs.ftdim)));
     winfun(kwargs.ftdim) = kwargs.winfun; kwargs.winfun = winfun;
-    kwargs.winfun = cellfun(@(x) str2func(x), kwargs.winfun, UniformOutput = false);
+    kwargs.winfun = cellfun(@(x) str2func(x), kwargs.winfun, 'UniformOutput', false);
     mask = ones(1, numel(1:max(kwargs.ftdim))); mask(kwargs.ftdim) = kwargs.winlen; kwargs.winlen = mask;
     win = kwargs.winfun{1}(kwargs.winlen(1));
     for i = 2:numel(kwargs.winlen); win = win.*shiftdim(kwargs.winfun{i}(kwargs.winlen(i)),-i+1); end
@@ -85,15 +79,13 @@ function varargout = procspecn(data, kwargs)
         otherwise
             funccor = @rms;
     end
-    cf = prod(cellfun(@(i) kwargs.winlen(i)./funccor(kwargs.winfun{i}(kwargs.winlen(i))), num2cell(1:numel(kwargs.winlen)), UniformOutput = true)).^2;
+    cf = prod(cellfun(@(i) kwargs.winlen(i)./funccor(kwargs.winfun{i}(kwargs.winlen(i))), num2cell(1:numel(kwargs.winlen)), 'UniformOutput', true)).^2;
 
     % process spectra
     kernel = nan(1, dimsd); kernel(kwargs.ftdim) = kwargs.winlen(kwargs.ftdim);
     stride = ones(1, dimsd); stride(kwargs.ftdim) = kwargs.overlap;
     offset = zeros(1, dimsd); offset(kwargs.ftdim) = kwargs.offset;
-    spec = nonlinfilt(@specker, data, kernel = kernel, stride = stride, offset = offset, padval = false, ...
-        pool = kwargs.pool, usefiledatastore = kwargs.usefiledatastore, useparallel = kwargs.useparallel, ...
-        extract = kwargs.extract, poolsize = kwargs.poolsize);
+    spec = nonlinfilt(@specker, data, kernel = kernel, stride = stride, offset = offset, padval = false);
     dimss = ndims(spec);
     dimsb = setdiff(1:dimss, 1:dimsd);
     if isempty(dimsb); dimsb = ndims(spec); end
@@ -101,15 +93,15 @@ function varargout = procspecn(data, kwargs)
 
     if kwargs.norm;  spec = spec./prod(kwargs.winlen).^2; end % norm spectra
 
-    kwargs.ftdims = kwargs.ftdim(cellfun(@(s) strcmp(s, 'single'), kwargs.side, UniformOutput = true));
+    kwargs.ftdims = kwargs.ftdim(cellfun(@(s) strcmp(s, 'single'), kwargs.side, 'UniformOutput', true));
     for i = setdiff(kwargs.ftdim, kwargs.ftdims)
         spec = fftshift(spec, i); % shift nodes for double frequency range
     end
 
     if ~isempty(kwargs.ftdims)
         szs = size(spec);
-        szs(kwargs.ftdims) = cellfun(@(x) numel(x), f, UniformOutput = true);
-        ind = cellfun(@(x) 1:x, num2cell(szs), UniformOutput = false);
+        szs(kwargs.ftdims) = cellfun(@(x) numel(x), f, 'UniformOutput', true);
+        ind = cellfun(@(x) 1:x, num2cell(szs), 'UniformOutput', false);
         spec = spec(ind{:})*sqrt(2); % truncate spectra & correct amplitude
 
         % zero frequency without amplitude correction
@@ -124,8 +116,8 @@ function varargout = procspecn(data, kwargs)
             dimsb = dimsb - 1;
             szs = size(spec);
             szst = szs; szst(kwargs.chdim) = [];
-            indg = cellfun(@(x) 1:x, num2cell(szst), UniformOutput = false);
-            indi = cellfun(@(x) 1:x, num2cell(szs), UniformOutput = false);
+            indg = cellfun(@(x) 1:x, num2cell(szst), 'UniformOutput', false);
+            indi = cellfun(@(x) 1:x, num2cell(szs), 'UniformOutput', false);
             indj = indi;
 
             temp = zeros([szst, szs(kwargs.chdim), szs(kwargs.chdim)]);
@@ -163,7 +155,7 @@ function varargout = procspecn(data, kwargs)
             varargout{2} = f;
         case 'cell'
             szs = size(spec);
-            indg = cellfun(@(x) 1:x, num2cell(szs(1:end-2)), UniformOutput = false);
+            indg = cellfun(@(x) 1:x, num2cell(szs(1:end-2)), 'UniformOutput', false);
 
             temp = cell(szd(kwargs.chdim));
             for i = 1:szd(kwargs.chdim)

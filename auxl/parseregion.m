@@ -26,6 +26,5 @@ function y = parseregion(x)
             rb = [rb; numel(difbin)];
         end
     end
-    [numel(lb),numel(rb)]
     y = [lb, rb];
 end
